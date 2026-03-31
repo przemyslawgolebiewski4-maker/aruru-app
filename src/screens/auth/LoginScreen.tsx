@@ -6,14 +6,15 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
+import type { AuthStackParamList } from '../../navigation/types';
 
-interface Props {
-  navigation: any;
-}
+type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { signIn } = useAuth();
@@ -21,6 +22,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focused, setFocused] = useState<'email' | 'password' | null>(null);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -51,7 +53,9 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.wordmark}>
             aru<Text style={{ color: colors.clay }}>ru</Text>
           </Text>
-          <Text style={styles.tagline}>Studio management for ceramic artists.</Text>
+          <Text style={styles.tagline}>
+            Studio management for ceramic artists.
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -63,6 +67,13 @@ export default function LoginScreen({ navigation }: Props) {
             keyboardType="email-address"
             placeholder="you@example.com"
             autoComplete="email"
+            onFocus={() => setFocused('email')}
+            onBlur={() => setFocused(null)}
+            style={
+              focused === 'email'
+                ? { borderColor: colors.clay, borderWidth: 0.5 }
+                : undefined
+            }
           />
           <Input
             label="Password"
@@ -71,6 +82,13 @@ export default function LoginScreen({ navigation }: Props) {
             secureTextEntry
             placeholder="••••••••"
             autoComplete="password"
+            onFocus={() => setFocused('password')}
+            onBlur={() => setFocused(null)}
+            style={
+              focused === 'password'
+                ? { borderColor: colors.clay, borderWidth: 0.5 }
+                : undefined
+            }
           />
 
           {error ? (
@@ -88,7 +106,12 @@ export default function LoginScreen({ navigation }: Props) {
 
           <Button
             label="Forgot password?"
-            onPress={() => {}}
+            onPress={() =>
+              Alert.alert(
+                'Forgot password',
+                'Password reset is not available yet. Please contact your studio owner.'
+              )
+            }
             variant="ghost"
             fullWidth
             style={{ marginTop: spacing[2] }}
@@ -96,7 +119,7 @@ export default function LoginScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={styles.footerText}>Don&apos;t have an account? </Text>
           <Text
             style={styles.footerLink}
             onPress={() => navigation.navigate('Register')}
@@ -153,6 +176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   footerText: {
     fontFamily: typography.body,
