@@ -23,6 +23,8 @@ type Route = RouteProp<AppStackParamList, 'TaskDetail'>;
 
 type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
+type EditableTaskStatus = 'todo' | 'in_progress' | 'done';
+
 type MemberRow = {
   userId: string;
   name?: string;
@@ -119,14 +121,13 @@ function createdById(t: Task): string {
   return (t.createdBy ?? '').toString().trim();
 }
 
-const STATUS_OPTS: { key: TaskStatus; label: string; dot: string }[] = [
+const STATUS_OPTS: { key: EditableTaskStatus; label: string; dot: string }[] = [
   { key: 'todo', label: 'To do', dot: colors.inkLight },
   { key: 'in_progress', label: 'In progress', dot: colors.clay },
   { key: 'done', label: 'Done', dot: colors.moss },
-  { key: 'cancelled', label: 'Cancelled', dot: colors.inkMid },
 ];
 
-function statusBtnContainerSel(k: TaskStatus) {
+function statusBtnContainerSel(k: EditableTaskStatus) {
   if (k === 'todo') {
     return {
       backgroundColor: colors.creamDark,
@@ -136,21 +137,17 @@ function statusBtnContainerSel(k: TaskStatus) {
   if (k === 'in_progress') {
     return { backgroundColor: colors.clayLight, borderColor: colors.clay };
   }
-  if (k === 'done') {
-    return { backgroundColor: colors.mossLight, borderColor: colors.moss };
-  }
-  return { backgroundColor: colors.creamDark, borderColor: colors.inkLight };
+  return { backgroundColor: colors.mossLight, borderColor: colors.moss };
 }
 
-function statusBtnLabelSelColor(k: TaskStatus): string {
+function statusBtnLabelSelColor(k: EditableTaskStatus): string {
   if (k === 'todo') return colors.ink;
   if (k === 'in_progress') return colors.clayDark;
-  if (k === 'done') return colors.mossDark;
-  return colors.inkMid;
+  return colors.mossDark;
 }
 
 export default function TaskDetailScreen({ route }: { route: Route }) {
-  const { tenantId, taskId: routeTaskId, taskTitle: paramTitle } = route.params;
+  const { tenantId, taskId, taskTitle: paramTitle } = route.params;
   const navigation = useNavigation<Nav>();
   const { studios } = useAuth();
 
@@ -182,7 +179,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
       let t: Task | null = null;
       try {
         const raw = await apiFetch<unknown>(
-          `/studios/${tenantId}/tasks/${routeTaskId}`,
+          `/studios/${tenantId}/tasks/${taskId}`,
           {},
           tenantId
         );
@@ -200,14 +197,14 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
           tenantId
         );
         t =
-          parseTasksLocal(listRes).find((x) => tid(x) === routeTaskId) ?? null;
+          parseTasksLocal(listRes).find((x) => tid(x) === taskId) ?? null;
       }
       if (!t) throw new Error('Task not found');
       setTask(t);
 
       const [logsRes, memRes] = await Promise.all([
         apiFetch<unknown>(
-          `/studios/${tenantId}/tasks/${routeTaskId}/logs`,
+          `/studios/${tenantId}/tasks/${taskId}/logs`,
           {},
           tenantId
         ).catch(() => null),
@@ -225,7 +222,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, routeTaskId]);
+  }, [tenantId, taskId]);
 
   useEffect(() => {
     load();
@@ -266,20 +263,23 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     return s;
   }, [logs]);
 
-  async function patchStatus(next: TaskStatus) {
+  async function handleStatusChange(newStatus: string) {
     if (!task || !isStaff || statusBusy) return;
-    const prev = task.status;
     setStatusBusy(true);
-    setTask({ ...task, status: next });
     try {
       await apiFetch(
-        `/studios/${tenantId}/tasks/${routeTaskId}`,
-        { method: 'PATCH', body: JSON.stringify({ status: next }) },
+        `/studios/${tenantId}/tasks/${taskId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: newStatus }),
+        },
         tenantId
       );
+      setTask((prev) => (prev ? { ...prev, status: newStatus } : prev));
     } catch (e: unknown) {
-      setTask({ ...task, status: prev });
-      setError(e instanceof Error ? e.message : 'Could not update status.');
+      setError(
+        e instanceof Error ? e.message : 'Failed to update status'
+      );
     } finally {
       setStatusBusy(false);
     }
@@ -302,7 +302,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     setLogError('');
     try {
       await apiFetch(
-        `/studios/${tenantId}/tasks/${routeTaskId}/logs`,
+        `/studios/${tenantId}/tasks/${taskId}/logs`,
         {
           method: 'POST',
           body: JSON.stringify({ hours: n }),
@@ -311,7 +311,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
       );
       setHoursInput('');
       const logsRes = await apiFetch<unknown>(
-        `/studios/${tenantId}/tasks/${routeTaskId}/logs`,
+        `/studios/${tenantId}/tasks/${taskId}/logs`,
         {},
         tenantId
       );
@@ -375,7 +375,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
 
       <SectionLabel>STATUS</SectionLabel>
       {isStaff ? (
-        <View style={[styles.statusRow, styles.statusRowWrap]}>
+        <View style={styles.statusRow}>
           {STATUS_OPTS.map((opt) => {
             const sel = currentStatus === opt.key;
             return (
@@ -385,7 +385,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
                   styles.statusBtn,
                   sel ? statusBtnContainerSel(opt.key) : null,
                 ]}
-                onPress={() => void patchStatus(opt.key)}
+                onPress={() => void handleStatusChange(opt.key)}
                 disabled={statusBusy}
               >
                 <View style={[styles.statusDotSm, { backgroundColor: opt.dot }]} />
@@ -541,11 +541,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusRow: { flexDirection: 'row', gap: 8, marginBottom: spacing[2] },
-  statusRowWrap: { flexWrap: 'wrap' },
   statusBtn: {
-    minWidth: '22%',
-    flexGrow: 1,
-    flexBasis: '22%',
+    flex: 1,
     paddingVertical: 10,
     borderWidth: 0.5,
     borderColor: colors.border,
