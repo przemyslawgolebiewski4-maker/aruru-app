@@ -192,15 +192,13 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   async function confirmClose() {
-    const confirmed =
+    const ok =
       typeof window !== 'undefined'
         ? window.confirm(
-            'Close this firing session? Costs will be calculated.'
+            'Close this firing session? Costs will be calculated and added to member summaries.'
           )
         : true;
-    if (confirmed) {
-      await handleClose();
-    }
+    if (ok) await handleClose();
   }
 
   async function handleReopen() {
@@ -220,13 +218,11 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   async function confirmReopen() {
-    const confirmed =
+    const ok =
       typeof window !== 'undefined'
         ? window.confirm('Reopen this firing session?')
         : true;
-    if (confirmed) {
-      await handleReopen();
-    }
+    if (ok) await handleReopen();
   }
 
   if (loading) {

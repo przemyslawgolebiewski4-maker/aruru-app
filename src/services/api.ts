@@ -53,11 +53,12 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = await getToken();
 
-  const hasBody = options.body != null;
   const headers: Record<string, string> = {
-    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
+    ...(options.body !== undefined
+      ? { 'Content-Type': 'application/json' }
+      : {}),
   };
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -75,6 +76,8 @@ export async function apiFetch<T>(
       message = err.detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
     } else if (err.message) {
       message = err.message;
+    } else {
+      message = `HTTP ${res.status}`;
     }
 
     throw new Error(message);

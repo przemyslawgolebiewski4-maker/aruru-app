@@ -79,15 +79,6 @@ function formatFiringDate(iso: string) {
   }
 }
 
-function parseFiringsResponse(data: unknown): KilnFiringListItem[] {
-  if (Array.isArray(data)) return data as KilnFiringListItem[];
-  if (data && typeof data === 'object' && 'firings' in data) {
-    const f = (data as { firings?: KilnFiringListItem[] }).firings;
-    return Array.isArray(f) ? f : [];
-  }
-  return [];
-}
-
 export default function KilnListScreen({ route }: { route: Route }) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
@@ -99,12 +90,13 @@ export default function KilnListScreen({ route }: { route: Route }) {
     setError('');
     setLoading(true);
     try {
-      const data = await apiFetch<unknown>(
-        `/studios/${tenantId}/kiln/firings`,
-        {},
-        tenantId
-      );
-      setFirings(parseFiringsResponse(data));
+      const data = await apiFetch<
+        { firings: KilnFiringListItem[] } | KilnFiringListItem[]
+      >(`/studios/${tenantId}/kiln/firings`, {}, tenantId);
+      const list = Array.isArray(data)
+        ? data
+        : (data as { firings?: KilnFiringListItem[] }).firings || [];
+      setFirings(list);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load firings.');
       setFirings([]);
