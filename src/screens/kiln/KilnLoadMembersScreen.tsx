@@ -22,9 +22,9 @@ type Route = RouteProp<AppStackParamList, 'KilnLoadMembers'>;
 
 type MemberRow = {
   userId: string;
-  email: string;
-  name: string;
-  status: string;
+  email?: string;
+  name?: string;
+  status?: string;
 };
 
 type FiringItem = {
@@ -41,33 +41,43 @@ type FiringDetail = {
   items?: FiringItem[];
 };
 
-function typeDot(c: KilnType) {
-  if (c === 'bisque') return colors.clay;
-  if (c === 'glaze') return colors.moss;
+function typeDot(c: string) {
+  const k = (c || '').toLowerCase();
+  if (k === 'bisque') return colors.clay;
+  if (k === 'glaze') return colors.moss;
   return colors.inkMid;
 }
 
 function capitalizeType(t: string) {
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  const s = t || '';
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
 function formatFiringDate(iso: string) {
+  const s = iso || '';
+  if (!s) return '';
   try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
     return d.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
   } catch {
-    return iso;
+    return s;
   }
 }
 
 function firstName(name: string) {
-  const p = name.trim().split(/\s+/)[0];
-  return p || name;
+  const s = (name || '').trim();
+  if (!s) return '';
+  const p = s.split(/\s+/)[0];
+  return p || s;
+}
+
+function memberDisplayLabel(m: MemberRow) {
+  return (m?.name || m?.email || '').trim();
 }
 
 export default function KilnLoadMembersScreen({ route }: { route: Route }) {
@@ -97,7 +107,7 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
         ),
       ]);
       const active = (memRes.members ?? []).filter(
-        (m) => m.status === 'active'
+        (m) => (m.status || '').toLowerCase() === 'active'
       );
       setMembers(active);
       const next: Record<string, string> = {};
@@ -188,10 +198,12 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
               <View
                 style={[
                   styles.headerDot,
-                  { backgroundColor: typeDot(kilnType) },
+                  { backgroundColor: typeDot(kilnType || '') },
                 ]}
               />
-              <Text style={styles.typeTitle}>{capitalizeType(kilnType)}</Text>
+              <Text style={styles.typeTitle}>
+                {capitalizeType(kilnType || '')}
+              </Text>
             </View>
             <Text style={styles.headerDate}>
               {formatFiringDate(scheduledAt)}
@@ -213,7 +225,9 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
         members.map((m) => {
           const val = entries[m.userId] ?? '';
           const has = val.trim().length > 0;
-          const displayName = firstName(m.name?.trim() || m.email);
+          const labelBase = memberDisplayLabel(m);
+          const displayName = firstName(labelBase);
+          const avatarName = labelBase;
           return (
             <View
               key={m.userId}
@@ -222,7 +236,7 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
                 has && { backgroundColor: colors.cream },
               ]}
             >
-              <Avatar name={m.name?.trim() || m.email} size="sm" />
+              <Avatar name={avatarName} size="sm" />
               <Text style={styles.memberName} numberOfLines={1}>
                 {displayName}
               </Text>

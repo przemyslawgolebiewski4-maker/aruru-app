@@ -22,9 +22,14 @@ export type KilnType = 'bisque' | 'glaze' | 'private';
 
 export interface KilnFiringListItem {
   _id: string;
-  kilnType: KilnType;
-  firedAt: string;
-  status: 'open' | 'closed';
+  kilnType?: KilnType;
+  kiln_type?: string;
+  firingType?: string;
+  firedAt?: string;
+  fired_at?: string;
+  scheduledAt?: string;
+  scheduled_at?: string;
+  status?: string;
   items?: unknown[];
   totalCost?: number;
   createdAt?: string;
@@ -36,14 +41,42 @@ const MONTH_SHORT = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-function typeColor(t: KilnType) {
-  if (t === 'bisque') return colors.clay;
-  if (t === 'glaze') return colors.moss;
+function rawKilnType(f: KilnFiringListItem) {
+  return f?.kiln_type || f?.firingType || f?.kilnType || '';
+}
+
+function typeColor(t: string) {
+  const k = (t || '').toLowerCase();
+  if (k === 'bisque') return colors.clay;
+  if (k === 'glaze') return colors.moss;
   return colors.inkMid;
 }
 
 function capitalizeType(t: string) {
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  const s = t || '';
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+function firingDateIso(f: KilnFiringListItem) {
+  return (
+    f.scheduledAt ?? f.scheduled_at ?? f.firedAt ?? f.fired_at ?? ''
+  );
+}
+
+function formatFiringDate(iso: string) {
+  const s = iso || '';
+  if (!s) return '';
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return s;
+  }
 }
 
 function parseFiringsResponse(data: unknown): KilnFiringListItem[] {
@@ -53,20 +86,6 @@ function parseFiringsResponse(data: unknown): KilnFiringListItem[] {
     return Array.isArray(f) ? f : [];
   }
   return [];
-}
-
-function formatFiringDate(iso: string) {
-  try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
 }
 
 export default function KilnListScreen({ route }: { route: Route }) {
@@ -101,12 +120,17 @@ export default function KilnListScreen({ route }: { route: Route }) {
   );
 
   const stats = useMemo(() => {
-    const open = firings.filter((f) => f.status === 'open').length;
+    const open = firings.filter(
+      (f) => (f.status || '').toLowerCase() === 'open'
+    ).length;
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();
     const thisMonth = firings.filter((f) => {
-      const d = new Date(f.firedAt);
+      const iso = firingDateIso(f);
+      if (!iso) return false;
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return false;
       return d.getFullYear() === y && d.getMonth() === m;
     }).length;
     return { total: firings.length, open, thisMonth };
@@ -125,7 +149,9 @@ export default function KilnListScreen({ route }: { route: Route }) {
       });
     }
     for (const f of firings) {
-      const d = new Date(f.firedAt);
+      const iso = firingDateIso(f);
+      if (!iso) continue;
+      const d = new Date(iso);
       if (Number.isNaN(d.getTime())) continue;
       const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const b = buckets.find((x) => x.key === k);
@@ -136,16 +162,20 @@ export default function KilnListScreen({ route }: { route: Route }) {
   }, [firings]);
 
   const openList = useMemo(
-    () => firings.filter((f) => f.status === 'open'),
+    () =>
+      firings.filter((f) => (f.status || '').toLowerCase() === 'open'),
     [firings]
   );
   const closedList = useMemo(
-    () => firings.filter((f) => f.status === 'closed'),
+    () =>
+      firings.filter((f) => (f.status || '').toLowerCase() === 'closed'),
     [firings]
   );
 
   function renderRow(f: KilnFiringListItem) {
-    const n = Array.isArray(f.items) ? f.items.length : 0;
+    const typeRaw = rawKilnType(f);
+    const n = f?.items?.length ?? 0;
+    const st = (f.status || '').toLowerCase();
     return (
       <TouchableOpacity
         key={f._id}
@@ -161,21 +191,23 @@ export default function KilnListScreen({ route }: { route: Route }) {
         <View
           style={[
             styles.typeDot,
-            { backgroundColor: typeColor(f.kilnType) },
+            { backgroundColor: typeColor(typeRaw) },
           ]}
         />
         <View style={styles.firingMid}>
           <View style={styles.firingTitleRow}>
             <Text style={styles.firingType}>
-              {capitalizeType(f.kilnType)}
+              {capitalizeType(typeRaw)}
             </Text>
             <Badge
-              label={f.status}
-              variant={f.status === 'open' ? 'open' : 'neutral'}
+              label={f.status || ''}
+              variant={st === 'open' ? 'open' : 'neutral'}
             />
           </View>
-          <Text style={styles.firingDate}>{formatFiringDate(f.firedAt)}</Text>
-          {f.status === 'closed' && f.totalCost != null ? (
+          <Text style={styles.firingDate}>
+            {formatFiringDate(firingDateIso(f))}
+          </Text>
+          {st === 'closed' && f.totalCost != null ? (
             <Text style={styles.firingCost}>
               €{Number(f.totalCost).toFixed(2)}
             </Text>
