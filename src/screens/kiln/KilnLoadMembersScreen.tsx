@@ -5,22 +5,21 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  Alert,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Badge, Button } from '../../components/ui';
+import { Avatar, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
-import type { KilnType } from './KilnListScreen';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'KilnLoadMembers'>;
 type Route = RouteProp<AppStackParamList, 'KilnLoadMembers'>;
 
-type MemberRow = {
+export type StudioMember = {
   userId: string;
   email?: string;
   name?: string;
@@ -30,77 +29,61 @@ type MemberRow = {
 type FiringItem = {
   userId?: string;
   weightKg?: number;
+  memberName?: string;
+  member_name?: string;
 };
 
-type FiringDetail = {
-  _id: string;
-  kilnType: KilnType;
-  firedAt?: string;
-  scheduledAt?: string;
-  status: string;
-  items?: FiringItem[];
-};
-
-function typeDot(c: string) {
-  const k = (c || '').toLowerCase();
-  if (k === 'bisque') return colors.clay;
-  if (k === 'glaze') return colors.moss;
-  return colors.inkMid;
-}
-
-function capitalizeType(t: string) {
-  const s = t || '';
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
-}
-
-function formatFiringDate(iso: string) {
-  const s = iso || '';
-  if (!s) return '';
-  try {
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return s;
-    return d.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  } catch {
-    return s;
-  }
-}
-
-function firstName(name: string) {
-  const s = (name || '').trim();
-  if (!s) return '';
-  const p = s.split(/\s+/)[0];
-  return p || s;
-}
-
-function memberDisplayLabel(m: MemberRow) {
+function memberDisplayLabel(m: StudioMember) {
   return (m?.name || m?.email || '').trim();
 }
 
+function itemMemberFallback(it: FiringItem | undefined) {
+  return (
+    it?.memberName?.trim() ||
+    it?.member_name?.trim() ||
+    'Member'
+  );
+}
+
+function extractItems(data: unknown): FiringItem[] {
+  if (!data || typeof data !== 'object') return [];
+  const o = data as Record<string, unknown>;
+  if (Array.isArray(o.items)) return o.items as FiringItem[];
+  if (
+    o.firing &&
+    typeof o.firing === 'object' &&
+    Array.isArray((o.firing as { items?: FiringItem[] }).items)
+  ) {
+    return (o.firing as { items: FiringItem[] }).items;
+  }
+  return [];
+}
+
 export default function KilnLoadMembersScreen({ route }: { route: Route }) {
-  const { tenantId, firingId, kilnType, scheduledAt } = route.params;
+  const { tenantId, firingId } = route.params;
   const navigation = useNavigation<Nav>();
 
-  const [members, setMembers] = useState<MemberRow[]>([]);
-  const [entries, setEntries] = useState<Record<string, string>>({});
+  const [members, setMembers] = useState<StudioMember[]>([]);
+  const [weightInputs, setWeightInputs] = useState<Record<string, string>>({});
+  const [items, setItems] = useState<FiringItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
+  const [mossInputIds, setMossInputIds] = useState<Record<string, boolean>>({});
 
   const load = useCallback(async () => {
     setLoadError('');
     setLoading(true);
     try {
-      const [memRes, fireRes] = await Promise.all([
-        apiFetch<{ members: MemberRow[] }>(
+      const [memRes, fireData] = await Promise.all([
+        apiFetch<{ members: StudioMember[] }>(
           `/studios/${tenantId}/members`,
           {},
           tenantId
         ),
-        apiFetch<FiringDetail>(
+        apiFetch<unknown>(
           `/studios/${tenantId}/kiln/firings/${firingId}`,
           {},
           tenantId
@@ -110,13 +93,19 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
         (m) => (m.status || '').toLowerCase() === 'active'
       );
       setMembers(active);
-      const next: Record<string, string> = {};
-      for (const it of fireRes.items ?? []) {
+      const nextItems = extractItems(fireData);
+      setItems(nextItems);
+
+      const nextInputs: Record<string, string> = {};
+      for (const m of active) {
+        nextInputs[m.userId] = '';
+      }
+      for (const it of nextItems) {
         if (it.userId != null && it.weightKg != null) {
-          next[it.userId] = String(it.weightKg);
+          nextInputs[it.userId] = String(it.weightKg);
         }
       }
-      setEntries(next);
+      setWeightInputs(nextInputs);
     } catch (e: unknown) {
       setLoadError(e instanceof Error ? e.message : 'Could not load data.');
     } finally {
@@ -124,38 +113,85 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
     }
   }, [tenantId, firingId]);
 
+  const refreshItems = useCallback(async () => {
+    const fireData = await apiFetch<unknown>(
+      `/studios/${tenantId}/kiln/firings/${firingId}`,
+      {},
+      tenantId
+    );
+    setItems(extractItems(fireData));
+  }, [tenantId, firingId]);
+
   useEffect(() => {
     load();
   }, [load]);
 
-  const totalKg = useMemo(() => {
+  const canSave = useMemo(() => {
+    return members.some((m) => {
+      const raw = (weightInputs[m.userId] ?? '').trim();
+      if (!raw) return false;
+      const n = parseFloat(raw.replace(',', '.'));
+      return Number.isFinite(n) && n > 0;
+    });
+  }, [members, weightInputs]);
+
+  const totalsByUser = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of items) {
+      const uid = it.userId;
+      if (!uid) continue;
+      map.set(uid, (map.get(uid) ?? 0) + (Number(it.weightKg) || 0));
+    }
+    return map;
+  }, [items]);
+
+  const sessionTotalRows = useMemo(() => {
+    const rows: { userId: string; kg: number; name: string }[] = [];
+    for (const [userId, kg] of totalsByUser.entries()) {
+      if (kg <= 0) continue;
+      const m = members.find((x) => x.userId === userId);
+      const sample = items.find((i) => i.userId === userId);
+      const name = m
+        ? memberDisplayLabel(m) || itemMemberFallback(sample)
+        : itemMemberFallback(sample);
+      rows.push({ userId, kg, name: name || 'Member' });
+    }
+    rows.sort((a, b) => a.name.localeCompare(b.name));
+    return rows;
+  }, [totalsByUser, members, items]);
+
+  const grandTotalKg = useMemo(() => {
     let s = 0;
-    for (const v of Object.values(entries)) {
-      const n = parseFloat(String(v).replace(',', '.'));
-      if (Number.isFinite(n)) s += n;
+    for (const it of items) {
+      s += Number(it.weightKg) || 0;
     }
     return s;
-  }, [entries]);
+  }, [items]);
 
   function setWeight(userId: string, text: string) {
-    setEntries((prev) => ({ ...prev, [userId]: text }));
+    setWeightInputs((prev) => ({ ...prev, [userId]: text }));
+    setSaveError('');
   }
 
-  async function saveWeights() {
+  async function saveWeight() {
+    if (!canSave) return;
     setSaving(true);
+    setSaveError('');
+    const pairs: { userId: string; w: number }[] = [];
+    for (const m of members) {
+      const raw = (weightInputs[m.userId] ?? '').trim();
+      if (!raw) continue;
+      const n = parseFloat(raw.replace(',', '.'));
+      if (!Number.isFinite(n) || n <= 0) continue;
+      pairs.push({ userId: m.userId, w: n });
+    }
+
+    const errors: string[] = [];
+    const savedIds: string[] = [];
+
     try {
-      const pairs: { userId: string; w: number }[] = [];
-      for (const m of members) {
-        const raw = (entries[m.userId] ?? '').trim();
-        if (!raw) continue;
-        const n = parseFloat(raw.replace(',', '.'));
-        if (!Number.isFinite(n) || n <= 0) continue;
-        pairs.push({ userId: m.userId, w: n });
-      }
-      if (pairs.length === 0) {
-        Alert.alert('Nothing to save', 'Enter at least one weight above zero.');
-      } else {
-        for (const { userId, w } of pairs) {
+      for (const { userId, w } of pairs) {
+        try {
           await apiFetch(
             `/studios/${tenantId}/kiln/firings/${firingId}/items`,
             {
@@ -164,24 +200,64 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
             },
             tenantId
           );
+          savedIds.push(userId);
+        } catch (e: unknown) {
+          const msg =
+            e instanceof Error ? e.message : 'Save failed for a member.';
+          errors.push(msg);
         }
-        Alert.alert('Weights saved', undefined, [
-          { text: 'Continue loading', style: 'cancel' },
-          {
-            text: 'Close session',
-            onPress: () =>
-              navigation.navigate('KilnDetail', { tenantId, firingId }),
-          },
-        ]);
-        await load();
       }
-    } catch (e: unknown) {
-      Alert.alert(
-        'Save failed',
-        e instanceof Error ? e.message : 'Please try again.'
-      );
+
+      try {
+        await refreshItems();
+      } catch (e: unknown) {
+        errors.push(
+          e instanceof Error ? e.message : 'Could not refresh firing.'
+        );
+      }
+
+      if (errors.length > 0) {
+        setSaveError(errors.join('\n'));
+      }
+
+      if (errors.length === 0 && savedIds.length > 0) {
+        const cleared: Record<string, string> = {};
+        for (const m of members) {
+          cleared[m.userId] = '';
+        }
+        setWeightInputs(cleared);
+        const flash: Record<string, boolean> = {};
+        for (const id of savedIds) {
+          flash[id] = true;
+        }
+        setMossInputIds(flash);
+        setTimeout(() => setMossInputIds({}), 1000);
+      }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCloseSession() {
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm('Close this session?')
+        : true;
+    if (!ok) return;
+    setClosing(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/kiln/firings/${firingId}/close`,
+        { method: 'POST' },
+        tenantId
+      );
+      navigation.navigate('KilnDetail', { tenantId, firingId });
+    } catch (e: unknown) {
+      setSaveError(
+        e instanceof Error ? e.message : 'Could not close session.'
+      );
+    } finally {
+      setClosing(false);
     }
   }
 
@@ -191,99 +267,107 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.headerCard}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.typeTitleRow}>
-              <View
-                style={[
-                  styles.headerDot,
-                  { backgroundColor: typeDot(kilnType || '') },
-                ]}
-              />
-              <Text style={styles.typeTitle}>
-                {capitalizeType(kilnType || '')}
-              </Text>
-            </View>
-            <Text style={styles.headerDate}>
-              {formatFiringDate(scheduledAt)}
-            </Text>
-          </View>
-          <Badge label="open" variant="open" />
-        </View>
-      </View>
-
       {loadError ? (
         <Text style={styles.errorBanner}>{loadError}</Text>
       ) : null}
 
-      <Text style={styles.sectionLabel}>MEMBER WEIGHTS (KG)</Text>
+      <SectionLabel>MEMBER WEIGHT KG</SectionLabel>
 
       {loading ? (
-        <Text style={styles.loadingHint}>Loading…</Text>
+        <View style={styles.loadingRow}>
+          <ActivityIndicator color={colors.clay} />
+        </View>
       ) : (
-        members.map((m) => {
-          const val = entries[m.userId] ?? '';
-          const has = val.trim().length > 0;
-          const labelBase = memberDisplayLabel(m);
-          const displayName = firstName(labelBase);
-          const avatarName = labelBase;
+        members.map((m, idx) => {
+          const val = weightInputs[m.userId] ?? '';
+          const label = memberDisplayLabel(m) || m.email || '';
+          const mossBorder = mossInputIds[m.userId];
+          const isLastMember = idx === members.length - 1;
           return (
             <View
               key={m.userId}
               style={[
-                styles.weightRow,
-                has && { backgroundColor: colors.cream },
+                styles.memberRow,
+                !isLastMember && styles.memberRowBorder,
               ]}
             >
-              <Avatar name={avatarName} size="sm" />
+              <Avatar name={label || '?'} size="sm" />
               <Text style={styles.memberName} numberOfLines={1}>
-                {displayName}
+                {label || 'Member'}
               </Text>
-              <TextInput
-                value={val}
-                onChangeText={(t) => setWeight(m.userId, t)}
-                keyboardType="decimal-pad"
-                placeholder="0.0"
-                placeholderTextColor={colors.inkFaint}
-                style={[
-                  styles.weightInput,
-                  {
-                    borderBottomColor: has ? colors.clay : colors.border,
-                  },
-                ]}
-              />
-              <Text style={styles.kgLabel}>kg</Text>
+              <View style={styles.inputKgRow}>
+                <TextInput
+                  value={val}
+                  onChangeText={(t) => setWeight(m.userId, t)}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.inkFaint}
+                  style={[
+                    styles.weightInput,
+                    {
+                      borderColor: mossBorder ? colors.moss : colors.clay,
+                    },
+                  ]}
+                />
+                <Text style={styles.kgSuffix}>kg</Text>
+              </View>
             </View>
           );
         })
       )}
 
-      <View style={styles.totalBox}>
-        <View style={styles.totalInner}>
-          <Text style={styles.totalLabel}>TOTAL</Text>
-          <Text style={styles.totalValue}>
-            {totalKg.toFixed(1)} kg
-          </Text>
-        </View>
-      </View>
+      {saveError ? <View style={styles.errorBox}><Text style={styles.errorBoxText}>{saveError}</Text></View> : null}
 
       <Button
-        label="Save weights"
+        label="Save weight"
         variant="primary"
-        onPress={saveWeights}
+        onPress={() => void saveWeight()}
         loading={saving}
+        disabled={!canSave}
         fullWidth
+        style={styles.saveButton}
       />
 
+      {items.length > 0 ? (
+        <>
+          <View style={styles.sectionSpacer} />
+          <SectionLabel>SESSION TOTALS</SectionLabel>
+          {sessionTotalRows.map((row, idx) => (
+            <View
+              key={row.userId}
+              style={[
+                styles.totalMemberRow,
+                idx < sessionTotalRows.length - 1 && styles.memberRowBorder,
+              ]}
+            >
+              <Text style={styles.sessionMemberName} numberOfLines={1}>
+                {row.name}
+              </Text>
+              <Text style={styles.sessionMemberKg}>
+                {row.kg.toFixed(1)} kg total
+              </Text>
+            </View>
+          ))}
+          <View style={styles.grandTotal}>
+            <Text style={styles.grandTotalLabel}>Total</Text>
+            <Text style={styles.grandTotalValue}>
+              {grandTotalKg.toFixed(1)} kg
+            </Text>
+          </View>
+        </>
+      ) : null}
+
       <TouchableOpacity
-        style={styles.ghostOuter}
-        onPress={() =>
-          navigation.navigate('KilnDetail', { tenantId, firingId })
-        }
+        style={styles.closeGhost}
+        onPress={() => void handleCloseSession()}
+        disabled={closing}
         accessibilityRole="button"
       >
-        <Text style={styles.ghostText}>Close session now →</Text>
+        {closing ? (
+          <ActivityIndicator color={colors.moss} />
+        ) : (
+          <Text style={styles.closeGhostText}>Close session</Text>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -292,40 +376,9 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing[5], paddingBottom: spacing[10] },
-  headerCard: {
-    backgroundColor: colors.cream,
-    borderRadius: radius.md,
-    padding: 14,
-    marginBottom: spacing[5],
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing[3],
-  },
-  headerDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: spacing[2],
-  },
-  typeTitleRow: {
-    flexDirection: 'row',
+  loadingRow: {
+    paddingVertical: spacing[4],
     alignItems: 'center',
-  },
-  typeTitle: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.md,
-    color: colors.ink,
-  },
-  headerDate: {
-    fontFamily: typography.mono,
-    fontSize: 11,
-    color: colors.inkLight,
-    marginTop: 4,
   },
   errorBanner: {
     fontFamily: typography.body,
@@ -333,83 +386,120 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginBottom: spacing[3],
   },
-  sectionLabel: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: spacing[2],
-  },
-  loadingHint: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-    marginBottom: spacing[3],
-  },
-  weightRow: {
+  memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderRadius: radius.sm,
-    marginBottom: 6,
+    paddingVertical: 12,
+  },
+  memberRowBorder: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
   memberName: {
     flex: 1,
     marginLeft: 10,
     fontFamily: typography.bodyMedium,
-    fontSize: 13,
+    fontSize: fontSize.md,
     color: colors.ink,
   },
+  inputKgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   weightInput: {
-    width: 72,
+    width: 120,
+    minWidth: 120,
+    height: 48,
+    fontSize: 20,
     textAlign: 'right',
     fontFamily: typography.mono,
-    fontSize: 14,
     color: colors.clayDark,
-    borderBottomWidth: 1,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceRaised,
   },
-  kgLabel: {
+  kgSuffix: {
     fontFamily: typography.mono,
-    fontSize: 11,
+    fontSize: fontSize.sm,
     color: colors.inkLight,
-    marginLeft: 4,
+    marginLeft: 6,
   },
-  totalBox: {
-    marginTop: spacing[4],
-    marginBottom: spacing[6],
-  },
-  totalInner: {
-    backgroundColor: colors.mossLight,
-    borderRadius: radius.md,
+  errorBox: {
+    marginTop: spacing[3],
     padding: spacing[3],
+    borderRadius: radius.sm,
+    backgroundColor: colors.errorLight,
+    borderWidth: 0.5,
+    borderColor: colors.error,
+  },
+  errorBoxText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+  },
+  saveButton: {
+    marginTop: spacing[4],
+    height: 48,
+    minHeight: 48,
+  },
+  sectionSpacer: {
+    height: spacing[6],
+  },
+  totalMemberRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 10,
+    gap: spacing[2],
   },
-  totalLabel: {
+  sessionMemberName: {
+    flex: 1,
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkMid,
+  },
+  sessionMemberKg: {
+    fontFamily: typography.mono,
+    fontSize: 13,
+    color: colors.mossDark,
+  },
+  grandTotal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.md,
+    padding: 12,
+    marginTop: 8,
+  },
+  grandTotalLabel: {
     fontFamily: typography.mono,
     fontSize: 11,
     color: colors.inkLight,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-  totalValue: {
+  grandTotalValue: {
     fontFamily: typography.monoMedium,
     fontSize: 14,
     color: colors.mossDark,
+    fontWeight: '500',
   },
-  ghostOuter: {
-    marginTop: spacing[3],
-    paddingVertical: 11,
+  closeGhost: {
+    marginTop: spacing[6],
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.moss,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    backgroundColor: 'transparent',
   },
-  ghostText: {
+  closeGhostText: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
-    color: colors.clay,
+    color: colors.moss,
   },
 });
