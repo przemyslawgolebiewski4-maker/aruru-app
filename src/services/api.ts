@@ -53,8 +53,9 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const token = await getToken();
 
+  const hasBody = options.body != null;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
   };

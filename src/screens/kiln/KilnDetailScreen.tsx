@@ -136,7 +136,8 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   const { studios } = useAuth();
 
   const studioRole = studios.find((s) => s.tenantId === tenantId)?.role;
-  const isOwner = studioRole === 'owner';
+  const canManageSession =
+    studioRole === 'owner' || studioRole === 'assistant';
 
   const [firing, setFiring] = useState<KilnFiringDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -231,7 +232,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       setLoading(true);
       await apiFetch(
         `/studios/${tenantId}/kiln/firings/${firingId}/reopen`,
-        { method: 'POST', body: JSON.stringify({}) },
+        { method: 'POST' },
         tenantId
       );
       await loadFiring();
@@ -344,17 +345,19 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
               fullWidth
             />
           </View>
-          <TouchableOpacity
-            style={styles.closeGhost}
-            onPress={confirmClose}
-            disabled={loading}
-          >
-            <Text style={styles.closeGhostText}>Close session</Text>
-          </TouchableOpacity>
+          {canManageSession ? (
+            <TouchableOpacity
+              style={styles.closeGhost}
+              onPress={confirmClose}
+              disabled={loading}
+            >
+              <Text style={styles.closeGhostText}>Close session</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       ) : null}
 
-      {isClosed && isOwner ? (
+      {isClosed && canManageSession ? (
         <TouchableOpacity
           style={styles.reopenBtn}
           onPress={confirmReopen}
