@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Aruru",
+    "slug": "aruru",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FDFAF6"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.lelekstudio.aruru"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FDFAF6"
+      },
+      "package": "com.lelekstudio.aruru"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiUrl": "https://aruru-production.up.railway.app"
+    }
+  }
+}

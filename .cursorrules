@@ -1,0 +1,23 @@
+This is Aruru — multi-tenant SaaS for ceramic studios.
+Named after the Sumerian goddess Aruru, she who shaped life from clay.
+
+NEVER confuse with Calmi Experiments (different project, different repo).
+
+Stack: FastAPI + MongoDB Atlas + React Native (Expo) + Vercel
+Auth: JWT with { user_id, tenant_id, role }
+Roles per studio: owner | assistant | member (NOT per user)
+DB: MongoDB Atlas Frankfurt (eu-central-1)
+GitHub org: przemyslawgolebiewski4-maker
+Repos: aruru-app (this) | aruru-backend (FastAPI)
+
+Design: src/theme/tokens.ts — always use tokens, never hardcode colours
+Colors: clay #C4714A · moss #4A5E3A · cream #F7F3ED · ink #1E1A16
+Fonts: DM Serif Display + Instrument Sans + DM Mono
+UI: neurodivergent-friendly — calm, predictable, 0.5px borders
+
+Key rule: users are GLOBAL (one email = one account everywhere).
+Role lives in studio_members collection, not in users.
+Every DB query must include tenant_id filter — enforced by middleware.
+
+Current sprint: Sprint 1 — auth + tenant + role foundation
+Active repo: aruru-backend (FastAPI, to be created)
