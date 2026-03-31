@@ -19,6 +19,9 @@ import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
 import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
+import MembersScreen from '../screens/members/MembersScreen';
+import InviteMemberScreen from '../screens/members/InviteMemberScreen';
+import MemberProfileScreen from '../screens/members/MemberProfileScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -102,6 +105,33 @@ function AppNavigator() {
           title: 'Pricing',
           ...appModalHeaderOptions,
         }}
+      />
+      <AppStack.Screen
+        name="Members"
+        component={MembersScreen}
+        options={{
+          headerShown: true,
+          title: 'Members',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="InviteMember"
+        component={InviteMemberScreen}
+        options={{
+          headerShown: true,
+          title: 'Invite member',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="MemberProfile"
+        component={MemberProfileScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params.memberName,
+          ...appModalHeaderOptions,
+        })}
       />
     </AppStack.Navigator>
   );

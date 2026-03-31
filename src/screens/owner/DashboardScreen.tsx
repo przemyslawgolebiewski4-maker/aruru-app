@@ -5,9 +5,11 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import {
   StatCard,
@@ -18,7 +20,7 @@ import {
   Button,
 } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import type { MainTabParamList } from '../../navigation/types';
+import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
 type FiringRow = { id: string; title: string; meta: string; status: 'open' | 'closed' };
 type TaskRow = {
@@ -38,8 +40,28 @@ export default function DashboardScreen() {
   const greeting =
     hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  const primaryStudio = studios[0];
-  const studioLabel = primaryStudio?.studioName?.trim() || 'Your studio';
+  const currentStudio = studios[0];
+  const studioLabel = currentStudio?.studioName?.trim() || 'Your studio';
+  const tenantId = currentStudio?.tenantId;
+  const canManageMembers =
+    currentStudio?.role === 'owner' && currentStudio?.status === 'active';
+
+  function goMembers() {
+    if (!canManageMembers) {
+      Alert.alert(
+        'Members',
+        'Only studio owners can manage members.'
+      );
+      return;
+    }
+    if (!tenantId) {
+      Alert.alert('Members', 'Create or join a studio first.');
+      return;
+    }
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('Members', { tenantId });
+  }
 
   const members = 0;
   const firings: FiringRow[] = [];
@@ -143,9 +165,9 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.actionHalf}>
           <Button
-            label="Add member"
+            label="Members"
             variant="ghost"
-            onPress={() => {}}
+            onPress={goMembers}
             fullWidth
             style={styles.actionBtn}
           />

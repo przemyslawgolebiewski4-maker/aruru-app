@@ -17,4 +17,14 @@ export type AppStackParamList = {
   EditProfile: undefined;
   CreateStudio: undefined;
   SetupPricing: { tenantId: string; studioName: string };
+  Members: { tenantId: string };
+  InviteMember: { tenantId: string };
+  MemberProfile: {
+    tenantId: string;
+    userId: string;
+    memberName: string;
+    memberEmail: string;
+    role: 'owner' | 'assistant' | 'member';
+    status: 'active' | 'invited' | 'suspended';
+  };
 };
