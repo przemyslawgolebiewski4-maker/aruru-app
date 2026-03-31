@@ -118,12 +118,9 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   const [firing, setFiring] = useState<KilnFiringDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [closing, setClosing] = useState(false);
-  const [reopening, setReopening] = useState(false);
 
-  const load = useCallback(async () => {
+  const loadFiring = useCallback(async () => {
     setError('');
-    setLoading(true);
     try {
       const data = await apiFetch<unknown>(
         `/studios/${tenantId}/kiln/firings/${firingId}`,
@@ -136,10 +133,17 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load firing.');
       setFiring(null);
+    }
+  }, [tenantId, firingId]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      await loadFiring();
     } finally {
       setLoading(false);
     }
-  }, [tenantId, firingId]);
+  }, [loadFiring]);
 
   useFocusEffect(
     useCallback(() => {
@@ -171,22 +175,19 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     });
   }
 
-  async function closeSession() {
-    setClosing(true);
+  async function handleClose() {
     try {
+      setLoading(true);
       await apiFetch(
         `/studios/${tenantId}/kiln/firings/${firingId}/close`,
-        { method: 'POST' },
+        { method: 'POST', body: JSON.stringify({}) },
         tenantId
       );
-      await load();
+      await loadFiring();
     } catch (e: unknown) {
-      Alert.alert(
-        'Could not close',
-        e instanceof Error ? e.message : 'Please try again.'
-      );
+      setError(e instanceof Error ? e.message : 'Failed to close session');
     } finally {
-      setClosing(false);
+      setLoading(false);
     }
   }
 
@@ -196,27 +197,24 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       'Costs will be calculated and added to member summaries.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Close session', onPress: closeSession },
+        { text: 'Close session', onPress: handleClose },
       ]
     );
   }
 
-  async function reopenSession() {
-    setReopening(true);
+  async function handleReopen() {
     try {
+      setLoading(true);
       await apiFetch(
         `/studios/${tenantId}/kiln/firings/${firingId}/reopen`,
-        { method: 'POST' },
+        { method: 'POST', body: JSON.stringify({}) },
         tenantId
       );
-      await load();
+      await loadFiring();
     } catch (e: unknown) {
-      Alert.alert(
-        'Could not reopen',
-        e instanceof Error ? e.message : 'Please try again.'
-      );
+      setError(e instanceof Error ? e.message : 'Failed to reopen session');
     } finally {
-      setReopening(false);
+      setLoading(false);
     }
   }
 
@@ -226,7 +224,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       'The firing will be marked open again.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reopen', onPress: reopenSession },
+        { text: 'Reopen', onPress: handleReopen },
       ]
     );
   }
@@ -324,11 +322,9 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
           <TouchableOpacity
             style={styles.closeGhost}
             onPress={confirmClose}
-            disabled={closing}
+            disabled={loading}
           >
-            <Text style={styles.closeGhostText}>
-              {closing ? 'Closing…' : 'Close session'}
-            </Text>
+            <Text style={styles.closeGhostText}>Close session</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -337,11 +333,9 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
         <TouchableOpacity
           style={styles.reopenBtn}
           onPress={confirmReopen}
-          disabled={reopening}
+          disabled={loading}
         >
-          <Text style={styles.reopenText}>
-            {reopening ? 'Reopening…' : 'Reopen session'}
-          </Text>
+          <Text style={styles.reopenText}>Reopen session</Text>
         </TouchableOpacity>
       ) : null}
 
