@@ -225,7 +225,9 @@ export default function TaskListScreen({ route }: { route: Route }) {
       .map((key) => ({
         key,
         label: labels[key],
-        items: filteredTasks.filter((t) => normStatus(t) === key),
+        items: filteredTasks.filter(
+          (t) => normStatus(t) === key && taskId(t) !== ''
+        ),
       }))
       .filter((s) => s.items.length > 0);
   }, [filteredTasks]);

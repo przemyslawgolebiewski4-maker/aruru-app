@@ -187,7 +187,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
           tenantId
         );
         t = extractTask(raw);
-        if (!t && raw && typeof raw === 'object' && ('_id' in raw || 'id' in raw)) {
+        if (!t && raw && typeof raw === 'object' && 'id' in raw) {
           t = raw as Task;
         }
       } catch {
@@ -239,21 +239,22 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
 
   const assigneeName = useMemo(() => {
     if (!task) return '';
-    const n = (task.assignee_name ?? task.assigneeName ?? '').trim();
+    const n = (task.assigneeName ?? '').trim();
     if (n) return n;
-    return nameByUserId.get(assignedIdLocal(task)) ?? '—';
+    const uid = assigneeUserIdOf(task);
+    return uid ? nameByUserId.get(uid) ?? uid : '—';
   }, [task, nameByUserId]);
 
   const creatorName = useMemo(() => {
     if (!task) return '';
-    const n = (task.creator_name ?? task.creatorName ?? '').trim();
+    const n = (task.creatorName ?? '').trim();
     if (n) return n;
     const uid = createdById(task);
     return uid ? nameByUserId.get(uid) ?? uid : '—';
   }, [task, nameByUserId]);
 
-  const due = task ? dueStrLocal(task) : '';
-  const overdue = isOverdueDueStr(due);
+  const due = task ? formatDueAtDisplay(task.dueAt ?? undefined) : '';
+  const overdue = task ? isOverdueDueAtDate(task.dueAt ?? undefined) : false;
   const currentStatus = task ? normStatusLocal(task) : 'todo';
 
   const totalLogged = useMemo(() => {
@@ -291,6 +292,12 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
       setLogError('Enter hours greater than 0.');
       return;
     }
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm('Log these hours on this task?')
+        : true;
+    if (!ok) return;
+
     setLogging(true);
     setLogError('');
     try {
@@ -298,7 +305,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
         `/studios/${tenantId}/tasks/${routeTaskId}/logs`,
         {
           method: 'POST',
-          body: JSON.stringify({ hours: n, date: todayYmd() }),
+          body: JSON.stringify({ hours: n }),
         },
         tenantId
       );
@@ -316,11 +323,8 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     }
   }
 
-  function logAuthorName(l: HourLog): string {
-    const n = (l.user_name ?? l.userName ?? '').trim();
-    if (n) return n;
-    const uid = (l.logged_by ?? l.loggedBy ?? '').trim();
-    return uid ? nameByUserId.get(uid) ?? uid : '—';
+  function logDisplayName(l: HourLog): string {
+    return (l.userName ?? '').trim() || '—';
   }
 
   if (loading) {
@@ -371,7 +375,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
 
       <SectionLabel>STATUS</SectionLabel>
       {isStaff ? (
-        <View style={styles.statusRow}>
+        <View style={[styles.statusRow, styles.statusRowWrap]}>
           {STATUS_OPTS.map((opt) => {
             const sel = currentStatus === opt.key;
             return (
@@ -448,17 +452,24 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
           {logs.map((l, idx) => {
             const h = Number(l.hours);
             const dateStr = l.date ?? '—';
+            const who = logDisplayName(l);
             return (
               <View
-                key={`${dateStr}-${idx}`}
+                key={l.id ?? `${dateStr}-${idx}`}
                 style={[
                   styles.logRow,
                   idx < logs.length - 1 && styles.logRowBorder,
                 ]}
               >
-                <View>
-                  <Text style={styles.logDate}>{dateStr}</Text>
-                  <Text style={styles.logBy}>{logAuthorName(l)}</Text>
+                <View style={styles.logLeft}>
+                  <Text style={styles.logLine}>
+                    {who} · {dateStr}
+                  </Text>
+                  {l.note ? (
+                    <Text style={styles.logNote} numberOfLines={2}>
+                      {l.note}
+                    </Text>
+                  ) : null}
                 </View>
                 <Text style={styles.logH}>
                   {Number.isFinite(h) ? `${h}h` : '—'}
@@ -530,8 +541,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusRow: { flexDirection: 'row', gap: 8, marginBottom: spacing[2] },
+  statusRowWrap: { flexWrap: 'wrap' },
   statusBtn: {
-    flex: 1,
+    minWidth: '22%',
+    flexGrow: 1,
+    flexBasis: '22%',
     paddingVertical: 10,
     borderWidth: 0.5,
     borderColor: colors.border,
@@ -616,16 +630,27 @@ const styles = StyleSheet.create({
   },
   logRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 10,
+    gap: spacing[2],
   },
   logRowBorder: {
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
   },
-  logDate: { fontFamily: typography.mono, fontSize: 11, color: colors.inkLight },
-  logBy: { fontFamily: typography.mono, fontSize: 11, color: colors.inkLight },
+  logLeft: { flex: 1 },
+  logLine: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.inkLight,
+  },
+  logNote: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkMid,
+    marginTop: 4,
+  },
   logH: { fontFamily: typography.mono, fontSize: 13, color: colors.clayDark },
   logEmpty: {
     fontFamily: typography.body,
