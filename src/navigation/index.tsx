@@ -15,12 +15,13 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
-import DashboardScreen from '../screens/owner/DashboardScreen';
+import { MainTabNavigator } from './MainTabs';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const ONBOARDING_KEY = 'aruru_onboarding_done';
 
-export type { AuthStackParamList, AppStackParamList } from './types';
+export type { AuthStackParamList, AppStackParamList, MainTabParamList } from './types';
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
@@ -55,7 +56,23 @@ function AppNavigator() {
         contentStyle: { backgroundColor: colors.surface },
       }}
     >
-      <AppStack.Screen name="Dashboard" component={DashboardScreen} />
+      <AppStack.Screen name="Main" component={MainTabNavigator} />
+      <AppStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{
+          headerShown: true,
+          title: 'Edit profile',
+          headerTintColor: colors.ink,
+          headerStyle: { backgroundColor: colors.surface },
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            fontFamily: typography.bodyMedium,
+            fontSize: fontSize.md,
+            color: colors.ink,
+          },
+        }}
+      />
     </AppStack.Navigator>
   );
 }
