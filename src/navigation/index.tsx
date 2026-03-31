@@ -22,6 +22,10 @@ import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import MembersScreen from '../screens/members/MembersScreen';
 import InviteMemberScreen from '../screens/members/InviteMemberScreen';
 import MemberProfileScreen from '../screens/members/MemberProfileScreen';
+import KilnListScreen from '../screens/kiln/KilnListScreen';
+import KilnNewSessionScreen from '../screens/kiln/KilnNewSessionScreen';
+import KilnLoadMembersScreen from '../screens/kiln/KilnLoadMembersScreen';
+import KilnDetailScreen from '../screens/kiln/KilnDetailScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -132,6 +136,42 @@ function AppNavigator() {
           title: route.params.memberName,
           ...appModalHeaderOptions,
         })}
+      />
+      <AppStack.Screen
+        name="KilnList"
+        component={KilnListScreen}
+        options={{
+          headerShown: true,
+          title: 'Kiln firings',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="KilnNewSession"
+        component={KilnNewSessionScreen}
+        options={{
+          headerShown: true,
+          title: 'New firing',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="KilnLoadMembers"
+        component={KilnLoadMembersScreen}
+        options={{
+          headerShown: true,
+          title: 'Load kiln',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="KilnDetail"
+        component={KilnDetailScreen}
+        options={{
+          headerShown: true,
+          title: 'Firing detail',
+          ...appModalHeaderOptions,
+        }}
       />
     </AppStack.Navigator>
   );

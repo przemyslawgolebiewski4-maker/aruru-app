@@ -27,4 +27,13 @@ export type AppStackParamList = {
     role: 'owner' | 'assistant' | 'member';
     status: 'active' | 'invited' | 'suspended';
   };
+  KilnList: { tenantId: string };
+  KilnNewSession: { tenantId: string };
+  KilnLoadMembers: {
+    tenantId: string;
+    firingId: string;
+    kilnType: 'bisque' | 'glaze' | 'private';
+    firedAt: string;
+  };
+  KilnDetail: { tenantId: string; firingId: string };
 };

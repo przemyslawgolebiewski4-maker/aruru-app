@@ -45,6 +45,27 @@ export default function DashboardScreen() {
   const tenantId = currentStudio?.tenantId;
   const canManageMembers =
     currentStudio?.role === 'owner' && currentStudio?.status === 'active';
+  const canManageKiln =
+    (currentStudio?.role === 'owner' ||
+      currentStudio?.role === 'assistant') &&
+    currentStudio?.status === 'active';
+
+  function goKilnList() {
+    if (!canManageKiln) {
+      Alert.alert(
+        'Kiln firings',
+        'Only studio owners and assistants can manage firings.'
+      );
+      return;
+    }
+    if (!tenantId) {
+      Alert.alert('Kiln firings', 'Create or join a studio first.');
+      return;
+    }
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('KilnList', { tenantId });
+  }
 
   function goMembers() {
     if (!canManageMembers) {
@@ -158,7 +179,7 @@ export default function DashboardScreen() {
           <Button
             label="New firing"
             variant="ghost"
-            onPress={() => {}}
+            onPress={goKilnList}
             fullWidth
             style={styles.actionBtn}
           />
