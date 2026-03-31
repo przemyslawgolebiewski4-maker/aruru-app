@@ -62,15 +62,19 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
     }
     setLoading(true);
     try {
+      const kilnTypeBody: 'bisque' | 'glaze' | 'private' = kilnType;
+      const firedAtBody = firedAt.trim();
+      const body = {
+        kilnType: kilnTypeBody,
+        firedAt: firedAtBody,
+        notes: notes.trim(),
+      };
+
       const res = await apiFetch<{ _id: string } & Record<string, unknown>>(
         `/studios/${tenantId}/kiln/firings`,
         {
           method: 'POST',
-          body: JSON.stringify({
-            kilnType,
-            firedAt: firedAt.trim(),
-            notes: notes.trim() || undefined,
-          }),
+          body: JSON.stringify(body),
         },
         tenantId
       );
@@ -79,11 +83,15 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
       navigation.replace('KilnLoadMembers', {
         tenantId,
         firingId: id,
-        kilnType,
-        firedAt: firedAt.trim(),
+        kilnType: kilnTypeBody,
+        firedAt: firedAtBody,
       });
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not open session.');
+      if (e instanceof Error) {
+        setError(e.message);
+      } else {
+        setError('Failed to create firing session. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
