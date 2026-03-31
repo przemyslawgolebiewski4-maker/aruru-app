@@ -20,27 +20,21 @@ import { useAuth } from '../../hooks/useAuth';
 type Nav = NativeStackNavigationProp<AppStackParamList, 'TaskList'>;
 type Route = RouteProp<AppStackParamList, 'TaskList'>;
 
-type TaskStatus = 'todo' | 'in_progress' | 'done';
+type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
+/** Matches backend tasks API (tasks.py). */
 export type Task = {
-  _id?: string;
   id?: string;
   title?: string;
-  status?: string;
-  assignedTo?: string;
-  assigned_to?: string;
+  status?: 'todo' | 'in_progress' | 'done' | 'cancelled' | string;
+  assigneeUserId?: string | null;
   assigneeName?: string;
-  assignee_name?: string;
-  dueDate?: string;
-  due_date?: string;
-  hoursLogged?: number;
-  hours_logged?: number;
-  totalHours?: number;
-  total_hours?: number;
+  dueAt?: string | null;
   createdBy?: string;
-  created_by?: string;
   creatorName?: string;
-  creator_name?: string;
+  priority?: 'low' | 'normal' | 'high' | string;
+  totalHours?: number;
+  hoursLogged?: number;
 };
 
 type StaffMember = {
@@ -54,33 +48,63 @@ type StaffMember = {
 type TabKey = 'all' | 'mine' | 'done';
 
 function parseTasks(data: unknown): Task[] {
-  if (Array.isArray(data)) return data as Task[];
   if (data && typeof data === 'object' && 'tasks' in data) {
     const t = (data as { tasks?: Task[] }).tasks;
     return Array.isArray(t) ? t : [];
   }
+  if (Array.isArray(data)) return data as Task[];
   return [];
 }
 
 function taskId(t: Task): string {
-  return String(t._id ?? t.id ?? '');
+  return String(t.id ?? '').trim();
 }
 
-function assignedId(t: Task): string {
-  return (t.assigned_to ?? t.assignedTo ?? '').trim();
+function assigneeUserIdOf(t: Task): string {
+  return (t.assigneeUserId ?? '').toString().trim();
 }
 
-function dueStr(t: Task): string {
-  return (t.due_date ?? t.dueDate ?? '').trim();
+function formatDueAtShort(dueAt: string | null | undefined): string {
+  if (dueAt == null || dueAt === '') return '';
+  try {
+    const d = new Date(dueAt);
+    if (Number.isNaN(d.getTime())) return String(dueAt);
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return String(dueAt);
+  }
+}
+
+function isOverdueDueAtDate(dueAt: string | null | undefined): boolean {
+  if (dueAt == null || dueAt === '') return false;
+  const d = new Date(dueAt);
+  if (Number.isNaN(d.getTime())) return false;
+  const dueMid = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate()
+  ).getTime();
+  const now = new Date();
+  const todayMid = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
+  return dueMid < todayMid;
 }
 
 function hoursOnTask(t: Task): number {
-  const h = t.hours_logged ?? t.hoursLogged ?? t.total_hours ?? t.totalHours;
+  const h = t.hoursLogged ?? t.totalHours;
   return typeof h === 'number' && Number.isFinite(h) ? h : 0;
 }
 
 function normStatus(t: Task): TaskStatus {
   const raw = (t.status ?? 'todo').toString().toLowerCase().replace(/\s+/g, '_');
+  if (raw === 'cancelled' || raw === 'canceled') return 'cancelled';
   if (raw === 'done' || raw === 'complete' || raw === 'completed') return 'done';
   if (raw === 'in_progress' || raw === 'inprogress') return 'in_progress';
   return 'todo';
@@ -90,19 +114,6 @@ function firstName(label: string) {
   const s = label.trim();
   if (!s) return '?';
   return s.split(/\s+/)[0] ?? s;
-}
-
-function todayYmd() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function isOverdueDueStr(ymd: string): boolean {
-  if (!ymd) return false;
-  return ymd < todayYmd();
 }
 
 export default function TaskListScreen({ route }: { route: Route }) {
@@ -120,7 +131,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
   const [tab, setTab] = useState<TabKey>('all');
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueAtInput, setDueAtInput] = useState('');
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -198,16 +209,17 @@ export default function TaskListScreen({ route }: { route: Route }) {
     let list = tasks;
     if (tab === 'done') list = list.filter((t) => normStatus(t) === 'done');
     else if (tab === 'mine' && user?.id)
-      list = list.filter((t) => assignedId(t) === user.id);
+      list = list.filter((t) => assigneeUserIdOf(t) === user.id);
     return list;
   }, [tasks, tab, user?.id]);
 
   const sections = useMemo(() => {
-    const order: TaskStatus[] = ['in_progress', 'todo', 'done'];
+    const order: TaskStatus[] = ['in_progress', 'todo', 'done', 'cancelled'];
     const labels: Record<TaskStatus, string> = {
       in_progress: 'IN PROGRESS',
       todo: 'TO DO',
       done: 'DONE',
+      cancelled: 'CANCELLED',
     };
     return order
       .map((key) => ({
@@ -219,9 +231,10 @@ export default function TaskListScreen({ route }: { route: Route }) {
   }, [filteredTasks]);
 
   function assigneeLabelForTask(t: Task): string {
-    const name = (t.assignee_name ?? t.assigneeName ?? '').trim();
+    const name = (t.assigneeName ?? '').trim();
     if (name) return name;
-    const uid = assignedId(t);
+    const uid = assigneeUserIdOf(t);
+    if (!uid) return 'Unassigned';
     const m = members.find((x) => x.userId === uid);
     return m ? (m.name || m.email || 'Member').trim() : 'Unassigned';
   }
@@ -238,18 +251,24 @@ export default function TaskListScreen({ route }: { route: Route }) {
     setCreating(true);
     setCreateError('');
     try {
-      const body: { title: string; assignedTo: string; dueDate?: string } = {
-        title: t,
-        assignedTo: selectedAssignee,
-      };
-      if (dueDate.trim()) body.dueDate = dueDate.trim();
+      const body: {
+        title: string;
+        assigneeUserId?: string;
+        dueAt?: string;
+        priority?: string;
+      } = { title: t };
+      if (selectedAssignee) body.assigneeUserId = selectedAssignee;
+      if (dueAtInput.trim()) {
+        const raw = dueAtInput.trim();
+        body.dueAt = raw.includes('T') ? raw : `${raw}T00:00:00`;
+      }
       await apiFetch(
         `/studios/${tenantId}/tasks`,
         { method: 'POST', body: JSON.stringify(body) },
         tenantId
       );
       setTitle('');
-      setDueDate('');
+      setDueAtInput('');
       setShowForm(false);
       await load();
     } catch (e: unknown) {
@@ -262,6 +281,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
   function dotColor(st: TaskStatus) {
     if (st === 'done') return colors.moss;
     if (st === 'in_progress') return colors.clay;
+    if (st === 'cancelled') return colors.inkMid;
     return colors.inkLight;
   }
 
@@ -343,9 +363,9 @@ export default function TaskListScreen({ route }: { route: Route }) {
             })}
           </ScrollView>
           <TextInput
-            value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="YYYY-MM-DD"
+            value={dueAtInput}
+            onChangeText={setDueAtInput}
+            placeholder="YYYY-MM-DD (optional)"
             placeholderTextColor={colors.inkFaint}
             style={styles.dueInput}
           />
@@ -391,13 +411,14 @@ export default function TaskListScreen({ route }: { route: Route }) {
             {sec.items.map((t) => {
               const id = taskId(t);
               const st = normStatus(t);
-              const due = dueStr(t);
-              const overdue = isOverdueDueStr(due);
+              const dueLabel = formatDueAtShort(t.dueAt ?? undefined);
+              const overdue = isOverdueDueAtDate(t.dueAt ?? undefined);
               const h = hoursOnTask(t);
               const titleText = (t.title ?? 'Untitled').trim();
+              if (!id) return null;
               return (
                 <TouchableOpacity
-                  key={id || titleText}
+                  key={id}
                   style={styles.taskRow}
                   onPress={() =>
                     navigation.navigate('TaskDetail', {
@@ -417,12 +438,12 @@ export default function TaskListScreen({ route }: { route: Route }) {
                     </Text>
                     <Text style={styles.taskMeta}>
                       Assigned to {assigneeLabelForTask(t)}
-                      {due ? (
+                      {dueLabel ? (
                         <>
                           {' '}
                           · Due:{' '}
                           <Text style={overdue ? styles.dueOverdue : undefined}>
-                            {due}
+                            {dueLabel}
                           </Text>
                         </>
                       ) : null}

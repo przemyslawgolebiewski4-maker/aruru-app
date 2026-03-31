@@ -21,7 +21,7 @@ import type { Task } from './TaskListScreen';
 type Nav = NativeStackNavigationProp<AppStackParamList, 'TaskDetail'>;
 type Route = RouteProp<AppStackParamList, 'TaskDetail'>;
 
-type TaskStatus = 'todo' | 'in_progress' | 'done';
+type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
 type MemberRow = {
   userId: string;
@@ -32,12 +32,12 @@ type MemberRow = {
 };
 
 type HourLog = {
+  id?: string;
   hours?: number;
   date?: string;
-  loggedBy?: string;
-  logged_by?: string;
+  note?: string;
   userName?: string;
-  user_name?: string;
+  createdAt?: string;
 };
 
 function parseTasksLocal(data: unknown): Task[] {
@@ -50,11 +50,11 @@ function parseTasksLocal(data: unknown): Task[] {
 }
 
 function parseLogs(data: unknown): HourLog[] {
-  if (Array.isArray(data)) return data as HourLog[];
   if (data && typeof data === 'object' && 'logs' in data) {
     const l = (data as { logs?: HourLog[] }).logs;
     return Array.isArray(l) ? l : [];
   }
+  if (Array.isArray(data)) return data as HourLog[];
   return [];
 }
 
@@ -62,50 +62,68 @@ function extractTask(data: unknown): Task | null {
   if (!data || typeof data !== 'object') return null;
   const o = data as Record<string, unknown>;
   if (o.task && typeof o.task === 'object') return o.task as Task;
-  if ('_id' in o || 'id' in o) return o as Task;
+  if ('id' in o || '_id' in o) return o as Task;
   return null;
 }
 
 function tid(t: Task): string {
-  return String(t._id ?? t.id ?? '');
+  return String(t.id ?? '').trim();
 }
 
-function todayYmd() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+function formatDueAtDisplay(dueAt: string | null | undefined): string {
+  if (dueAt == null || dueAt === '') return '';
+  try {
+    const d = new Date(dueAt);
+    if (Number.isNaN(d.getTime())) return String(dueAt);
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return String(dueAt);
+  }
 }
 
-function isOverdueDueStr(ymd: string): boolean {
-  if (!ymd) return false;
-  return ymd < todayYmd();
+function isOverdueDueAtDate(dueAt: string | null | undefined): boolean {
+  if (dueAt == null || dueAt === '') return false;
+  const d = new Date(dueAt);
+  if (Number.isNaN(d.getTime())) return false;
+  const dueMid = new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate()
+  ).getTime();
+  const now = new Date();
+  const todayMid = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
+  return dueMid < todayMid;
 }
 
 function normStatusLocal(t: Task): TaskStatus {
   const raw = (t.status ?? 'todo').toString().toLowerCase().replace(/\s+/g, '_');
+  if (raw === 'cancelled' || raw === 'canceled') return 'cancelled';
   if (raw === 'done' || raw === 'complete' || raw === 'completed') return 'done';
   if (raw === 'in_progress' || raw === 'inprogress') return 'in_progress';
   return 'todo';
 }
 
-function assignedIdLocal(t: Task): string {
-  return (t.assigned_to ?? t.assignedTo ?? '').trim();
-}
-
-function dueStrLocal(t: Task): string {
-  return (t.due_date ?? t.dueDate ?? '').trim();
+function assigneeUserIdOf(t: Task): string {
+  return (t.assigneeUserId ?? '').toString().trim();
 }
 
 function createdById(t: Task): string {
-  return (t.created_by ?? t.createdBy ?? '').trim();
+  return (t.createdBy ?? '').toString().trim();
 }
 
 const STATUS_OPTS: { key: TaskStatus; label: string; dot: string }[] = [
   { key: 'todo', label: 'To do', dot: colors.inkLight },
   { key: 'in_progress', label: 'In progress', dot: colors.clay },
   { key: 'done', label: 'Done', dot: colors.moss },
+  { key: 'cancelled', label: 'Cancelled', dot: colors.inkMid },
 ];
 
 function statusBtnContainerSel(k: TaskStatus) {
@@ -118,13 +136,17 @@ function statusBtnContainerSel(k: TaskStatus) {
   if (k === 'in_progress') {
     return { backgroundColor: colors.clayLight, borderColor: colors.clay };
   }
-  return { backgroundColor: colors.mossLight, borderColor: colors.moss };
+  if (k === 'done') {
+    return { backgroundColor: colors.mossLight, borderColor: colors.moss };
+  }
+  return { backgroundColor: colors.creamDark, borderColor: colors.inkLight };
 }
 
 function statusBtnLabelSelColor(k: TaskStatus): string {
   if (k === 'todo') return colors.ink;
   if (k === 'in_progress') return colors.clayDark;
-  return colors.mossDark;
+  if (k === 'done') return colors.mossDark;
+  return colors.inkMid;
 }
 
 export default function TaskDetailScreen({ route }: { route: Route }) {
