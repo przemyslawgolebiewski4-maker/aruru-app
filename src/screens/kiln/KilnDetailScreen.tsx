@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -107,6 +108,28 @@ function parseFiring(data: unknown): KilnFiringDetail | null {
   return null;
 }
 
+/** On web, `Alert.alert` is often a no-op — use the browser confirm dialog. */
+function confirmAction(
+  title: string,
+  message: string,
+  cancelLabel: string,
+  confirmLabel: string,
+  onConfirm: () => void
+) {
+  if (Platform.OS === 'web') {
+    const g = globalThis as typeof globalThis & { window?: Window };
+    const ok =
+      typeof g.window !== 'undefined' &&
+      g.window.confirm(`${title}\n\n${message}`);
+    if (ok) onConfirm();
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: cancelLabel, style: 'cancel' },
+    { text: confirmLabel, onPress: onConfirm },
+  ]);
+}
+
 export default function KilnDetailScreen({ route }: { route: Route }) {
   const { tenantId, firingId } = route.params;
   const navigation = useNavigation<Nav>();
@@ -192,18 +215,14 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   function confirmClose() {
-    Alert.alert(
+    confirmAction(
       'Close this firing session?',
       'Costs will be calculated and added to member summaries.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Close session',
-          onPress: () => {
-            void handleClose();
-          },
-        },
-      ]
+      'Cancel',
+      'Close session',
+      () => {
+        void handleClose();
+      }
     );
   }
 
@@ -224,18 +243,14 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   function confirmReopen() {
-    Alert.alert(
+    confirmAction(
       'Reopen this session?',
       'The firing will be marked open again.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reopen',
-          onPress: () => {
-            void handleReopen();
-          },
-        },
-      ]
+      'Cancel',
+      'Reopen',
+      () => {
+        void handleReopen();
+      }
     );
   }
 
