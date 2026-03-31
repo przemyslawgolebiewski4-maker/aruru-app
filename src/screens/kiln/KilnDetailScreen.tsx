@@ -5,9 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -108,28 +106,6 @@ function parseFiring(data: unknown): KilnFiringDetail | null {
   return null;
 }
 
-/** On web, `Alert.alert` is often a no-op — use the browser confirm dialog. */
-function confirmAction(
-  title: string,
-  message: string,
-  cancelLabel: string,
-  confirmLabel: string,
-  onConfirm: () => void
-) {
-  if (Platform.OS === 'web') {
-    const g = globalThis as typeof globalThis & { window?: Window };
-    const ok =
-      typeof g.window !== 'undefined' &&
-      g.window.confirm(`${title}\n\n${message}`);
-    if (ok) onConfirm();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: cancelLabel, style: 'cancel' },
-    { text: confirmLabel, onPress: onConfirm },
-  ]);
-}
-
 export default function KilnDetailScreen({ route }: { route: Route }) {
   const { tenantId, firingId } = route.params;
   const navigation = useNavigation<Nav>();
@@ -204,7 +180,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       setLoading(true);
       await apiFetch(
         `/studios/${tenantId}/kiln/firings/${firingId}/close`,
-        { method: 'POST', body: JSON.stringify({}) },
+        { method: 'POST' },
         tenantId
       );
       await loadFiring();
@@ -215,16 +191,16 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     }
   }
 
-  function confirmClose() {
-    confirmAction(
-      'Close this firing session?',
-      'Costs will be calculated and added to member summaries.',
-      'Cancel',
-      'Close session',
-      () => {
-        void handleClose();
-      }
-    );
+  async function confirmClose() {
+    const confirmed =
+      typeof window !== 'undefined'
+        ? window.confirm(
+            'Close this firing session? Costs will be calculated.'
+          )
+        : true;
+    if (confirmed) {
+      await handleClose();
+    }
   }
 
   async function handleReopen() {
@@ -243,16 +219,14 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     }
   }
 
-  function confirmReopen() {
-    confirmAction(
-      'Reopen this session?',
-      'The firing will be marked open again.',
-      'Cancel',
-      'Reopen',
-      () => {
-        void handleReopen();
-      }
-    );
+  async function confirmReopen() {
+    const confirmed =
+      typeof window !== 'undefined'
+        ? window.confirm('Reopen this firing session?')
+        : true;
+    if (confirmed) {
+      await handleReopen();
+    }
   }
 
   if (loading) {
@@ -348,7 +322,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
           {canManageSession ? (
             <TouchableOpacity
               style={styles.closeGhost}
-              onPress={confirmClose}
+              onPress={() => void confirmClose()}
               disabled={loading}
             >
               <Text style={styles.closeGhostText}>Close session</Text>
@@ -360,7 +334,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       {isClosed && canManageSession ? (
         <TouchableOpacity
           style={styles.reopenBtn}
-          onPress={confirmReopen}
+          onPress={() => void confirmReopen()}
           disabled={loading}
         >
           <Text style={styles.reopenText}>Reopen session</Text>
