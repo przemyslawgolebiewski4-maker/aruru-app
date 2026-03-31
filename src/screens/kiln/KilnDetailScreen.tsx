@@ -197,7 +197,12 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       'Costs will be calculated and added to member summaries.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Close session', onPress: handleClose },
+        {
+          text: 'Close session',
+          onPress: () => {
+            void handleClose();
+          },
+        },
       ]
     );
   }
@@ -224,7 +229,12 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       'The firing will be marked open again.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reopen', onPress: handleReopen },
+        {
+          text: 'Reopen',
+          onPress: () => {
+            void handleReopen();
+          },
+        },
       ]
     );
   }

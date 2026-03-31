@@ -79,7 +79,16 @@ export async function apiFetch<T>(
     throw new Error(message);
   }
 
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return undefined as T;
+  }
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    throw new Error('Invalid response from server');
+  }
 }
 
 // ─── Auth endpoints ────────────────────────────────────────────────────────
