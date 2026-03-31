@@ -65,8 +65,8 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
       const kilnTypeBody: 'bisque' | 'glaze' | 'private' = kilnType;
       const firedAtBody = firedAt.trim();
       const body = {
-        kilnType: kilnTypeBody,
-        firedAt: firedAtBody,
+        kiln_type: kilnTypeBody,
+        fired_at: firedAtBody,
         notes: notes.trim(),
       };
 
