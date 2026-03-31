@@ -10,7 +10,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors, typography, fontSize, spacing, radius } from '../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 // ─── Button ────────────────────────────────────────────────────────────────
 
