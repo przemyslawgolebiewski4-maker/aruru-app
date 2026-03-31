@@ -35,7 +35,8 @@ type FiringItem = {
 type FiringDetail = {
   _id: string;
   kilnType: KilnType;
-  firedAt: string;
+  firedAt?: string;
+  scheduledAt?: string;
   status: string;
   items?: FiringItem[];
 };
@@ -70,7 +71,7 @@ function firstName(name: string) {
 }
 
 export default function KilnLoadMembersScreen({ route }: { route: Route }) {
-  const { tenantId, firingId, kilnType, firedAt } = route.params;
+  const { tenantId, firingId, kilnType, scheduledAt } = route.params;
   const navigation = useNavigation<Nav>();
 
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -192,7 +193,9 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
               />
               <Text style={styles.typeTitle}>{capitalizeType(kilnType)}</Text>
             </View>
-            <Text style={styles.headerDate}>{formatFiringDate(firedAt)}</Text>
+            <Text style={styles.headerDate}>
+              {formatFiringDate(scheduledAt)}
+            </Text>
           </View>
           <Badge label="open" variant="open" />
         </View>

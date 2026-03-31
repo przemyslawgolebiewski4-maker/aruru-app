@@ -63,11 +63,11 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
     setLoading(true);
     try {
       const kilnTypeBody: 'bisque' | 'glaze' | 'private' = kilnType;
-      const firedAtBody = firedAt.trim();
+      const dateTrim = firedAt.trim();
       const body = {
-        kiln_type: kilnTypeBody,
-        fired_at: firedAtBody,
-        notes: notes.trim(),
+        firingType: kilnTypeBody,
+        scheduledAt: `${dateTrim}T00:00:00`,
+        notes: notes.trim() || null,
       };
 
       const res = await apiFetch<{ _id: string } & Record<string, unknown>>(
@@ -84,7 +84,7 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
         tenantId,
         firingId: id,
         kilnType: kilnTypeBody,
-        firedAt: firedAtBody,
+        scheduledAt: dateTrim,
       });
     } catch (e: unknown) {
       if (e instanceof Error) {

@@ -33,7 +33,7 @@ export type AppStackParamList = {
     tenantId: string;
     firingId: string;
     kilnType: 'bisque' | 'glaze' | 'private';
-    firedAt: string;
+    scheduledAt: string;
   };
   KilnDetail: { tenantId: string; firingId: string };
 };

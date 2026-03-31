@@ -32,7 +32,8 @@ type KilnItemRow = {
 type KilnFiringDetail = {
   _id: string;
   kilnType: KilnType;
-  firedAt: string;
+  firedAt?: string;
+  scheduledAt?: string;
   status: 'open' | 'closed';
   items?: KilnItemRow[];
   totalCost?: number;
@@ -121,13 +122,17 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   const totalKg = items.reduce((s, it) => s + (Number(it.weightKg) || 0), 0);
   const memberCount = items.length;
 
+  function scheduleLabel(f: KilnFiringDetail) {
+    return f.scheduledAt ?? f.firedAt ?? '';
+  }
+
   function goLoadMembers() {
     if (!firing) return;
     navigation.navigate('KilnLoadMembers', {
       tenantId,
       firingId,
       kilnType: firing.kilnType,
-      firedAt: firing.firedAt,
+      scheduledAt: scheduleLabel(firing),
     });
   }
 
@@ -237,7 +242,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
             </Text>
             <Text style={styles.statusDate}>
               {' · '}
-              {formatFiringDate(firing.firedAt)}
+              {formatFiringDate(scheduleLabel(firing))}
             </Text>
           </View>
           <Badge
