@@ -36,4 +36,6 @@ export type AppStackParamList = {
     scheduledAt: string;
   };
   KilnDetail: { tenantId: string; firingId: string };
+  TaskList: { tenantId: string };
+  TaskDetail: { tenantId: string; taskId: string; taskTitle: string };
 };

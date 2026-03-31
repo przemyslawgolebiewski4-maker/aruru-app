@@ -26,6 +26,8 @@ import KilnListScreen from '../screens/kiln/KilnListScreen';
 import KilnNewSessionScreen from '../screens/kiln/KilnNewSessionScreen';
 import KilnLoadMembersScreen from '../screens/kiln/KilnLoadMembersScreen';
 import KilnDetailScreen from '../screens/kiln/KilnDetailScreen';
+import TaskListScreen from '../screens/tasks/TaskListScreen';
+import TaskDetailScreen from '../screens/tasks/TaskDetailScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -172,6 +174,24 @@ function AppNavigator() {
           title: 'Firing detail',
           ...appModalHeaderOptions,
         }}
+      />
+      <AppStack.Screen
+        name="TaskList"
+        component={TaskListScreen}
+        options={{
+          headerShown: true,
+          title: 'Tasks',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="TaskDetail"
+        component={TaskDetailScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params.taskTitle,
+          ...appModalHeaderOptions,
+        })}
       />
     </AppStack.Navigator>
   );

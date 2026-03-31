@@ -84,6 +84,16 @@ export default function DashboardScreen() {
       ?.navigate('Members', { tenantId });
   }
 
+  function goTasks() {
+    if (!tenantId) {
+      Alert.alert('Tasks', 'Create or join a studio first.');
+      return;
+    }
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('TaskList', { tenantId });
+  }
+
   const members = 0;
   const firings: FiringRow[] = [];
   const tasks: TaskRow[] = [];
@@ -175,7 +185,7 @@ export default function DashboardScreen() {
       <View style={{ height: spacing[6] }} />
 
       <View style={styles.actionsRow}>
-        <View style={styles.actionHalf}>
+        <View style={styles.actionThird}>
           <Button
             label="New firing"
             variant="ghost"
@@ -184,11 +194,20 @@ export default function DashboardScreen() {
             style={styles.actionBtn}
           />
         </View>
-        <View style={styles.actionHalf}>
+        <View style={styles.actionThird}>
           <Button
             label="Members"
             variant="ghost"
             onPress={goMembers}
+            fullWidth
+            style={styles.actionBtn}
+          />
+        </View>
+        <View style={styles.actionThird}>
+          <Button
+            label="Tasks"
+            variant="ghost"
+            onPress={goTasks}
             fullWidth
             style={styles.actionBtn}
           />
@@ -290,10 +309,13 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing[2],
   },
-  actionHalf: {
-    flex: 1,
+  actionThird: {
+    flexGrow: 1,
+    flexBasis: '30%',
+    minWidth: 96,
   },
   actionBtn: {
     borderColor: colors.clay,
