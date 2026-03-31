@@ -21,50 +21,79 @@ import type { KilnType } from './KilnListScreen';
 type Nav = NativeStackNavigationProp<AppStackParamList, 'KilnDetail'>;
 type Route = RouteProp<AppStackParamList, 'KilnDetail'>;
 
-type KilnItemRow = {
-  userId?: string;
-  memberName?: string;
-  name?: string;
-  weightKg?: number;
-  cost?: number;
-};
+type KilnItemRow = Partial<{
+  userId: string;
+  memberName: string;
+  member_name: string;
+  name: string;
+  weightKg: number;
+  cost: number;
+}>;
 
-type KilnFiringDetail = {
+/** API may use camelCase or snake_case; most fields optional. */
+type KilnFiringDetail = Partial<{
   _id: string;
   kilnType: KilnType;
-  firedAt?: string;
-  scheduledAt?: string;
-  status: 'open' | 'closed';
-  items?: KilnItemRow[];
-  totalCost?: number;
-  notes?: string;
-  createdAt?: string;
-  closedAt?: string;
-  loggedBy?: string;
-};
+  kiln_type: string;
+  firingType: string;
+  firedAt: string;
+  fired_at: string;
+  scheduledAt: string;
+  scheduled_at: string;
+  status: string;
+  items: KilnItemRow[];
+  totalCost: number;
+  notes: string;
+  createdAt: string;
+  closedAt: string;
+  loggedBy: string;
+}>;
 
-function typeDot(c: KilnType) {
-  if (c === 'bisque') return colors.clay;
-  if (c === 'glaze') return colors.moss;
+function typeDot(c: string) {
+  const k = (c || '').toLowerCase();
+  if (k === 'bisque') return colors.clay;
+  if (k === 'glaze') return colors.moss;
   return colors.inkMid;
 }
 
-function capitalizeType(t: string) {
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
-
 function formatFiringDate(iso: string) {
+  const s = iso || '';
+  if (!s) return '';
   try {
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return s;
     return d.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
   } catch {
-    return iso;
+    return s;
   }
+}
+
+function rawKilnType(f: KilnFiringDetail | null | undefined): string {
+  return String(f?.kiln_type || f?.firingType || f?.kilnType || '');
+}
+
+function kilnTypeLabel(f: KilnFiringDetail | null | undefined): string {
+  const raw = rawKilnType(f);
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : '';
+}
+
+function kilnTypeForNav(f: KilnFiringDetail | null | undefined): KilnType {
+  const k = rawKilnType(f).toLowerCase();
+  if (k === 'bisque' || k === 'glaze' || k === 'private') return k;
+  return 'bisque';
+}
+
+function itemMemberLabel(item: KilnItemRow | undefined): string {
+  const nm =
+    item?.memberName?.trim() ||
+    item?.member_name?.trim() ||
+    item?.name?.trim() ||
+    '';
+  return nm || 'Unknown member';
 }
 
 function parseFiring(data: unknown): KilnFiringDetail | null {
@@ -123,7 +152,13 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   const memberCount = items.length;
 
   function scheduleLabel(f: KilnFiringDetail) {
-    return f.scheduledAt ?? f.firedAt ?? '';
+    return (
+      f.scheduledAt ??
+      f.scheduled_at ??
+      f.firedAt ??
+      f.fired_at ??
+      ''
+    );
   }
 
   function goLoadMembers() {
@@ -131,7 +166,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     navigation.navigate('KilnLoadMembers', {
       tenantId,
       firingId,
-      kilnType: firing.kilnType,
+      kilnType: kilnTypeForNav(firing),
       scheduledAt: scheduleLabel(firing),
     });
   }
@@ -196,7 +231,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     );
   }
 
-  if (loading && !firing) {
+  if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator color={colors.clay} />
@@ -205,15 +240,23 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   if (!firing) {
+    if (error) {
+      return (
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error || 'Not found.'}</Text>
+        </View>
+      );
+    }
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>{error || 'Not found.'}</Text>
+        <ActivityIndicator color={colors.clay} />
       </View>
     );
   }
 
-  const isOpen = firing.status === 'open';
-  const isClosed = firing.status === 'closed';
+  const statusStr = (firing.status || '').toLowerCase();
+  const isOpen = statusStr === 'open';
+  const isClosed = statusStr === 'closed';
 
   return (
     <ScrollView
@@ -234,19 +277,17 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
             <View
               style={[
                 styles.headerDot,
-                { backgroundColor: typeDot(firing.kilnType) },
+                { backgroundColor: typeDot(rawKilnType(firing)) },
               ]}
             />
-            <Text style={styles.typeTitle}>
-              {capitalizeType(firing.kilnType)}
-            </Text>
+            <Text style={styles.typeTitle}>{kilnTypeLabel(firing)}</Text>
             <Text style={styles.statusDate}>
               {' · '}
               {formatFiringDate(scheduleLabel(firing))}
             </Text>
           </View>
           <Badge
-            label={firing.status}
+            label={firing.status || ''}
             variant={isOpen ? 'open' : 'neutral'}
           />
         </View>
@@ -310,10 +351,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
         <Text style={styles.emptyItems}>No weights logged yet.</Text>
       ) : (
         items.map((it, idx) => {
-          const nm =
-            it.memberName?.trim() ||
-            it.name?.trim() ||
-            'Member';
+          const nm = itemMemberLabel(it);
           return (
             <View
               key={`${it.userId ?? idx}`}
