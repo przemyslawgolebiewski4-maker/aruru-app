@@ -17,7 +17,19 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
+import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
+
+const appModalHeaderOptions = {
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.clay,
+  headerTitleStyle: {
+    fontFamily: typography.body,
+    fontSize: 16,
+  },
+  headerShadowVisible: false,
+} as const;
 
 const ONBOARDING_KEY = 'aruru_onboarding_done';
 
@@ -71,6 +83,24 @@ function AppNavigator() {
             fontSize: fontSize.md,
             color: colors.ink,
           },
+        }}
+      />
+      <AppStack.Screen
+        name="CreateStudio"
+        component={CreateStudioScreen}
+        options={{
+          headerShown: true,
+          title: 'Create studio',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="SetupPricing"
+        component={SetupPricingScreen}
+        options={{
+          headerShown: true,
+          title: 'Pricing',
+          ...appModalHeaderOptions,
         }}
       />
     </AppStack.Navigator>

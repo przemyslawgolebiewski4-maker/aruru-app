@@ -15,4 +15,6 @@ export type MainTabParamList = {
 export type AppStackParamList = {
   Main: undefined;
   EditProfile: undefined;
+  CreateStudio: undefined;
+  SetupPricing: { tenantId: string; studioName: string };
 };

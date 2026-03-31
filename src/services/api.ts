@@ -46,7 +46,7 @@ export async function clearAuth(): Promise<void> {
 
 // ─── API fetch wrapper ─────────────────────────────────────────────────────
 
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
   tenantId?: string
@@ -157,6 +157,7 @@ export async function setPricing(
     kilnBisquePerKg: number;
     kilnGlazePerKg: number;
     kilnPrivatePerFiring: number;
+    membershipFee?: number;
   }
 ): Promise<{ message: string }> {
   return apiFetch(

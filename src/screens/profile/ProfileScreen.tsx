@@ -69,6 +69,18 @@ export default function ProfileScreen() {
         ))
       )}
 
+      <Button
+        label="+ Create studio"
+        variant="ghost"
+        onPress={() =>
+          navigation
+            .getParent<NativeStackNavigationProp<AppStackParamList>>()
+            ?.navigate('CreateStudio')
+        }
+        fullWidth
+        style={styles.createStudioBtn}
+      />
+
       <View style={{ height: spacing[8] }} />
 
       <SectionLabel>Account</SectionLabel>
@@ -143,6 +155,11 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     marginVertical: 0,
+  },
+  createStudioBtn: {
+    marginTop: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.clay,
   },
   accountBtn: {
     marginTop: spacing[2],
