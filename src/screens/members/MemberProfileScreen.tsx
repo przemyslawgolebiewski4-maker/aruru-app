@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Badge, SectionLabel } from '../../components/ui';
+import { Avatar, Badge, SectionLabel, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -20,6 +21,41 @@ type Route = RouteProp<AppStackParamList, 'MemberProfile'>;
 
 type Role = 'owner' | 'assistant' | 'member';
 type Status = 'active' | 'invited' | 'suspended';
+
+type MembershipPlan = {
+  id: string;
+  name: string;
+  price: number;
+};
+
+function numFromUnknown(v: unknown): number {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function parseMembershipPlansPayload(data: unknown): MembershipPlan[] {
+  const rawList = Array.isArray(data)
+    ? data
+    : data &&
+        typeof data === 'object' &&
+        Array.isArray((data as { plans?: unknown }).plans)
+      ? (data as { plans: unknown[] }).plans
+      : [];
+  return rawList
+    .map((raw): MembershipPlan | null => {
+      if (!raw || typeof raw !== 'object') return null;
+      const r = raw as Record<string, unknown>;
+      const id = String(r.id ?? r._id ?? '').trim();
+      if (!id) return null;
+      return {
+        id,
+        name: String(r.name ?? ''),
+        price: numFromUnknown(r.price),
+      };
+    })
+    .filter((x): x is MembershipPlan => x != null);
+}
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: 'owner', label: 'Owner', desc: 'Full studio control' },
@@ -48,6 +84,50 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
   const [status, setStatus] = useState<Status>(initialStatus);
   const [roleSaving, setRoleSaving] = useState(false);
   const [statusSaving, setStatusSaving] = useState(false);
+
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [assignedPlanId, setAssignedPlanId] = useState<string | null>(null);
+  const [assigningPlan, setAssigningPlan] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [plansRaw, memberRaw] = await Promise.all([
+        apiFetch<unknown>(
+          `/studios/${tenantId}/membership-plans`,
+          {},
+          tenantId
+        ).catch(() => null),
+        apiFetch<unknown>(
+          `/studios/${tenantId}/members/${userId}`,
+          {},
+          tenantId
+        ).catch(() => null),
+      ]);
+      setPlans(
+        plansRaw != null ? parseMembershipPlansPayload(plansRaw) : []
+      );
+      if (memberRaw && typeof memberRaw === 'object') {
+        const m = memberRaw as Record<string, unknown>;
+        const pid = m.membershipPlanId ?? m.membership_plan_id;
+        setAssignedPlanId(
+          pid != null && String(pid).trim() !== ''
+            ? String(pid)
+            : null
+        );
+      } else {
+        setAssignedPlanId(null);
+      }
+    } catch {
+      setPlans([]);
+      setAssignedPlanId(null);
+    }
+  }, [tenantId, userId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
 
   async function patchRole(next: Role) {
     if (next === role) return;
@@ -93,6 +173,31 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
       );
     } finally {
       setStatusSaving(false);
+    }
+  }
+
+  async function onAssignPlan(planId: string | null) {
+    setAssigningPlan(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/membership-plans/assign`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ userId, planId }),
+        },
+        tenantId
+      );
+      setAssignedPlanId(planId);
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : 'Could not assign plan.';
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
+    } finally {
+      setAssigningPlan(false);
     }
   }
 
@@ -199,6 +304,49 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
           </TouchableOpacity>
         ) : null}
       </View>
+
+      <Divider style={{ marginTop: spacing[6] }} />
+      <SectionLabel>MEMBERSHIP PLAN</SectionLabel>
+      {plans.length === 0 ? (
+        <Text style={styles.emptyPlans}>
+          No plans defined. Add plans in Pricing Settings.
+        </Text>
+      ) : (
+        <>
+          {plans.map((plan) => (
+            <TouchableOpacity
+              key={plan.id}
+              style={[
+                styles.planOption,
+                assignedPlanId === plan.id && styles.planOptionActive,
+              ]}
+              onPress={() => void onAssignPlan(plan.id)}
+              disabled={assigningPlan}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.planOptionName,
+                  assignedPlanId === plan.id && styles.planOptionNameActive,
+                ]}
+              >
+                {plan.name}
+              </Text>
+              <Text style={styles.planOptionPrice}>
+                €{plan.price.toFixed(2)}/mo
+              </Text>
+            </TouchableOpacity>
+          ))}
+          {assignedPlanId ? (
+            <TouchableOpacity
+              onPress={() => void onAssignPlan(null)}
+              disabled={assigningPlan}
+            >
+              <Text style={styles.unassignLabel}>Remove plan</Text>
+            </TouchableOpacity>
+          ) : null}
+        </>
+      )}
 
       <View style={styles.costsSection}>
         <SectionLabel>COSTS</SectionLabel>
@@ -327,6 +475,47 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
     color: colors.moss,
+  },
+  emptyPlans: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+  },
+  planOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing[3],
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginTop: spacing[2],
+  },
+  planOptionActive: {
+    borderColor: colors.clay,
+    backgroundColor: colors.clayLight,
+  },
+  planOptionName: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  planOptionNameActive: {
+    color: colors.clay,
+  },
+  planOptionPrice: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+  },
+  unassignLabel: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    textAlign: 'center',
+    paddingVertical: spacing[2],
+    marginTop: spacing[1],
   },
   costsSection: {
     marginTop: spacing[6],
