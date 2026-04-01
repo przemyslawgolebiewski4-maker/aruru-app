@@ -339,6 +339,31 @@ export default function DashboardScreen() {
       ?.navigate('TaskList', { tenantId });
   }
 
+  function goCosts() {
+    if (!tenantId) {
+      Alert.alert('Costs', 'Create or join a studio first.');
+      return;
+    }
+    const stack =
+      navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
+    const y = new Date().getFullYear();
+    const m = new Date().getMonth() + 1;
+    if (currentStudio?.role === 'owner') {
+      stack?.navigate('CostList', { tenantId });
+    } else {
+      const uid = user?.id;
+      if (!uid) return;
+      stack?.navigate('CostDetail', {
+        tenantId,
+        userId: uid,
+        memberName: user?.name?.trim() || user?.email || 'You',
+        memberEmail: user?.email,
+        year: y,
+        month: m,
+      });
+    }
+  }
+
   const membersVal = loading ? '—' : String(stats.members);
   const firingsVal = loading ? '—' : String(stats.firingsThisMonth);
   const tasksVal = loading ? '—' : String(stats.openTasks);
@@ -374,7 +399,15 @@ export default function DashboardScreen() {
         <StatCard label="Members" value={membersVal} accent="clay" />
         <StatCard label="Firings this month" value={firingsVal} accent="moss" />
         <StatCard label="Open tasks" value={tasksVal} accent="none" />
-        <StatCard label="Summaries due" value={summariesVal} accent="none" />
+        <TouchableOpacity
+          style={styles.statCardTap}
+          onPress={goCosts}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Open cost summaries"
+        >
+          <StatCard label="Summaries due" value={summariesVal} accent="none" />
+        </TouchableOpacity>
       </View>
 
       <SectionLabel>Recent firings</SectionLabel>
@@ -440,7 +473,7 @@ export default function DashboardScreen() {
       <View style={{ height: spacing[6] }} />
 
       <View style={styles.actionsRow}>
-        <View style={styles.actionThird}>
+        <View style={styles.actionQuarter}>
           <Button
             label="New firing"
             variant="ghost"
@@ -449,7 +482,7 @@ export default function DashboardScreen() {
             style={styles.actionBtn}
           />
         </View>
-        <View style={styles.actionThird}>
+        <View style={styles.actionQuarter}>
           <Button
             label="Members"
             variant="ghost"
@@ -458,11 +491,20 @@ export default function DashboardScreen() {
             style={styles.actionBtn}
           />
         </View>
-        <View style={styles.actionThird}>
+        <View style={styles.actionQuarter}>
           <Button
             label="Tasks"
             variant="ghost"
             onPress={goTasks}
+            fullWidth
+            style={styles.actionBtn}
+          />
+        </View>
+        <View style={styles.actionQuarter}>
+          <Button
+            label="Costs"
+            variant="ghost"
+            onPress={goCosts}
             fullWidth
             style={styles.actionBtn}
           />
@@ -522,6 +564,10 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     marginBottom: spacing[6],
   },
+  statCardTap: {
+    flex: 1,
+    minWidth: '45%',
+  },
   listLoading: {
     paddingVertical: spacing[6],
     alignItems: 'center',
@@ -573,10 +619,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing[2],
   },
-  actionThird: {
+  actionQuarter: {
     flexGrow: 1,
-    flexBasis: '30%',
-    minWidth: 96,
+    flexBasis: '22%',
+    minWidth: 88,
   },
   actionBtn: {
     borderColor: colors.clay,

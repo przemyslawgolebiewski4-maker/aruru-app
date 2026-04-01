@@ -28,6 +28,8 @@ import KilnLoadMembersScreen from '../screens/kiln/KilnLoadMembersScreen';
 import KilnDetailScreen from '../screens/kiln/KilnDetailScreen';
 import TaskListScreen from '../screens/tasks/TaskListScreen';
 import TaskDetailScreen from '../screens/tasks/TaskDetailScreen';
+import CostListScreen from '../screens/costs/CostListScreen';
+import CostDetailScreen from '../screens/costs/CostDetailScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -190,6 +192,24 @@ function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: route.params.taskTitle,
+          ...appModalHeaderOptions,
+        })}
+      />
+      <AppStack.Screen
+        name="CostList"
+        component={CostListScreen}
+        options={{
+          headerShown: true,
+          title: 'Cost summaries',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="CostDetail"
+        component={CostDetailScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params.memberName,
           ...appModalHeaderOptions,
         })}
       />

@@ -38,4 +38,13 @@ export type AppStackParamList = {
   KilnDetail: { tenantId: string; firingId: string };
   TaskList: { tenantId: string };
   TaskDetail: { tenantId: string; taskId: string; taskTitle: string };
+  CostList: { tenantId: string };
+  CostDetail: {
+    tenantId: string;
+    userId: string;
+    memberName: string;
+    year: number;
+    month: number;
+    memberEmail?: string;
+  };
 };
