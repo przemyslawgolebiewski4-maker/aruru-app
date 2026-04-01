@@ -35,6 +35,7 @@ import EventListScreen from '../screens/events/EventListScreen';
 import EventDetailScreen from '../screens/events/EventDetailScreen';
 import BookStudioScreen from '../screens/member/BookStudioScreen';
 import CatalogManageScreen from '../screens/materials/CatalogManageScreen';
+import MaterialsShopScreen from '../screens/materials/MaterialsShopScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -301,7 +302,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="MaterialsShop"
-        component={CatalogManageScreen}
+        component={MaterialsShopScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
