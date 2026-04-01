@@ -13,7 +13,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch, getToken } from '../../services/api';
+import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'CostDetail'>;
@@ -82,9 +82,6 @@ function formatDate(iso: string): string {
     return iso;
   }
 }
-
-const API_BASE =
-  process.env.EXPO_PUBLIC_API_URL ?? 'https://aruru-production.up.railway.app';
 
 function periodLabel(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
@@ -236,42 +233,40 @@ function extractPdfUrlFromRecord(o: Record<string, unknown>): string {
   return str(o.pdf_url ?? o.pdfUrl ?? o.pdf).trim();
 }
 
-async function fetchPdfUrlFromEndpoint(
+async function fetchPdfFromEndpoint(
   tenantId: string,
   summaryId: string
 ): Promise<string | null> {
-  const token = await getToken();
-  const res = await fetch(
-    `${API_BASE}/studios/${tenantId}/costs/${summaryId}/pdf`,
-    {
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        'X-Tenant-ID': tenantId,
-      },
+  try {
+    const res = await apiFetch<Record<string, unknown>>(
+      `/studios/${tenantId}/costs/${summaryId}/pdf`,
+      {},
+      tenantId
+    );
+    // Przypadek 1: zewnętrzny URL
+    if (res.pdfUrl && typeof res.pdfUrl === 'string') {
+      return res.pdfUrl;
     }
-  );
-  if (!res.ok) return null;
-  const ct = (res.headers.get('content-type') ?? '').toLowerCase();
-  if (ct.includes('application/json')) {
-    try {
-      const j = (await res.json()) as Record<string, unknown>;
-      return extractPdfUrlFromRecord(j) || null;
-    } catch {
-      return null;
-    }
-  }
-  if (res.redirected && res.url) return res.url;
-  if (ct.includes('application/pdf') || ct.includes('octet-stream')) {
-    try {
-      const blob = await res.blob();
-      if (typeof URL !== 'undefined' && URL.createObjectURL) {
-        return URL.createObjectURL(blob);
+    // Przypadek 2: base64
+    if (res.pdfBase64 && typeof res.pdfBase64 === 'string') {
+      const filename =
+        typeof res.filename === 'string' ? res.filename : 'aruru-costs.pdf';
+      const dataUrl = `data:application/pdf;base64,${res.pdfBase64}`;
+      // Triggeruj download przez anchor
+      if (typeof window !== 'undefined') {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
-    } catch {
-      return null;
+      return dataUrl;
     }
+    return null;
+  } catch {
+    return null;
   }
-  return res.url || null;
 }
 
 export default function CostDetailScreen({ route }: { route: Route }) {
@@ -451,7 +446,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
 
       let pdfUrl = extractPdfUrlFromRecord(res);
       if (!pdfUrl && sid) {
-        pdfUrl = (await fetchPdfUrlFromEndpoint(tenantId, sid)) ?? '';
+        pdfUrl = (await fetchPdfFromEndpoint(tenantId, sid)) ?? '';
       }
       if (pdfUrl) setPdfReadyUrl(pdfUrl);
 
