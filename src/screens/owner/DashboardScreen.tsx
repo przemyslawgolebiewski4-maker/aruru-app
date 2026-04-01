@@ -56,15 +56,6 @@ function parseFiringsArray(data: unknown): Record<string, unknown>[] {
   return [];
 }
 
-function parseTasksArray(data: unknown): Record<string, unknown>[] {
-  if (Array.isArray(data)) return data as Record<string, unknown>[];
-  if (data && typeof data === 'object' && 'tasks' in data) {
-    const t = (data as { tasks?: unknown[] }).tasks;
-    return Array.isArray(t) ? (t as Record<string, unknown>[]) : [];
-  }
-  return [];
-}
-
 function firingId(f: Record<string, unknown>): string {
   return String(f.id ?? f._id ?? '');
 }
@@ -231,11 +222,17 @@ export default function DashboardScreen() {
         };
       });
 
-      const tasks = parseTasksArray(taskRes);
-      const openTasks = tasks.filter((t) => {
-        const s = taskStatus(t);
-        return s === 'todo' || s === 'in_progress';
-      }).length;
+      const tasksPayload = Array.isArray(taskRes)
+        ? taskRes
+        : (taskRes as { tasks?: unknown[] }).tasks || [];
+      const allTasks = Array.isArray(tasksPayload) ? tasksPayload : [];
+      const tasks = allTasks.filter(
+        (item): item is Record<string, unknown> =>
+          item != null && typeof item === 'object' && !Array.isArray(item)
+      );
+      const openTasks = tasks.filter(
+        (t) => t.status === 'todo' || t.status === 'in_progress'
+      ).length;
 
       const sortedTasks = [...tasks].sort((a, b) => {
         const ta = new Date(taskCreatedAt(a)).getTime();
