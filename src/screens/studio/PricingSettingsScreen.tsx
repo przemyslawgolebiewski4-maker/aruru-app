@@ -8,11 +8,13 @@ import {
   Platform,
   TextInput,
   ActivityIndicator,
+  TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Button, SectionLabel } from '../../components/ui';
+import { Button, SectionLabel, Divider, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -20,6 +22,13 @@ import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'PricingSettings'>;
 type Route = RouteProp<AppStackParamList, 'PricingSettings'>;
+
+type MembershipPlan = {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+};
 
 function numFromUnknown(v: unknown): number {
   if (typeof v === 'number' && Number.isFinite(v)) return v;
@@ -30,6 +39,55 @@ function numFromUnknown(v: unknown): number {
 function formatInitialAmount(n: number): string {
   if (!Number.isFinite(n)) return '';
   return String(n);
+}
+
+function parseMembershipPlansPayload(data: unknown): MembershipPlan[] {
+  const rawList = Array.isArray(data)
+    ? data
+    : data &&
+        typeof data === 'object' &&
+        Array.isArray((data as { plans?: unknown }).plans)
+      ? (data as { plans: unknown[] }).plans
+      : [];
+  return rawList
+    .map((raw): MembershipPlan | null => {
+      if (!raw || typeof raw !== 'object') return null;
+      const r = raw as Record<string, unknown>;
+      const id = String(r.id ?? r._id ?? '').trim();
+      if (!id) return null;
+      return {
+        id,
+        name: String(r.name ?? ''),
+        price: numFromUnknown(r.price),
+        description:
+          r.description != null && String(r.description).trim()
+            ? String(r.description)
+            : undefined,
+      };
+    })
+    .filter((x): x is MembershipPlan => x != null);
+}
+
+function confirmDeleteMembershipPlan(): Promise<boolean> {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    return Promise.resolve(
+      window.confirm('Delete this membership plan?')
+    );
+  }
+  return new Promise((resolve) => {
+    Alert.alert(
+      'Delete plan',
+      'Delete this membership plan?',
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => resolve(true),
+        },
+      ]
+    );
+  });
 }
 
 type PricingFieldProps = {
@@ -77,6 +135,14 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
   const [saved, setSaved] = useState(false);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [showPlanForm, setShowPlanForm] = useState(false);
+  const [planName, setPlanName] = useState('');
+  const [planPrice, setPlanPrice] = useState('');
+  const [planDesc, setPlanDesc] = useState('');
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planError, setPlanError] = useState('');
+
   useLayoutEffect(() => {
     if (!isOwner) {
       if (typeof window !== 'undefined') {
@@ -94,10 +160,20 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
     setLoadPricing(true);
     setError('');
     try {
-      const data = await apiFetch<Record<string, unknown>>(
-        `/studios/${tenantId}/pricing`,
-        {},
-        tenantId
+      const [data, plansRaw] = await Promise.all([
+        apiFetch<Record<string, unknown>>(
+          `/studios/${tenantId}/pricing`,
+          {},
+          tenantId
+        ),
+        apiFetch<unknown>(
+          `/studios/${tenantId}/membership-plans`,
+          {},
+          tenantId
+        ).catch(() => null),
+      ]);
+      setPlans(
+        plansRaw != null ? parseMembershipPlansPayload(plansRaw) : []
       );
       const open = numFromUnknown(
         data.openStudioPerH ?? data.open_studio_per_h
@@ -116,6 +192,7 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
       setKilnGlazePerKg(formatInitialAmount(glaze));
       setKilnPrivatePerFiring(formatInitialAmount(priv));
     } catch (e) {
+      setPlans([]);
       setError(
         e instanceof Error ? e.message : 'Could not load pricing.'
       );
@@ -166,6 +243,66 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
       setError(e instanceof Error ? e.message : 'Could not save pricing.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onCreatePlan() {
+    setPlanError('');
+    if (!planName.trim() || !planPrice) {
+      setPlanError('Name and price are required.');
+      return;
+    }
+    const price = parseFloat(planPrice);
+    if (Number.isNaN(price) || price < 0) {
+      setPlanError('Invalid price.');
+      return;
+    }
+    setSavingPlan(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/membership-plans`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: planName.trim(),
+            price,
+            description: planDesc.trim() || null,
+          }),
+        },
+        tenantId
+      );
+      setPlanName('');
+      setPlanPrice('');
+      setPlanDesc('');
+      setShowPlanForm(false);
+      await load();
+    } catch (e: unknown) {
+      setPlanError(
+        e instanceof Error ? e.message : 'Could not create plan.'
+      );
+    } finally {
+      setSavingPlan(false);
+    }
+  }
+
+  async function onDeletePlan(id: string) {
+    const ok = await confirmDeleteMembershipPlan();
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/membership-plans/${id}`,
+        { method: 'DELETE' },
+        tenantId
+      );
+      await load();
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : 'Could not delete plan.';
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     }
   }
 
@@ -243,6 +380,66 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
             {saved ? (
               <Text style={styles.savedText}>✓ Pricing saved</Text>
             ) : null}
+
+            <Divider />
+            <SectionLabel>MEMBERSHIP PLANS</SectionLabel>
+            <Button
+              label={showPlanForm ? 'Cancel' : '+ Add plan'}
+              variant="ghost"
+              onPress={() => setShowPlanForm((v) => !v)}
+              fullWidth
+            />
+            {showPlanForm ? (
+              <View style={styles.planForm}>
+                <Input
+                  label="Plan name"
+                  value={planName}
+                  onChangeText={setPlanName}
+                  placeholder="e.g. Standard, Student"
+                />
+                <Input
+                  label="Monthly fee (€)"
+                  value={planPrice}
+                  onChangeText={setPlanPrice}
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                />
+                <Input
+                  label="Description (optional)"
+                  value={planDesc}
+                  onChangeText={setPlanDesc}
+                  placeholder={"What's included"}
+                />
+                {planError ? (
+                  <Text style={styles.planError}>{planError}</Text>
+                ) : null}
+                <Button
+                  label="Save plan"
+                  onPress={() => void onCreatePlan()}
+                  loading={savingPlan}
+                  fullWidth
+                />
+              </View>
+            ) : null}
+            {plans.map((plan) => (
+              <View key={plan.id} style={styles.planRow}>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planName}>{plan.name}</Text>
+                  {plan.description ? (
+                    <Text style={styles.planDesc}>{plan.description}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.planPrice}>
+                  €{plan.price.toFixed(2)}/mo
+                </Text>
+                <TouchableOpacity
+                  onPress={() => void onDeletePlan(plan.id)}
+                  style={styles.planDelete}
+                >
+                  <Text style={styles.planDeleteLabel}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
           </>
         )}
       </ScrollView>
@@ -344,5 +541,45 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 32,
+  },
+  planForm: {
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    marginTop: spacing[2],
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+  },
+  planInfo: { flex: 1 },
+  planName: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  planDesc: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  planPrice: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+  },
+  planDelete: { padding: spacing[1] },
+  planDeleteLabel: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.error,
+  },
+  planError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
   },
 });
