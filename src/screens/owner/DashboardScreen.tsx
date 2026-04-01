@@ -40,6 +40,19 @@ type RecentTask = {
   dot: 'clay' | 'moss' | 'inkLight';
 };
 
+type IncomeData = {
+  current: {
+    membership: number;
+    kiln: number;
+    materials: number;
+    events: number;
+    openStudio: number;
+    total: number;
+  };
+  history: { period: string; total: number }[];
+  memberCount: number;
+};
+
 function parseMembersArray(data: unknown): unknown[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object' && 'members' in data) {
@@ -154,6 +167,7 @@ export default function DashboardScreen() {
   const [recentFirings, setRecentFirings] = useState<RecentFiring[]>([]);
   const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [income, setIncome] = useState<IncomeData | null>(null);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -181,26 +195,40 @@ export default function DashboardScreen() {
       });
       setRecentFirings([]);
       setRecentTasks([]);
+      setIncome(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      const [memRes, firRes, taskRes] = await Promise.all([
+      const [memRes, firRes, taskRes, incomeRes] = await Promise.allSettled([
         apiFetch<unknown>(`/studios/${tenantId}/members`, {}, tenantId),
         apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
         apiFetch<unknown>(`/studios/${tenantId}/tasks`, {}, tenantId),
+        apiFetch<unknown>(`/studios/${tenantId}/costs/income`, {}, tenantId),
       ]);
 
-      const membersList = parseMembersArray(memRes);
+      const membersList =
+        memRes.status === 'fulfilled'
+          ? parseMembersArray(memRes.value)
+          : [];
       const activeCount = membersList.filter((m) => {
         if (!m || typeof m !== 'object') return false;
         const st = String((m as { status?: string }).status ?? '').toLowerCase();
         return st === 'active';
       }).length;
 
-      const firings = parseFiringsArray(firRes);
+      const firings =
+        firRes.status === 'fulfilled'
+          ? parseFiringsArray(firRes.value)
+          : [];
+
+      if (incomeRes.status === 'fulfilled' && incomeRes.value) {
+        setIncome(incomeRes.value as IncomeData);
+      } else {
+        setIncome(null);
+      }
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
@@ -248,9 +276,11 @@ export default function DashboardScreen() {
         };
       });
 
-      const tasksPayload = Array.isArray(taskRes)
-        ? taskRes
-        : (taskRes as { tasks?: unknown[] }).tasks || [];
+      const taskData =
+        taskRes.status === 'fulfilled' ? taskRes.value : null;
+      const tasksPayload = Array.isArray(taskData)
+        ? taskData
+        : (taskData as { tasks?: unknown[] } | null)?.tasks || [];
       const allTasks = Array.isArray(tasksPayload) ? tasksPayload : [];
       const tasks = allTasks.filter(
         (item): item is Record<string, unknown> =>
@@ -307,6 +337,7 @@ export default function DashboardScreen() {
       });
       setRecentFirings([]);
       setRecentTasks([]);
+      setIncome(null);
     } finally {
       setLoading(false);
     }
@@ -523,6 +554,75 @@ export default function DashboardScreen() {
           <StatCard label="Summaries due" value={summariesVal} accent="none" />
         </TouchableOpacity>
       </View>
+
+      <Divider />
+
+      {income?.current ? (
+        <>
+          <SectionLabel>INCOME THIS MONTH</SectionLabel>
+          <View style={styles.incomeCards}>
+            <View
+              style={[styles.incomeCard, { backgroundColor: colors.clayLight }]}
+            >
+              <Text style={styles.incomeCardLabel}>Total</Text>
+              <Text style={styles.incomeCardValue}>
+                €{income.current.total.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.incomeCard}>
+              <Text style={styles.incomeCardLabel}>Membership</Text>
+              <Text style={styles.incomeCardValue}>
+                €{income.current.membership.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.incomeCard}>
+              <Text style={styles.incomeCardLabel}>Kiln</Text>
+              <Text style={styles.incomeCardValue}>
+                €{income.current.kiln.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.incomeCard}>
+              <Text style={styles.incomeCardLabel}>Materials</Text>
+              <Text style={styles.incomeCardValue}>
+                €{income.current.materials.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.incomeCard}>
+              <Text style={styles.incomeCardLabel}>Open studio</Text>
+              <Text style={styles.incomeCardValue}>
+                €{income.current.openStudio.toFixed(2)}
+              </Text>
+            </View>
+          </View>
+          <SectionLabel>LAST 6 MONTHS</SectionLabel>
+          <View style={styles.sparkline}>
+            {(income.history ?? []).map((h, i) => {
+              const max = Math.max(
+                ...(income.history ?? []).map((x) => x.total),
+                1
+              );
+              const heightPct = h.total / max;
+              return (
+                <View key={h.period || String(i)} style={styles.sparkCol}>
+                  <View
+                    style={[
+                      styles.sparkBar,
+                      {
+                        flex: heightPct || 0.02,
+                        backgroundColor:
+                          i === (income.history ?? []).length - 1
+                            ? colors.clay
+                            : colors.border,
+                      },
+                    ]}
+                  />
+                  <Text style={styles.sparkLabel}>{h.period.slice(5)}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
 
       <SectionLabel>Recent firings</SectionLabel>
       {!tenantId ? (
@@ -774,6 +874,55 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing[2],
     marginBottom: spacing[6],
+  },
+  incomeCards: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  incomeCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    gap: 4,
+  },
+  incomeCardLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textTransform: 'uppercase',
+  },
+  incomeCardValue: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.lg,
+    color: colors.ink,
+  },
+  sparkline: {
+    flexDirection: 'row',
+    height: 80,
+    gap: spacing[1],
+    alignItems: 'flex-end',
+    marginBottom: spacing[3],
+  },
+  sparkCol: {
+    flex: 1,
+    alignItems: 'center',
+    height: '100%',
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  sparkBar: {
+    width: '100%',
+    borderRadius: 3,
+    minHeight: 3,
+  },
+  sparkLabel: {
+    fontFamily: typography.mono,
+    fontSize: 9,
+    color: colors.inkLight,
   },
   statCardTap: {
     flex: 1,
