@@ -43,6 +43,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await getMe();
       setUser(me.user);
       setStudios(me.studios);
+
+      // Auto-accept pending invites
+      for (const studio of me.studios) {
+        if (studio.status === 'invited') {
+          try {
+            await apiFetch(
+              `/studios/${studio.tenantId}/accept-invite`,
+              { method: 'POST' },
+              studio.tenantId
+            );
+          } catch {
+            // silent — nie blokuj logowania
+          }
+        }
+      }
+      // Refresh again to get updated statuses
+      if (me.studios.some((s) => s.status === 'invited')) {
+        const updated = await getMe();
+        setStudios(updated.studios);
+      }
     } catch {
       await clearAuth();
       setUser(null);
