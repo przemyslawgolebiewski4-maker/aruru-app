@@ -401,6 +401,16 @@ export default function DashboardScreen() {
       ?.navigate('EventList', { tenantId });
   }
 
+  function goCatalog() {
+    if (!tenantId) {
+      Alert.alert('Catalog', 'Create or join a studio first.');
+      return;
+    }
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('CatalogManage', { tenantId });
+  }
+
   function goPricing() {
     if (!canManageMembers) {
       Alert.alert('Pricing', 'Only studio owners can edit pricing.');
@@ -622,6 +632,17 @@ export default function DashboardScreen() {
             style={styles.actionBtn}
           />
         </View>
+        {canManageMembers ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Catalog"
+              variant="ghost"
+              onPress={goCatalog}
+              fullWidth
+              style={styles.actionBtn}
+            />
+          </View>
+        ) : null}
         {canManageMembers ? (
           <View style={styles.actionQuarter}>
             <Button

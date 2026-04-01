@@ -189,6 +189,11 @@ export default function MemberDashboardScreen() {
     navigation.navigate('BookStudio', { tenantId });
   }
 
+  function goShop() {
+    if (!tenantId) return;
+    navigation.navigate('MaterialsShop', { tenantId });
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -293,6 +298,13 @@ export default function MemberDashboardScreen() {
           activeOpacity={0.8}
         >
           <Text style={styles.actionLabel}>Events</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={goShop}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionLabel}>Buy materials</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionBtn}
