@@ -306,7 +306,7 @@ function AppNavigator() {
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
-          title: 'Shop',
+          title: 'Materials',
         }}
       />
     </AppStack.Navigator>
