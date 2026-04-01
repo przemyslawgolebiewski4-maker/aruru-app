@@ -361,6 +361,16 @@ export default function DashboardScreen() {
     }
   }
 
+  function goEvents() {
+    if (!tenantId) {
+      Alert.alert('Events', 'Create or join a studio first.');
+      return;
+    }
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('EventList', { tenantId });
+  }
+
   function goPricing() {
     if (!canManageMembers) {
       Alert.alert('Pricing', 'Only studio owners can edit pricing.');
@@ -520,6 +530,15 @@ export default function DashboardScreen() {
             label="Costs"
             variant="ghost"
             onPress={goCosts}
+            fullWidth
+            style={styles.actionBtn}
+          />
+        </View>
+        <View style={styles.actionQuarter}>
+          <Button
+            label="Events"
+            variant="ghost"
+            onPress={goEvents}
             fullWidth
             style={styles.actionBtn}
           />

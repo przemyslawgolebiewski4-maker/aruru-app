@@ -31,6 +31,8 @@ import TaskListScreen from '../screens/tasks/TaskListScreen';
 import TaskDetailScreen from '../screens/tasks/TaskDetailScreen';
 import CostListScreen from '../screens/costs/CostListScreen';
 import CostDetailScreen from '../screens/costs/CostDetailScreen';
+import EventListScreen from '../screens/events/EventListScreen';
+import EventDetailScreen from '../screens/events/EventDetailScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -220,6 +222,24 @@ function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: route.params.memberName,
+          ...appModalHeaderOptions,
+        })}
+      />
+      <AppStack.Screen
+        name="EventList"
+        component={EventListScreen}
+        options={{
+          headerShown: true,
+          title: 'Events',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="EventDetail"
+        component={EventDetailScreen}
+        options={({ route }) => ({
+          headerShown: true,
+          title: route.params.eventTitle,
           ...appModalHeaderOptions,
         })}
       />

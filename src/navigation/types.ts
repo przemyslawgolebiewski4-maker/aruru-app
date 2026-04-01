@@ -48,4 +48,6 @@ export type AppStackParamList = {
     month: number;
     memberEmail?: string;
   };
+  EventList: { tenantId: string };
+  EventDetail: { tenantId: string; eventId: string; eventTitle: string };
 };
