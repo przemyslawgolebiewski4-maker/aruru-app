@@ -214,6 +214,19 @@ function parseCostData(o: Record<string, unknown>): CostData {
   };
 }
 
+/** True when there is nothing to show (e.g. my-history has no row for this month yet). */
+function memberCostLooksEmpty(parsed: CostData): boolean {
+  return (
+    parsed.grandTotal === 0 &&
+    parsed.membershipFee === 0 &&
+    parsed.openStudioTotal === 0 &&
+    parsed.kilnTotal === 0 &&
+    parsed.eventsTotal === 0 &&
+    parsed.materialsTotal === 0 &&
+    parsed.miscTotal === 0
+  );
+}
+
 function extractSummaryId(o: Record<string, unknown>): string {
   return str(o.summaryId ?? o.summary_id ?? o.id ?? o._id).trim();
 }
@@ -377,17 +390,41 @@ export default function CostDetailScreen({ route }: { route: Route }) {
           (genRecord ? extractSummaryId(genRecord) : '');
         setSummaryId(sid || null);
       } else {
-        raw = await apiFetch<unknown>(
-          `/studios/${tenantId}/costs/my-history${q}`,
-          {},
-          tenantId
-        );
-        raw = normalizeHistoryPayload(raw, y, m);
-        const o =
-          raw && typeof raw === 'object'
-            ? (raw as Record<string, unknown>)
-            : {};
-        const parsed = parseCostData(o);
+        let o: Record<string, unknown> = {};
+        try {
+          raw = await apiFetch<unknown>(
+            `/studios/${tenantId}/costs/my-history${q}`,
+            {},
+            tenantId
+          );
+          raw = normalizeHistoryPayload(raw, y, m);
+          o =
+            raw && typeof raw === 'object'
+              ? (raw as Record<string, unknown>)
+              : {};
+        } catch {
+          o = {};
+        }
+        let parsed = parseCostData(o);
+        if (memberCostLooksEmpty(parsed)) {
+          try {
+            const live = await apiFetch<unknown>(
+              `/studios/${tenantId}/costs/live/${userId}${q}`,
+              {},
+              tenantId
+            );
+            if (live && typeof live === 'object') {
+              const lo = live as Record<string, unknown>;
+              const p = str(lo.period);
+              if (!p || p === wantPeriod) {
+                o = lo;
+                parsed = parseCostData(o);
+              }
+            }
+          } catch {
+            /* keep my-history / empty */
+          }
+        }
         setData(parsed);
         const sid = extractSummaryId(o);
         setSummaryId(sid || null);
