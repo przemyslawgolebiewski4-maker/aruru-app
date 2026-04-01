@@ -247,12 +247,27 @@ async function fetchPdfFromEndpoint(
     if (res.pdfUrl && typeof res.pdfUrl === 'string') {
       return res.pdfUrl;
     }
-    // Przypadek 2: base64
+    // Przypadek 2: HTML base64 (nowy format)
+    if (res.htmlBase64 && typeof res.htmlBase64 === 'string') {
+      const filename =
+        typeof res.filename === 'string' ? res.filename : 'aruru-costs.html';
+      const html = atob(res.htmlBase64);
+      if (typeof window !== 'undefined') {
+        // Otwórz w nowym oknie z przyciskiem print
+        const win = window.open('', '_blank');
+        if (win) {
+          win.document.write(html);
+          win.document.close();
+          win.print();
+        }
+      }
+      return 'html_exported';
+    }
+    // Przypadek 3: PDF base64 (stary format, fallback)
     if (res.pdfBase64 && typeof res.pdfBase64 === 'string') {
       const filename =
         typeof res.filename === 'string' ? res.filename : 'aruru-costs.pdf';
       const dataUrl = `data:application/pdf;base64,${res.pdfBase64}`;
-      // Triggeruj download przez anchor
       if (typeof window !== 'undefined') {
         const a = document.createElement('a');
         a.href = dataUrl;
@@ -705,11 +720,11 @@ export default function CostDetailScreen({ route }: { route: Route }) {
                 <TouchableOpacity
                   onPress={() => openPdfUrl(pdfReadyUrl)}
                   accessibilityRole="link"
-                  accessibilityLabel="Open PDF download"
+                  accessibilityLabel="Open cost summary"
                   style={styles.pdfLinkWrap}
                 >
                   <Text style={styles.pdfLinkText}>
-                    PDF ready — click to download
+                    Cost summary ready — click to open
                   </Text>
                 </TouchableOpacity>
               ) : null}
