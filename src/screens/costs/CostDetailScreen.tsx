@@ -416,7 +416,14 @@ export default function CostDetailScreen({ route }: { route: Route }) {
 
   function openPdfUrl(url: string) {
     if (typeof window !== 'undefined') {
-      window.open(url, '_blank');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'aruru-cost-summary.pdf';
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   }
 
