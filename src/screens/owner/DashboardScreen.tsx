@@ -75,18 +75,6 @@ function firingScheduledAt(f: Record<string, unknown>): string {
   );
 }
 
-function firingStatus(f: Record<string, unknown>): string {
-  return String(f.status ?? '').toLowerCase();
-}
-
-function firingItemsCount(f: Record<string, unknown>): number {
-  const n = f.itemsCount;
-  if (typeof n === 'number' && Number.isFinite(n)) return n;
-  const items = f.items;
-  if (Array.isArray(items)) return items.length;
-  return 0;
-}
-
 function firingTypeRaw(f: Record<string, unknown>): string {
   return String(f.kiln_type ?? f.firingType ?? f.kilnType ?? 'Firing');
 }
@@ -109,14 +97,6 @@ function formatDate(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function isScheduledInCurrentMonth(iso: string): boolean {
-  if (!iso) return false;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return false;
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
 function taskId(t: Record<string, unknown>): string {
@@ -204,10 +184,24 @@ export default function DashboardScreen() {
       }).length;
 
       const firings = parseFiringsArray(firRes);
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
       const firingsThisMonth = firings.filter((f) => {
-        const st = firingStatus(f);
-        if (st === 'cancelled') return false;
-        return isScheduledInCurrentMonth(firingScheduledAt(f));
+        const dateStr =
+          f.scheduledAt ?? f.scheduled_at ?? f.firedAt ?? f.fired_at;
+        if (dateStr == null || dateStr === '') return false;
+        const d = new Date(
+          typeof dateStr === 'string' || typeof dateStr === 'number'
+            ? dateStr
+            : String(dateStr)
+        );
+        if (Number.isNaN(d.getTime())) return false;
+        return (
+          d.getMonth() === currentMonth &&
+          d.getFullYear() === currentYear &&
+          f.status !== 'cancelled'
+        );
       }).length;
 
       const sortedFirings = [...firings].sort((a, b) => {
@@ -221,7 +215,12 @@ export default function DashboardScreen() {
       const topFirings: RecentFiring[] = sortedFirings.slice(0, 3).map((f, idx) => {
         const id = firingId(f);
         const sched = firingScheduledAt(f);
-        const cnt = firingItemsCount(f);
+        const cnt =
+          (typeof f.itemsCount === 'number' && Number.isFinite(f.itemsCount)
+            ? f.itemsCount
+            : undefined) ??
+          (Array.isArray(f.items) ? f.items.length : undefined) ??
+          0;
         const st = String(f.status ?? 'open').toLowerCase();
         return {
           id: id || `firing-row-${idx}`,
