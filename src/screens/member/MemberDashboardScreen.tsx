@@ -57,13 +57,12 @@ function parseCosts(data: unknown): CostSummary {
     string,
     unknown
   >;
-  const costs = (d.costs ?? d) as Record<string, unknown>;
   return {
-    kiln: Number(costs.kiln ?? costs.kiln_total ?? 0),
-    materials: Number(costs.materials ?? costs.materials_total ?? 0),
-    events: Number(costs.events ?? costs.events_total ?? 0),
-    misc: Number(costs.misc ?? costs.misc_total ?? 0),
-    total: Number(costs.total ?? costs.grand_total ?? 0),
+    kiln: Number(d.kilnTotal ?? d.kiln_total ?? 0),
+    materials: Number(d.materialsTotal ?? d.materials_total ?? 0),
+    events: Number(d.eventsTotal ?? d.events_total ?? 0),
+    misc: Number(d.miscTotal ?? d.misc_total ?? 0),
+    total: Number(d.grandTotal ?? d.grand_total ?? 0),
   };
 }
 
@@ -116,15 +115,11 @@ export default function MemberDashboardScreen() {
     try {
       const [costsRes, firingsRes, eventsRes] = await Promise.allSettled([
         apiFetch<unknown>(
-          `/studios/${tenantId}/costs/summary?year=${year}&month=${month}&user_id=${user.id}`,
+          `/studios/${tenantId}/costs/live/mine`,
           {},
           tenantId
         ),
-        apiFetch<unknown>(
-          `/studios/${tenantId}/kiln/firings`,
-          {},
-          tenantId
-        ),
+        apiFetch<unknown>(`/studios/${tenantId}/kiln`, {}, tenantId),
         apiFetch<unknown>(`/studios/${tenantId}/events`, {}, tenantId),
       ]);
 
@@ -160,7 +155,7 @@ export default function MemberDashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, user?.id, year, month]);
+  }, [tenantId, user?.id]);
 
   useFocusEffect(useCallback(() => void load(), [load]));
 
