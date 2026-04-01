@@ -52,14 +52,50 @@ export type { AuthStackParamList, AppStackParamList, MainTabParamList } from './
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
+function getWebVerifyEmailInitialState():
+  | {
+      routes: Array<{
+        name: 'VerifyEmail';
+        params: AuthStackParamList['VerifyEmail'];
+      }>;
+      index: number;
+    }
+  | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const raw = window.location.pathname || '/';
+  const path = raw.replace(/\/+$/, '') || '/';
+  const parts = path.split('/').filter(Boolean);
+  const last = parts[parts.length - 1] ?? '';
+  if (last !== 'verify-email') return undefined;
+  const q = new URLSearchParams(window.location.search);
+  const email = q.get('email') ?? undefined;
+  const success = q.get('success') ?? undefined;
+  const token = q.get('token') ?? q.get('jwt_token') ?? undefined;
+  const error = q.get('error') ?? undefined;
+  if (!email && !success && !token && !error) return undefined;
+  return {
+    routes: [
+      {
+        name: 'VerifyEmail',
+        params: { email, success, token, error },
+      },
+    ],
+    index: 0,
+  };
+}
+
 function AuthNavigator({
   initialRouteName,
+  verifyNavState,
 }: {
   initialRouteName: keyof AuthStackParamList;
+  verifyNavState: ReturnType<typeof getWebVerifyEmailInitialState>;
 }) {
   return (
     <AuthStack.Navigator
-      initialRouteName={initialRouteName}
+      {...(verifyNavState
+        ? { initialState: verifyNavState }
+        : { initialRouteName })}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.surface },
@@ -251,6 +287,7 @@ export function RootNavigator() {
   const { user, loading: authLoading } = useAuth();
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
+  const [verifyNavState] = useState(() => getWebVerifyEmailInitialState());
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
@@ -279,6 +316,7 @@ export function RootNavigator() {
   return (
     <AuthNavigator
       initialRouteName={onboardingDone ? 'Login' : 'Onboarding'}
+      verifyNavState={verifyNavState}
     />
   );
 }

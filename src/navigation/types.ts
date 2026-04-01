@@ -2,7 +2,12 @@ export type AuthStackParamList = {
   Onboarding: undefined;
   Login: undefined;
   Register: undefined;
-  VerifyEmail: { email: string };
+  VerifyEmail: {
+    email?: string;
+    success?: string;
+    token?: string;
+    error?: string;
+  };
 };
 
 export type MainTabParamList = {

@@ -3,9 +3,10 @@ import {
   getMe,
   login,
   logout,
-  register,
   clearAuth,
   getToken,
+  setToken,
+  apiFetch,
 } from '../services/api';
 import type { AuthUser, StudioMembership } from '../services/api';
 
@@ -75,7 +76,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signUp(email: string, password: string, name: string) {
     setError(null);
     try {
-      await register({ email, password, name });
+      const data = await apiFetch<{ message?: string; access_token?: string }>(
+        '/auth/register',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password, name }),
+        }
+      );
+      if (data?.access_token) {
+        await setToken(data.access_token);
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Registration failed');
       throw e;
