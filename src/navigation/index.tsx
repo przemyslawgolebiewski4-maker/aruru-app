@@ -294,9 +294,18 @@ function AppNavigator() {
         name="CatalogManage"
         component={CatalogManageScreen}
         options={{
+          ...appModalHeaderOptions,
           headerShown: true,
           title: 'Catalog',
+        }}
+      />
+      <AppStack.Screen
+        name="MaterialsShop"
+        component={CatalogManageScreen}
+        options={{
           ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Shop',
         }}
       />
     </AppStack.Navigator>
