@@ -24,6 +24,7 @@ import {
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
+import MemberDashboardScreen from '../member/MemberDashboardScreen';
 
 type RecentFiring = {
   id: string;
@@ -316,6 +317,10 @@ export default function DashboardScreen() {
       void load();
     }, [load])
   );
+
+  if (currentStudio?.role === 'member') {
+    return <MemberDashboardScreen />;
+  }
 
   function goKilnList() {
     if (!canManageKiln) {
