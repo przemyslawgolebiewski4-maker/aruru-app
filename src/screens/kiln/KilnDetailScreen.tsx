@@ -175,7 +175,15 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     });
   }
 
-  async function handleClose() {
+  async function confirmClose() {
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm(
+            'Close this firing session? Costs will be calculated and added to member summaries.'
+          )
+        : true;
+    if (!ok) return;
+
     try {
       setLoading(true);
       await apiFetch(
@@ -191,17 +199,13 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     }
   }
 
-  async function confirmClose() {
+  async function confirmReopen() {
     const ok =
       typeof window !== 'undefined'
-        ? window.confirm(
-            'Close this firing session? Costs will be calculated and added to member summaries.'
-          )
+        ? window.confirm('Reopen this firing session?')
         : true;
-    if (ok) await handleClose();
-  }
+    if (!ok) return;
 
-  async function handleReopen() {
     try {
       setLoading(true);
       await apiFetch(
@@ -215,14 +219,6 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function confirmReopen() {
-    const ok =
-      typeof window !== 'undefined'
-        ? window.confirm('Reopen this firing session?')
-        : true;
-    if (ok) await handleReopen();
   }
 
   if (loading) {
