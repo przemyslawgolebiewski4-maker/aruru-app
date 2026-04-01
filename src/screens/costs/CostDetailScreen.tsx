@@ -716,17 +716,26 @@ export default function CostDetailScreen({ route }: { route: Route }) {
                 loading={generating}
                 style={styles.btnClay}
               />
-              {pdfReadyUrl ? (
-                <TouchableOpacity
-                  onPress={() => openPdfUrl(pdfReadyUrl)}
-                  accessibilityRole="link"
-                  accessibilityLabel="Open cost summary"
-                  style={styles.pdfLinkWrap}
-                >
+              {pdfReadyUrl && pdfReadyUrl !== 'html_exported' ? (
+                <View style={styles.pdfLinkWrap}>
+                  <TouchableOpacity
+                    onPress={() => openPdfUrl(pdfReadyUrl)}
+                    accessibilityRole="link"
+                    accessibilityLabel="Open cost summary"
+                    style={styles.pdfLinkInner}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.pdfLinkText}>
+                      ↓ Cost summary ready — click to open
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : pdfReadyUrl === 'html_exported' ? (
+                <View style={styles.pdfLinkWrap}>
                   <Text style={styles.pdfLinkText}>
-                    Cost summary ready — click to open
+                    ✓ Summary opened in new window
                   </Text>
-                </TouchableOpacity>
+                </View>
               ) : null}
               <Button
                 label="Send to member"
@@ -918,6 +927,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[2],
     paddingVertical: spacing[2],
   },
+  pdfLinkInner: {},
   pdfLinkText: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.sm,
