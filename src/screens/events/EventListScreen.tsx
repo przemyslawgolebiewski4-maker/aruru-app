@@ -11,7 +11,8 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Badge, Button, Input, SectionLabel } from '../../components/ui';
+import EventCalendar from '../../components/EventCalendar';
+import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -80,14 +81,6 @@ function kindNorm(k: string | undefined): EventKind | 'other' {
   if (v === 'open_studio') return 'open_studio';
   if (v === 'private_event') return 'private_event';
   return 'other';
-}
-
-function kindDotColor(kind: string | undefined) {
-  const k = kindNorm(kind);
-  if (k === 'workshop') return colors.clay;
-  if (k === 'open_studio') return colors.moss;
-  if (k === 'private_event') return colors.inkMid;
-  return colors.inkLight;
 }
 
 export function kindBadgeVariant(
@@ -235,37 +228,6 @@ export default function EventListScreen({ route }: { route: Route }) {
     return { upcoming, thisMonth };
   }, [events]);
 
-  const { upcomingList, pastList } = useMemo(() => {
-    const nowMs = Date.now();
-    const up: StudioEvent[] = [];
-    const past: StudioEvent[] = [];
-    for (const e of events) {
-      const s = e.startsAt;
-      if (!s) {
-        past.push(e);
-        continue;
-      }
-      const t = new Date(s).getTime();
-      if (Number.isNaN(t)) {
-        past.push(e);
-        continue;
-      }
-      if (t > nowMs) up.push(e);
-      else past.push(e);
-    }
-    up.sort((a, b) => {
-      const ta = new Date(a.startsAt ?? 0).getTime();
-      const tb = new Date(b.startsAt ?? 0).getTime();
-      return ta - tb;
-    });
-    past.sort((a, b) => {
-      const ta = new Date(a.startsAt ?? 0).getTime();
-      const tb = new Date(b.startsAt ?? 0).getTime();
-      return tb - ta;
-    });
-    return { upcomingList: up, pastList: past };
-  }, [events]);
-
   function resetForm() {
     setTitle('');
     setKind('workshop');
@@ -333,46 +295,6 @@ export default function EventListScreen({ route }: { route: Route }) {
       eventId: id,
       eventTitle: e.title?.trim() || 'Event',
     });
-  }
-
-  function renderEventRow(e: StudioEvent, idx: number) {
-    const id = eventId(e);
-    const loc = (e.location ?? '').trim();
-    const max = e.maxParticipants;
-    return (
-      <TouchableOpacity
-        key={id || `ev-${idx}`}
-        style={styles.eventCard}
-        activeOpacity={0.75}
-        onPress={() => goDetail(e)}
-      >
-        <View style={styles.eventRowInner}>
-          <View
-            style={[styles.kindDot, { backgroundColor: kindDotColor(e.kind) }]}
-          />
-          <View style={styles.eventMid}>
-            <Text style={styles.eventTitle} numberOfLines={2}>
-              {e.title || 'Untitled'}
-            </Text>
-            <Text style={styles.eventMeta} numberOfLines={2}>
-              {e.startsAt
-                ? `${formatDate(e.startsAt)} · ${formatTime(e.startsAt)}`
-                : '—'}
-              {loc ? ` · ${loc}` : ''}
-            </Text>
-            {max != null && max > 0 ? (
-              <Text style={styles.eventMax}>
-                Max {max} participants
-              </Text>
-            ) : null}
-          </View>
-          <Badge
-            label={kindBadgeLabel(e.kind)}
-            variant={kindBadgeVariant(e.kind)}
-          />
-        </View>
-      </TouchableOpacity>
-    );
   }
 
   return (
@@ -483,26 +405,14 @@ export default function EventListScreen({ route }: { route: Route }) {
         <Text style={styles.errBanner}>{error}</Text>
       ) : null}
 
-      {!loading && upcomingList.length === 0 && pastList.length === 0 ? (
+      {!loading && events.length === 0 ? (
         <Text style={styles.empty}>
           No events yet. Tap + New to create one.
         </Text>
       ) : null}
 
-      {upcomingList.length > 0 ? (
-        <>
-          <SectionLabel>UPCOMING</SectionLabel>
-          {upcomingList.map((e, i) => renderEventRow(e, i))}
-        </>
-      ) : null}
-
-      {pastList.length > 0 ? (
-        <>
-          <View style={styles.pastSection}>
-            <SectionLabel>PAST</SectionLabel>
-          </View>
-          {pastList.map((e, i) => renderEventRow(e, i))}
-        </>
+      {!loading && events.length > 0 ? (
+        <EventCalendar events={events} onEventPress={(e) => goDetail(e)} />
       ) : null}
 
       <View style={{ height: spacing[10] }} />
@@ -640,50 +550,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.inkLight,
     marginTop: spacing[2],
-  },
-  pastSection: {
-    marginTop: spacing[4],
-  },
-  eventCard: {
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  eventRowInner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  kindDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 6,
-  },
-  eventMid: {
-    flex: 1,
-    marginLeft: 10,
-    marginRight: spacing[2],
-    minWidth: 0,
-  },
-  eventTitle: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.md,
-    color: colors.ink,
-  },
-  eventMeta: {
-    fontFamily: typography.mono,
-    fontSize: 11,
-    color: colors.inkLight,
-    marginTop: 2,
-  },
-  eventMax: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.inkLight,
-    marginTop: 4,
   },
 });
