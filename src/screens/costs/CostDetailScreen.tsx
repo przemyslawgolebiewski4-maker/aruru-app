@@ -73,7 +73,7 @@ function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString(undefined, {
+    return d.toLocaleDateString('en-GB', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -88,12 +88,12 @@ const API_BASE =
 
 function periodLabel(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
 
 /** Header / display: always matches selected period (not API `period` slug). */
 function periodLabelDisplay(year: number, month: number): string {
-  return new Date(year, month - 1, 1).toLocaleString('en', {
+  return new Date(year, month - 1, 1).toLocaleString('en-GB', {
     month: 'long',
     year: 'numeric',
   });
