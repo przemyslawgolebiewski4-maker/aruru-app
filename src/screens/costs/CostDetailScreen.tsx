@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import { apiFetch, getToken } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'CostDetail'>;
@@ -83,9 +83,20 @@ function formatDate(iso: string): string {
   }
 }
 
+const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://aruru-production.up.railway.app';
+
 function periodLabel(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
   return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+/** Header / display: always matches selected period (not API `period` slug). */
+function periodLabelDisplay(year: number, month: number): string {
+  return new Date(year, month - 1, 1).toLocaleString('en', {
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 function isAfterCurrentMonth(y: number, m: number): boolean {
@@ -210,6 +221,59 @@ function extractSummaryId(o: Record<string, unknown>): string {
   return str(o.summaryId ?? o.summary_id ?? o.id ?? o._id).trim();
 }
 
+function isCostPayload(x: unknown): x is Record<string, unknown> {
+  if (!x || typeof x !== 'object') return false;
+  const o = x as Record<string, unknown>;
+  return (
+    'grandTotal' in o ||
+    'breakdown' in o ||
+    'membershipFee' in o ||
+    'membership_fee' in o
+  );
+}
+
+function extractPdfUrlFromRecord(o: Record<string, unknown>): string {
+  return str(o.pdf_url ?? o.pdfUrl ?? o.pdf).trim();
+}
+
+async function fetchPdfUrlFromEndpoint(
+  tenantId: string,
+  summaryId: string
+): Promise<string | null> {
+  const token = await getToken();
+  const res = await fetch(
+    `${API_BASE}/studios/${tenantId}/costs/${summaryId}/pdf`,
+    {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-Tenant-ID': tenantId,
+      },
+    }
+  );
+  if (!res.ok) return null;
+  const ct = (res.headers.get('content-type') ?? '').toLowerCase();
+  if (ct.includes('application/json')) {
+    try {
+      const j = (await res.json()) as Record<string, unknown>;
+      return extractPdfUrlFromRecord(j) || null;
+    } catch {
+      return null;
+    }
+  }
+  if (res.redirected && res.url) return res.url;
+  if (ct.includes('application/pdf') || ct.includes('octet-stream')) {
+    try {
+      const blob = await res.blob();
+      if (typeof URL !== 'undefined' && URL.createObjectURL) {
+        return URL.createObjectURL(blob);
+      }
+    } catch {
+      return null;
+    }
+  }
+  return res.url || null;
+}
+
 export default function CostDetailScreen({ route }: { route: Route }) {
   const {
     tenantId,
@@ -233,6 +297,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
   const [summaryId, setSummaryId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pdfReadyUrl, setPdfReadyUrl] = useState<string | null>(null);
 
   const displayName = routeMemberName || data?.memberName || 'Member';
 
@@ -245,55 +310,78 @@ export default function CostDetailScreen({ route }: { route: Route }) {
     }
   }, [isOwner, user?.id, userId, navigation]);
 
-  const load = useCallback(async () => {
+  const loadCostData = useCallback(async () => {
     if (!isOwner && user?.id !== userId) return;
     setLoading(true);
-    const q = `?year=${selectedYear}&month=${selectedMonth}`;
+    const y = selectedYear;
+    const m = selectedMonth;
+    const q = `?year=${y}&month=${m}`;
+    const wantPeriod = periodKey(y, m);
     try {
       let raw: unknown;
       if (isOwner) {
+        let genRecord: Record<string, unknown> | null = null;
         try {
           raw = await apiFetch<unknown>(
             `/studios/${tenantId}/costs/live/${userId}${q}`,
             {},
             tenantId
           );
+          const first = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+          const p = str(first.period);
+          if (p && p !== wantPeriod) {
+            throw new Error('period mismatch');
+          }
         } catch {
-          await apiFetch(
+          const gen = await apiFetch<Record<string, unknown>>(
             `/studios/${tenantId}/costs/generate`,
             {
               method: 'POST',
               body: JSON.stringify({
                 userId,
-                year: selectedYear,
-                month: selectedMonth,
+                year: y,
+                month: m,
               }),
             },
             tenantId
           );
-          raw = await apiFetch<unknown>(
-            `/studios/${tenantId}/costs/live/${userId}${q}`,
-            {},
-            tenantId
-          );
+          genRecord = gen;
+          if (isCostPayload(gen)) {
+            raw = gen;
+          } else {
+            raw = await apiFetch<unknown>(
+              `/studios/${tenantId}/costs/live/${userId}${q}`,
+              {},
+              tenantId
+            );
+          }
         }
+        const o =
+          raw && typeof raw === 'object'
+            ? (raw as Record<string, unknown>)
+            : {};
+        const parsed = parseCostData(o);
+        setData(parsed);
+        const sid =
+          extractSummaryId(o) ||
+          (genRecord ? extractSummaryId(genRecord) : '');
+        setSummaryId(sid || null);
       } else {
         raw = await apiFetch<unknown>(
           `/studios/${tenantId}/costs/my-history${q}`,
           {},
           tenantId
         );
-        raw = normalizeHistoryPayload(raw, selectedYear, selectedMonth);
+        raw = normalizeHistoryPayload(raw, y, m);
+        const o =
+          raw && typeof raw === 'object'
+            ? (raw as Record<string, unknown>)
+            : {};
+        const parsed = parseCostData(o);
+        setData(parsed);
+        const sid = extractSummaryId(o);
+        setSummaryId(sid || null);
       }
-
-      const o =
-        raw && typeof raw === 'object'
-          ? (raw as Record<string, unknown>)
-          : {};
-      const parsed = parseCostData(o);
-      setData(parsed);
-      const sid = extractSummaryId(o);
-      setSummaryId(sid || null);
     } catch {
       setData(null);
       setSummaryId(null);
@@ -302,11 +390,10 @@ export default function CostDetailScreen({ route }: { route: Route }) {
     }
   }, [tenantId, userId, isOwner, user?.id, selectedYear, selectedMonth]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void load();
-    }, [load])
-  );
+  useEffect(() => {
+    setPdfReadyUrl(null);
+    void loadCostData();
+  }, [selectedYear, selectedMonth, loadCostData]);
 
   function goPrevMonth() {
     if (selectedMonth <= 1) {
@@ -327,9 +414,18 @@ export default function CostDetailScreen({ route }: { route: Route }) {
   const nextPeriod = bumpMonthForward(selectedYear, selectedMonth);
   const nextMonthDisabled = isAfterCurrentMonth(nextPeriod.y, nextPeriod.m);
 
+  function openPdfUrl(url: string) {
+    if (typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    }
+  }
+
   async function onGeneratePdf() {
     if (!isOwner) return;
     setGenerating(true);
+    setPdfReadyUrl(null);
+    const y = selectedYear;
+    const mo = selectedMonth;
     try {
       const res = await apiFetch<Record<string, unknown>>(
         `/studios/${tenantId}/costs/generate`,
@@ -337,17 +433,25 @@ export default function CostDetailScreen({ route }: { route: Route }) {
           method: 'POST',
           body: JSON.stringify({
             userId,
-            year: selectedYear,
-            month: selectedMonth,
+            year: y,
+            month: mo,
           }),
         },
         tenantId
       );
       const sid = extractSummaryId(res);
       if (sid) setSummaryId(sid);
-      await load();
-      if (typeof window !== 'undefined') {
-        window.alert('Summary generated. Ready to download.');
+
+      let pdfUrl = extractPdfUrlFromRecord(res);
+      if (!pdfUrl && sid) {
+        pdfUrl = (await fetchPdfUrlFromEndpoint(tenantId, sid)) ?? '';
+      }
+      if (pdfUrl) setPdfReadyUrl(pdfUrl);
+
+      if (isCostPayload(res)) {
+        setData(parseCostData(res));
+      } else {
+        await loadCostData();
       }
     } catch (e) {
       if (typeof window !== 'undefined') {
@@ -450,7 +554,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
               <Text style={styles.headerName}>{displayName}</Text>
             </View>
             <Text style={styles.headerPeriod}>
-              {d?.period || periodKey(selectedYear, selectedMonth)}
+              {periodLabelDisplay(selectedYear, selectedMonth)}
             </Text>
             <Text style={styles.headerTotal}>{formatEuro(grand)}</Text>
           </View>
@@ -595,6 +699,18 @@ export default function CostDetailScreen({ route }: { route: Route }) {
                 loading={generating}
                 style={styles.btnClay}
               />
+              {pdfReadyUrl ? (
+                <TouchableOpacity
+                  onPress={() => openPdfUrl(pdfReadyUrl)}
+                  accessibilityRole="link"
+                  accessibilityLabel="Open PDF download"
+                  style={styles.pdfLinkWrap}
+                >
+                  <Text style={styles.pdfLinkText}>
+                    PDF ready — click to download
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <Button
                 label="Send to member"
                 variant="ghost"
@@ -780,5 +896,15 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: colors.moss,
     marginTop: 8,
+  },
+  pdfLinkWrap: {
+    marginTop: spacing[2],
+    paddingVertical: spacing[2],
+  },
+  pdfLinkText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+    textDecorationLine: 'underline',
   },
 });
