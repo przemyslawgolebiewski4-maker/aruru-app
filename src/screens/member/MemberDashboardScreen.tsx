@@ -63,7 +63,7 @@ function parseCosts(data: unknown): CostSummary {
 function formatDate(iso: string): string {
   if (!iso) return '';
   try {
-    return new Date(iso).toLocaleDateString('pl-PL', {
+    return new Date(iso).toLocaleDateString(undefined, {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -191,15 +191,15 @@ export default function MemberDashboardScreen() {
         <View style={styles.headerText}>
           <Text style={styles.studioName}>{studioLabel}</Text>
           <Text style={styles.greeting}>
-            Cześć, {user?.name?.split(' ')[0] ?? 'ceramiczko'}.
+            Hello, {user?.name?.split(' ')[0] ?? 'there'}.
           </Text>
         </View>
-        <Badge label="Członek" variant="moss" />
+        <Badge label="Member" variant="moss" />
       </View>
 
       <Divider />
 
-      <SectionLabel>{`Moje koszty — ${month}/${year}`}</SectionLabel>
+      <SectionLabel>{`My costs — ${month}/${year}`}</SectionLabel>
       <TouchableOpacity
         style={styles.costsCard}
         onPress={goCosts}
@@ -210,23 +210,23 @@ export default function MemberDashboardScreen() {
         </Text>
         <View style={styles.costsRow}>
           <Text style={styles.costItem}>
-            Piec: {costs?.kiln.toFixed(2) ?? '—'} zł
+            Kiln: {costs?.kiln.toFixed(2) ?? '—'} zł
           </Text>
           <Text style={styles.costItem}>
-            Materiały: {costs?.materials.toFixed(2) ?? '—'} zł
+            Materials: {costs?.materials.toFixed(2) ?? '—'} zł
           </Text>
           <Text style={styles.costItem}>
-            Eventy: {costs?.events.toFixed(2) ?? '—'} zł
+            Events: {costs?.events.toFixed(2) ?? '—'} zł
           </Text>
         </View>
-        <Text style={styles.costsLink}>Zobacz pełne zestawienie →</Text>
+        <Text style={styles.costsLink}>View full summary →</Text>
       </TouchableOpacity>
 
       <Divider />
 
-      <SectionLabel>Moje wypalenia</SectionLabel>
+      <SectionLabel>My firings</SectionLabel>
       {firings.length === 0 ? (
-        <Text style={styles.empty}>Nie masz jeszcze żadnych wypaleń.</Text>
+        <Text style={styles.empty}>No firings yet.</Text>
       ) : (
         firings.map((f) => (
           <TouchableOpacity
@@ -249,9 +249,9 @@ export default function MemberDashboardScreen() {
 
       <Divider />
 
-      <SectionLabel>Nadchodzące eventy</SectionLabel>
+      <SectionLabel>Upcoming events</SectionLabel>
       {events.length === 0 ? (
-        <Text style={styles.empty}>Brak nadchodzących eventów.</Text>
+        <Text style={styles.empty}>No upcoming events.</Text>
       ) : (
         events.map((e) => (
           <View key={e.id} style={styles.row}>
@@ -273,14 +273,14 @@ export default function MemberDashboardScreen() {
           onPress={goCosts}
           activeOpacity={0.8}
         >
-          <Text style={styles.actionLabel}>Moje koszty</Text>
+          <Text style={styles.actionLabel}>My costs</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.actionBtn}
           onPress={goEvents}
           activeOpacity={0.8}
         >
-          <Text style={styles.actionLabel}>Eventy</Text>
+          <Text style={styles.actionLabel}>Events</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
