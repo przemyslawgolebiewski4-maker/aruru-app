@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import DateTimeField from '../../components/DateTimeField';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'BookStudio'>;
-
-function pad(n: number) {
-  return String(n).padStart(2, '0');
-}
 
 function roundToNextHour(): Date {
   const d = new Date();
@@ -26,30 +23,16 @@ export default function BookStudioScreen({ route, navigation }: Props) {
   const defaultEnd = new Date(defaultStart);
   defaultEnd.setHours(defaultEnd.getHours() + 2);
 
-  const [date, setDate] = useState(
-    `${defaultStart.getFullYear()}-${pad(defaultStart.getMonth() + 1)}-${pad(defaultStart.getDate())}`
-  );
-  const [startTime, setStartTime] = useState(`${pad(defaultStart.getHours())}:00`);
-  const [endTime, setEndTime] = useState(`${pad(defaultEnd.getHours())}:00`);
+  const [startsAt, setStartsAt] = useState<Date>(defaultStart);
+  const [endsAt, setEndsAt] = useState<Date>(defaultEnd);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function onSubmit() {
     setError('');
-    if (!date || !startTime || !endTime) {
-      setError('Please fill in date, start and end time.');
-      return;
-    }
-    const startsAt = new Date(`${date}T${startTime}:00`);
-    const endsAt = new Date(`${date}T${endTime}:00`);
-    if (
-      Number.isNaN(startsAt.getTime()) ||
-      Number.isNaN(endsAt.getTime())
-    ) {
-      setError('Invalid date or time.');
-      return;
-    }
+    const startsAtISO = startsAt.toISOString();
+    const endsAtISO = endsAt.toISOString();
     if (endsAt <= startsAt) {
       setError('End time must be after start time.');
       return;
@@ -61,8 +44,8 @@ export default function BookStudioScreen({ route, navigation }: Props) {
         {
           method: 'POST',
           body: JSON.stringify({
-            startsAt: startsAt.toISOString(),
-            endsAt: endsAt.toISOString(),
+            startsAt: startsAtISO,
+            endsAt: endsAtISO,
             notes: notes.trim() || null,
           }),
         },
@@ -83,31 +66,35 @@ export default function BookStudioScreen({ route, navigation }: Props) {
         Reserve a slot and let your studio know what you&apos;ll be working on.
       </Text>
 
-      <Text style={styles.label}>Date</Text>
-      <Input
-        value={date}
-        onChangeText={setDate}
-        placeholder="YYYY-MM-DD"
-        autoCapitalize="none"
+      <DateTimeField
+        label="Date"
+        value={startsAt}
+        onChange={(d) => {
+          const newStart = new Date(startsAt);
+          newStart.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+          setStartsAt(newStart);
+          const newEnd = new Date(endsAt);
+          newEnd.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+          setEndsAt(newEnd);
+        }}
+        mode="date"
+        minimumDate={new Date()}
       />
-
       <View style={styles.timeRow}>
         <View style={styles.timeCol}>
-          <Text style={styles.label}>Start time</Text>
-          <Input
-            value={startTime}
-            onChangeText={setStartTime}
-            placeholder="HH:MM"
-            autoCapitalize="none"
+          <DateTimeField
+            label="Start time"
+            value={startsAt}
+            onChange={(d) => setStartsAt(d)}
+            mode="time"
           />
         </View>
         <View style={styles.timeCol}>
-          <Text style={styles.label}>End time</Text>
-          <Input
-            value={endTime}
-            onChangeText={setEndTime}
-            placeholder="HH:MM"
-            autoCapitalize="none"
+          <DateTimeField
+            label="End time"
+            value={endsAt}
+            onChange={(d) => setEndsAt(d)}
+            mode="time"
           />
         </View>
       </View>
