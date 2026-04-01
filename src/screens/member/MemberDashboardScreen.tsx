@@ -206,17 +206,17 @@ export default function MemberDashboardScreen() {
         activeOpacity={0.8}
       >
         <Text style={styles.costsTotal}>
-          {costs ? `${costs.total.toFixed(2)} zł` : '—'}
+          {costs ? `€${costs.total.toFixed(2)}` : '—'}
         </Text>
         <View style={styles.costsRow}>
           <Text style={styles.costItem}>
-            Kiln: {costs?.kiln.toFixed(2) ?? '—'} zł
+            Kiln: {costs ? `€${costs.kiln.toFixed(2)}` : '—'}
           </Text>
           <Text style={styles.costItem}>
-            Materials: {costs?.materials.toFixed(2) ?? '—'} zł
+            Materials: {costs ? `€${costs.materials.toFixed(2)}` : '—'}
           </Text>
           <Text style={styles.costItem}>
-            Events: {costs?.events.toFixed(2) ?? '—'} zł
+            Events: {costs ? `€${costs.events.toFixed(2)}` : '—'}
           </Text>
         </View>
         <Text style={styles.costsLink}>View full summary →</Text>
