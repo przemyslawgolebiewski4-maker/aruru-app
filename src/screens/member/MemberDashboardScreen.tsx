@@ -7,7 +7,11 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import {
+  useFocusEffect,
+  useNavigation,
+  type CompositeNavigationProp,
+} from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
@@ -16,7 +20,10 @@ import { colors, typography, fontSize, spacing, radius } from '../../theme/token
 import { apiFetch } from '../../services/api';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
-type Nav = MaterialTopTabNavigationProp<MainTabParamList>;
+type Nav = CompositeNavigationProp<
+  MaterialTopTabNavigationProp<MainTabParamList>,
+  NativeStackNavigationProp<AppStackParamList>
+>;
 type StackNav = NativeStackNavigationProp<AppStackParamList>;
 
 type CostSummary = {
@@ -177,6 +184,11 @@ export default function MemberDashboardScreen() {
     stackNav?.navigate('EventList', { tenantId });
   }
 
+  function goBookStudio() {
+    if (!tenantId) return;
+    navigation.navigate('BookStudio', { tenantId });
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -282,6 +294,13 @@ export default function MemberDashboardScreen() {
         >
           <Text style={styles.actionLabel}>Events</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionBtn}
+          onPress={goBookStudio}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionLabel}>Book studio time</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -368,6 +387,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing[2],
     marginTop: spacing[2],
   },
