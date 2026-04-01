@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -116,6 +117,30 @@ function taskTitle(t: Record<string, unknown>): string {
   return String(t.title ?? 'Untitled').trim();
 }
 
+function IconTwoCircles60() {
+  return (
+    <Svg width={60} height={60} viewBox="0 0 60 60">
+      <Circle
+        cx={24}
+        cy={30}
+        r={16}
+        fill={colors.clayLight}
+        stroke={colors.clay}
+        strokeWidth={0.75}
+      />
+      <Circle
+        cx={36}
+        cy={30}
+        r={16}
+        fill={colors.mossLight}
+        stroke={colors.moss}
+        strokeWidth={0.75}
+        opacity={0.95}
+      />
+    </Svg>
+  );
+}
+
 export default function DashboardScreen() {
   const { user, studios } = useAuth();
   const navigation = useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
@@ -146,7 +171,7 @@ export default function DashboardScreen() {
     currentStudio?.status === 'active';
 
   const load = useCallback(async () => {
-    if (!tenantId) {
+    if (studios.length === 0 || !tenantId) {
       setStats({
         members: 0,
         firingsThisMonth: 0,
@@ -284,7 +309,7 @@ export default function DashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, studios.length]);
 
   useFocusEffect(
     useCallback(() => {
@@ -394,6 +419,59 @@ export default function DashboardScreen() {
   const tasksVal = loading ? '—' : String(stats.openTasks);
   const summariesVal = loading ? '—' : String(stats.summariesDue);
 
+  if (studios.length === 0) {
+    return (
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={styles.emptyStudiosScroll}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.emptyStudiosInner}>
+          <IconTwoCircles60 />
+          <Text style={styles.emptyStudiosTitle}>Welcome to Aruru.</Text>
+          <Text style={styles.emptyStudiosBody}>
+            You&apos;re not part of any studio yet.{'\n\n'}
+            If you run a ceramic studio, create one below.{'\n'}
+            If you were invited, check your email for an invitation link from
+            your studio owner.
+          </Text>
+          <Button
+            label="Create a studio"
+            variant="primary"
+            onPress={() =>
+              navigation
+                .getParent<NativeStackNavigationProp<AppStackParamList>>()
+                ?.navigate('CreateStudio')
+            }
+            fullWidth
+            style={styles.emptyStudiosCreateBtn}
+          />
+          <View style={styles.orDividerRow}>
+            <View style={styles.orLine} />
+            <Text style={styles.orText}>or</Text>
+            <View style={styles.orLine} />
+          </View>
+          <View style={styles.emptyStudiosInfoCard}>
+            <Text style={styles.emptyStudiosInfoText}>
+              Waiting for an invitation? Ask your studio owner to invite you via
+              email. You&apos;ll receive a link to join automatically.
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => navigation.jumpTo('Profile')}
+            style={styles.emptyStudiosLinkWrap}
+            accessibilityRole="button"
+            accessibilityLabel="Open profile to see your studios"
+          >
+            <Text style={styles.emptyStudiosLink}>
+              Already have an account in another studio? →
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.topRow}>
@@ -415,10 +493,6 @@ export default function DashboardScreen() {
         </Text>
         <Text style={styles.studioSub}>{studioLabel.toUpperCase()}</Text>
       </View>
-
-      {!tenantId ? (
-        <Text style={styles.emptyStudio}>Create a studio to get started</Text>
-      ) : null}
 
       <View style={styles.statsRow}>
         <StatCard label="Members" value={membersVal} accent="clay" />
@@ -564,6 +638,79 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing[5] },
+  emptyStudiosScroll: {
+    flexGrow: 1,
+    padding: 40,
+    justifyContent: 'center',
+  },
+  emptyStudiosInner: {
+    alignItems: 'center',
+    maxWidth: 400,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  emptyStudiosTitle: {
+    fontFamily: typography.display,
+    fontSize: 24,
+    color: colors.ink,
+    textAlign: 'center',
+    marginTop: 16,
+    letterSpacing: -0.3,
+  },
+  emptyStudiosBody: {
+    fontFamily: typography.body,
+    fontSize: 14,
+    color: colors.inkMid,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 280,
+    marginTop: 8,
+  },
+  emptyStudiosCreateBtn: {
+    marginTop: 24,
+    width: '100%',
+  },
+  orDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  orLine: {
+    flex: 1,
+    height: 0.5,
+    backgroundColor: colors.border,
+  },
+  orText: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.inkLight,
+    marginHorizontal: 12,
+  },
+  emptyStudiosInfoCard: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.md,
+    padding: 14,
+    width: '100%',
+  },
+  emptyStudiosInfoText: {
+    fontFamily: typography.body,
+    fontSize: 13,
+    color: colors.inkMid,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  emptyStudiosLinkWrap: {
+    marginTop: 16,
+    paddingVertical: spacing[2],
+  },
+  emptyStudiosLink: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.clay,
+    textAlign: 'center',
+  },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -595,13 +742,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginTop: spacing[2],
-  },
-  emptyStudio: {
-    fontFamily: typography.body,
-    fontSize: fontSize.md,
-    color: colors.inkMid,
-    marginBottom: spacing[4],
-    textAlign: 'center',
   },
   statsRow: {
     flexDirection: 'row',

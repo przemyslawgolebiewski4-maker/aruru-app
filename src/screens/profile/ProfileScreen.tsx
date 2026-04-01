@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -12,6 +14,53 @@ import { useAuth } from '../../hooks/useAuth';
 import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
+import { apiFetch } from '../../services/api';
+
+const DELETE_LABEL_GRAY = '#9E9890';
+
+function confirmDeleteWeb(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (
+    !window.confirm(
+      'Delete your Aruru account?\n\nThis will permanently remove your profile and all your data. This cannot be undone.'
+    )
+  ) {
+    return false;
+  }
+  return window.confirm(
+    'Are you absolutely sure? This action is permanent and cannot be reversed.'
+  );
+}
+
+function confirmDeleteNative(): Promise<boolean> {
+  return new Promise((resolve) => {
+    Alert.alert(
+      'Delete your Aruru account?',
+      'This will permanently remove your profile and all your data. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        {
+          text: 'Continue',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you absolutely sure?',
+              'This action is permanent and cannot be reversed.',
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                {
+                  text: 'Delete account',
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
+  });
+}
 
 function roleToBadgeVariant(
   role: string
@@ -30,6 +79,35 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const stackNav =
     navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeleteAccount() {
+    setDeleteError('');
+    const ok =
+      typeof window !== 'undefined'
+        ? confirmDeleteWeb()
+        : await confirmDeleteNative();
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      try {
+        await apiFetch('/auth/account', { method: 'DELETE' });
+      } catch {
+        await apiFetch('/auth/delete-account', {
+          method: 'POST',
+          body: JSON.stringify({}),
+        });
+      }
+      await signOut();
+    } catch (e: unknown) {
+      setDeleteError(
+        e instanceof Error ? e.message : 'Could not delete account.'
+      );
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   function goEditProfile() {
     stackNav?.navigate('EditProfile');
@@ -120,6 +198,29 @@ export default function ProfileScreen() {
         <Text style={styles.signOutText}>Sign out</Text>
       </TouchableOpacity>
 
+      <Divider style={styles.rowDivider} />
+      <TouchableOpacity
+        style={styles.deleteAccountBtn}
+        onPress={() => void handleDeleteAccount()}
+        disabled={deleting}
+        accessibilityRole="button"
+        accessibilityLabel="Delete account"
+      >
+        {deleting ? (
+          <ActivityIndicator color={DELETE_LABEL_GRAY} />
+        ) : (
+          <>
+            <Text style={styles.deleteAccountText}>Delete account</Text>
+            <Text style={styles.deleteAccountSub}>
+              Permanently removes your data
+            </Text>
+          </>
+        )}
+      </TouchableOpacity>
+      {deleteError ? (
+        <Text style={styles.deleteErrorText}>{deleteError}</Text>
+      ) : null}
+
       <View style={{ height: spacing[10] }} />
     </ScrollView>
   );
@@ -203,5 +304,30 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
     color: colors.error,
+  },
+  deleteAccountBtn: {
+    paddingVertical: 11,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginTop: spacing[1],
+  },
+  deleteAccountText: {
+    fontFamily: typography.body,
+    fontSize: 13,
+    color: DELETE_LABEL_GRAY,
+  },
+  deleteAccountSub: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  deleteErrorText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: spacing[2],
   },
 });
