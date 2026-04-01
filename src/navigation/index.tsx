@@ -323,7 +323,22 @@ export function RootNavigator() {
 
 export function AppNavigationContainer() {
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={{
+      prefixes: ['https://aruru.xyz', 'https://aruru-app.vercel.app', 'aruru://'],
+      config: {
+        screens: {
+          VerifyEmail: {
+            path: 'verify-email',
+            parse: {
+              success: (v) => v,
+              token: (v) => v,
+              error: (v) => v,
+              email: (v) => v,
+            },
+          },
+        },
+      },
+    }}>
       <RootNavigator />
     </NavigationContainer>
   );
