@@ -187,6 +187,7 @@ export default function DashboardScreen() {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
+      // counts current calendar month only
       const firingsThisMonth = firings.filter((f) => {
         const dateStr =
           f.scheduledAt ?? f.scheduled_at ?? f.firedAt ?? f.fired_at;
@@ -215,17 +216,17 @@ export default function DashboardScreen() {
       const topFirings: RecentFiring[] = sortedFirings.slice(0, 3).map((f, idx) => {
         const id = firingId(f);
         const sched = firingScheduledAt(f);
-        const cnt =
-          (typeof f.itemsCount === 'number' && Number.isFinite(f.itemsCount)
-            ? f.itemsCount
-            : undefined) ??
-          (Array.isArray(f.items) ? f.items.length : undefined) ??
-          0;
+        const rawMembers =
+          f.itemsCount ?? f.items_count ?? (Array.isArray(f.items) ? f.items.length : undefined);
+        const membersCount =
+          typeof rawMembers === 'number' && Number.isFinite(rawMembers)
+            ? rawMembers
+            : 0;
         const st = String(f.status ?? 'open').toLowerCase();
         return {
           id: id || `firing-row-${idx}`,
           title: capitalizeType(firingTypeRaw(f)),
-          meta: `${formatDate(sched)} · ${cnt} members`,
+          meta: formatDate(sched) + ' · ' + membersCount + ' members',
           status: st === 'closed' ? 'closed' : 'open',
         };
       });
