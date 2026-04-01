@@ -193,7 +193,15 @@ export default function KilnListScreen({ route }: { route: Route }) {
             </Text>
             <Badge
               label={f.status || ''}
-              variant={st === 'open' ? 'open' : 'neutral'}
+              variant={
+                st === 'open' || st === 'scheduled' || st === 'loading'
+                  ? 'open'
+                  : st === 'closed' || st === 'complete'
+                    ? 'neutral'
+                    : st === 'cancelled'
+                      ? 'error'
+                      : 'open'
+              }
             />
           </View>
           <Text style={styles.firingDate}>

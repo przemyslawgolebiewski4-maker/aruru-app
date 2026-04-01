@@ -272,7 +272,7 @@ export default function DashboardScreen() {
           id: id || `firing-row-${idx}`,
           title: capitalizeType(firingTypeRaw(f)),
           meta: formatDate(sched) + ' · ' + membersCount + ' members',
-          status: st === 'closed' ? 'closed' : 'open',
+          status: st,
         };
       });
 
@@ -642,8 +642,18 @@ export default function DashboardScreen() {
                 <Text style={styles.rowMeta}>{item.meta}</Text>
               </View>
               <Badge
-                label={item.status === 'open' ? 'open' : 'closed'}
-                variant={item.status === 'open' ? 'open' : 'neutral'}
+                label={item.status}
+                variant={
+                  item.status === 'open' ||
+                  item.status === 'scheduled' ||
+                  item.status === 'loading'
+                    ? 'open'
+                    : item.status === 'closed' || item.status === 'complete'
+                      ? 'neutral'
+                      : item.status === 'cancelled'
+                        ? 'error'
+                        : 'open'
+                }
               />
             </View>
             {i < recentFirings.length - 1 ? <Divider /> : null}
