@@ -11,6 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import DateTimeField from '../../components/DateTimeField';
 import EventCalendar from '../../components/EventCalendar';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
@@ -108,48 +109,18 @@ export function kindBadgeLabel(kind: string | undefined): string {
   return 'Other';
 }
 
-function splitDateTimeInput(s: string): { date: string; time: string } | null {
-  const t = s.trim().replace(/\s+/g, ' ');
-  if (!t) return null;
-  const m = t.match(
-    /^(\d{4}-\d{2}-\d{2})[ T]+(\d{1,2}):(\d{2})(?::(\d{2}))?$/
-  );
-  if (m) {
-    const date = m[1];
-    const hh = m[2].padStart(2, '0');
-    const mm = m[3].padStart(2, '0');
-    const ss = (m[4] ?? '00').padStart(2, '0');
-    return { date, time: `${hh}:${mm}:${ss}` };
-  }
-  return null;
+function defaultStartsAt(): Date {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return d;
 }
 
-function toIso8601(date: string, timeHhMmSs: string): string {
-  return `${date}T${timeHhMmSs}`;
-}
-
-function DateTimeField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (text: string) => void;
-}) {
-  return (
-    <View style={styles.dtField}>
-      <Text style={styles.dtLabel}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder="YYYY-MM-DD HH:mm"
-        placeholderTextColor={colors.inkFaint}
-        style={styles.dtInput}
-        keyboardType="numbers-and-punctuation"
-      />
-    </View>
-  );
+function defaultEndsAt(): Date {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 3);
+  return d;
 }
 
 export default function EventListScreen({ route }: { route: Route }) {
@@ -166,8 +137,8 @@ export default function EventListScreen({ route }: { route: Route }) {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<EventKind>('workshop');
-  const [startsInput, setStartsInput] = useState('');
-  const [endsInput, setEndsInput] = useState('');
+  const [startsAt, setStartsAt] = useState<Date>(() => defaultStartsAt());
+  const [endsAt, setEndsAt] = useState<Date>(() => defaultEndsAt());
   const [location, setLocation] = useState('');
   const [maxP, setMaxP] = useState('');
   const [description, setDescription] = useState('');
@@ -239,8 +210,8 @@ export default function EventListScreen({ route }: { route: Route }) {
   function resetForm() {
     setTitle('');
     setKind('workshop');
-    setStartsInput('');
-    setEndsInput('');
+    setStartsAt(defaultStartsAt());
+    setEndsAt(defaultEndsAt());
     setLocation('');
     setMaxP('');
     setDescription('');
@@ -250,20 +221,12 @@ export default function EventListScreen({ route }: { route: Route }) {
 
   async function onCreate() {
     setCreateError('');
-    const startParts = splitDateTimeInput(startsInput);
-    const endParts = splitDateTimeInput(endsInput);
     if (!title.trim()) {
       setCreateError('Title is required.');
       return;
     }
-    if (!startParts || !endParts) {
-      setCreateError('Use start and end as YYYY-MM-DD HH:mm');
-      return;
-    }
-    const startsAt = toIso8601(startParts.date, startParts.time);
-    const endsAt = toIso8601(endParts.date, endParts.time);
-    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
-      setCreateError('End must be after start.');
+    if (endsAt <= startsAt) {
+      setCreateError('End time must be after start time.');
       return;
     }
     setCreating(true);
@@ -275,8 +238,8 @@ export default function EventListScreen({ route }: { route: Route }) {
           body: JSON.stringify({
             title: title.trim(),
             kind,
-            startsAt,
-            endsAt,
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
             location: location.trim() || null,
             maxParticipants: parseInt(maxP, 10) || null,
             description: description.trim() || null,
@@ -345,16 +308,40 @@ export default function EventListScreen({ route }: { route: Route }) {
             })}
           </View>
           <View style={styles.dtRow}>
-            <DateTimeField
-              label="STARTS"
-              value={startsInput}
-              onChange={setStartsInput}
-            />
-            <DateTimeField
-              label="ENDS"
-              value={endsInput}
-              onChange={setEndsInput}
-            />
+            <View style={{ flex: 1 }}>
+              <DateTimeField
+                label="Starts"
+                value={startsAt}
+                onChange={(d) => setStartsAt(d)}
+                mode="date"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <DateTimeField
+                label="Ends"
+                value={endsAt}
+                onChange={(d) => setEndsAt(d)}
+                mode="date"
+              />
+            </View>
+          </View>
+          <View style={styles.dtRow}>
+            <View style={{ flex: 1 }}>
+              <DateTimeField
+                label="Start time"
+                value={startsAt}
+                onChange={(d) => setStartsAt(d)}
+                mode="time"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <DateTimeField
+                label="End time"
+                value={endsAt}
+                onChange={(d) => setEndsAt(d)}
+                mode="time"
+              />
+            </View>
           </View>
           <Input
             label="Location (optional)"
@@ -493,22 +480,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
-  },
-  dtField: { flex: 1 },
-  dtLabel: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.inkLight,
-    letterSpacing: 0.8,
-  },
-  dtInput: {
-    fontFamily: typography.mono,
-    fontSize: 13,
-    color: colors.ink,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-    paddingVertical: 8,
-    marginTop: 4,
   },
   inputSpaced: { marginTop: spacing[2] },
   descLabel: {
