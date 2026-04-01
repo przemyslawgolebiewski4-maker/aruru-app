@@ -57,11 +57,18 @@ function formatRowTime(iso: string): string {
   });
 }
 
+function kindColor(kind: string | undefined): string {
+  const v = (kind ?? '').toLowerCase();
+  if (v === 'member_booking') return colors.clayLight;
+  return colors.surface;
+}
+
 function kindDotColor(kind: string | undefined) {
   const v = (kind ?? '').toLowerCase();
   if (v === 'workshop') return colors.clay;
   if (v === 'open_studio') return colors.moss;
   if (v === 'private_event') return colors.inkMid;
+  if (v === 'member_booking') return colors.clay;
   return colors.inkLight;
 }
 
@@ -71,6 +78,7 @@ function kindBadgeVariant(
   const v = (kind ?? '').toLowerCase();
   if (v === 'workshop') return 'clay';
   if (v === 'open_studio') return 'moss';
+  if (v === 'member_booking') return 'clay';
   return 'neutral';
 }
 
@@ -79,6 +87,7 @@ function kindBadgeLabel(kind: string | undefined): string {
   if (v === 'workshop') return 'Workshop';
   if (v === 'open_studio') return 'Open studio';
   if (v === 'private_event') return 'Private';
+  if (v === 'member_booking') return 'Studio booking';
   return 'Other';
 }
 
@@ -244,7 +253,7 @@ export default function EventCalendar({ events, onEventPress }: Props) {
           return (
             <TouchableOpacity
               key={id}
-              style={styles.eventCard}
+              style={[styles.eventCard, { backgroundColor: kindColor(e.kind) }]}
               activeOpacity={0.75}
               onPress={() => onEventPress(e)}
             >

@@ -21,7 +21,12 @@ import { useAuth } from '../../hooks/useAuth';
 type Nav = NativeStackNavigationProp<AppStackParamList, 'EventList'>;
 type Route = RouteProp<AppStackParamList, 'EventList'>;
 
-export type EventKind = 'workshop' | 'open_studio' | 'private_event' | 'other';
+export type EventKind =
+  | 'workshop'
+  | 'open_studio'
+  | 'private_event'
+  | 'member_booking'
+  | 'other';
 
 export type StudioEvent = {
   id?: string;
@@ -75,11 +80,12 @@ function eventId(e: StudioEvent): string {
   return String(e.id ?? '').trim();
 }
 
-function kindNorm(k: string | undefined): EventKind | 'other' {
+function kindNorm(k: string | undefined): EventKind {
   const v = (k ?? '').toLowerCase();
   if (v === 'workshop') return 'workshop';
   if (v === 'open_studio') return 'open_studio';
   if (v === 'private_event') return 'private_event';
+  if (v === 'member_booking') return 'member_booking';
   return 'other';
 }
 
@@ -89,6 +95,7 @@ export function kindBadgeVariant(
   const k = kindNorm(kind);
   if (k === 'workshop') return 'clay';
   if (k === 'open_studio') return 'moss';
+  if (k === 'member_booking') return 'clay';
   return 'neutral';
 }
 
@@ -97,6 +104,7 @@ export function kindBadgeLabel(kind: string | undefined): string {
   if (k === 'workshop') return 'Workshop';
   if (k === 'open_studio') return 'Open studio';
   if (k === 'private_event') return 'Private';
+  if (k === 'member_booking') return 'Studio booking';
   return 'Other';
 }
 
