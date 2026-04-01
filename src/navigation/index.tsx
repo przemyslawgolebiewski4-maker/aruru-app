@@ -33,6 +33,7 @@ import CostListScreen from '../screens/costs/CostListScreen';
 import CostDetailScreen from '../screens/costs/CostDetailScreen';
 import EventListScreen from '../screens/events/EventListScreen';
 import EventDetailScreen from '../screens/events/EventDetailScreen';
+import BookStudioScreen from '../screens/member/BookStudioScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -278,6 +279,15 @@ function AppNavigator() {
           title: route.params.eventTitle,
           ...appModalHeaderOptions,
         })}
+      />
+      <AppStack.Screen
+        name="BookStudio"
+        component={BookStudioScreen}
+        options={{
+          headerShown: true,
+          title: 'Book studio',
+          ...appModalHeaderOptions,
+        }}
       />
     </AppStack.Navigator>
   );
