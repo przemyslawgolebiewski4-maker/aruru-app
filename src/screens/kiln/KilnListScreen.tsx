@@ -41,6 +41,9 @@ const MONTH_SHORT = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
+const ACTIVE_STATUSES = ['open', 'scheduled', 'loading', 'firing', 'cooling'];
+const CLOSED_STATUSES = ['closed', 'complete'];
+
 function rawKilnType(f: KilnFiringListItem) {
   return f?.kiln_type || f?.firingType || f?.kilnType || '';
 }
@@ -112,8 +115,8 @@ export default function KilnListScreen({ route }: { route: Route }) {
   );
 
   const stats = useMemo(() => {
-    const open = firings.filter(
-      (f) => (f.status || '').toLowerCase() === 'open'
+    const open = firings.filter((f) =>
+      ACTIVE_STATUSES.includes((f.status || '').toLowerCase())
     ).length;
     const now = new Date();
     const y = now.getFullYear();
@@ -155,12 +158,23 @@ export default function KilnListScreen({ route }: { route: Route }) {
 
   const openList = useMemo(
     () =>
-      firings.filter((f) => (f.status || '').toLowerCase() === 'open'),
+      firings.filter((f) =>
+        ACTIVE_STATUSES.includes((f.status || '').toLowerCase())
+      ),
     [firings]
   );
   const closedList = useMemo(
     () =>
-      firings.filter((f) => (f.status || '').toLowerCase() === 'closed'),
+      firings.filter((f) =>
+        CLOSED_STATUSES.includes((f.status || '').toLowerCase())
+      ),
+    [firings]
+  );
+  const cancelledList = useMemo(
+    () =>
+      firings.filter(
+        (f) => (f.status || '').toLowerCase() === 'cancelled'
+      ),
     [firings]
   );
 
@@ -283,7 +297,7 @@ export default function KilnListScreen({ route }: { route: Route }) {
 
       {openList.length > 0 ? (
         <>
-          <Text style={styles.sectionHdr}>OPEN</Text>
+          <Text style={styles.sectionHdr}>ACTIVE</Text>
           {openList.map(renderRow)}
         </>
       ) : null}
@@ -299,6 +313,15 @@ export default function KilnListScreen({ route }: { route: Route }) {
             CLOSED
           </Text>
           {closedList.map(renderRow)}
+        </>
+      ) : null}
+
+      {cancelledList.length > 0 ? (
+        <>
+          <Text style={[styles.sectionHdr, { marginTop: spacing[4] }]}>
+            CANCELLED
+          </Text>
+          {cancelledList.map(renderRow)}
         </>
       ) : null}
 
