@@ -34,6 +34,7 @@ import CostDetailScreen from '../screens/costs/CostDetailScreen';
 import EventListScreen from '../screens/events/EventListScreen';
 import EventDetailScreen from '../screens/events/EventDetailScreen';
 import BookStudioScreen from '../screens/member/BookStudioScreen';
+import CatalogManageScreen from '../screens/materials/CatalogManageScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -286,6 +287,15 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Book studio',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="CatalogManage"
+        component={CatalogManageScreen}
+        options={{
+          headerShown: true,
+          title: 'Catalog',
           ...appModalHeaderOptions,
         }}
       />

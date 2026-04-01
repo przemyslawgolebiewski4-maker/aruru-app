@@ -56,4 +56,5 @@ export type AppStackParamList = {
   EventList: { tenantId: string };
   EventDetail: { tenantId: string; eventId: string; eventTitle: string };
   BookStudio: { tenantId: string };
+  CatalogManage: { tenantId: string };
 };
