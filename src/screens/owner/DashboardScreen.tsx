@@ -364,6 +364,24 @@ export default function DashboardScreen() {
     }
   }
 
+  function goPricing() {
+    if (!canManageMembers) {
+      Alert.alert('Pricing', 'Only studio owners can edit pricing.');
+      return;
+    }
+    if (!tenantId) {
+      Alert.alert('Pricing', 'Create or join a studio first.');
+      return;
+    }
+    const name =
+      currentStudio?.studioName?.trim() ||
+      currentStudio?.studioSlug ||
+      'Studio';
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('PricingSettings', { tenantId, studioName: name });
+  }
+
   const membersVal = loading ? '—' : String(stats.members);
   const firingsVal = loading ? '—' : String(stats.firingsThisMonth);
   const tasksVal = loading ? '—' : String(stats.openTasks);
@@ -509,6 +527,17 @@ export default function DashboardScreen() {
             style={styles.actionBtn}
           />
         </View>
+        {canManageMembers ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Pricing"
+              variant="ghost"
+              onPress={goPricing}
+              fullWidth
+              style={styles.actionBtn}
+            />
+          </View>
+        ) : null}
       </View>
 
       <View style={{ height: spacing[10] }} />

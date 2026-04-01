@@ -28,11 +28,18 @@ function formatRole(role: string) {
 export default function ProfileScreen() {
   const { user, studios, signOut } = useAuth();
   const navigation = useNavigation();
+  const stackNav =
+    navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
 
   function goEditProfile() {
-    navigation
-      .getParent<NativeStackNavigationProp<AppStackParamList>>()
-      ?.navigate('EditProfile');
+    stackNav?.navigate('EditProfile');
+  }
+
+  function goPricingSettings(studio: (typeof studios)[number]) {
+    stackNav?.navigate('PricingSettings', {
+      tenantId: studio.tenantId,
+      studioName: studio.studioName || studio.studioSlug,
+    });
   }
 
   return (
@@ -56,9 +63,21 @@ export default function ProfileScreen() {
         studios.map((s, i) => (
           <View key={s.tenantId}>
             <View style={styles.studioRow}>
-              <Text style={styles.studioName} numberOfLines={1}>
-                {s.studioName || s.studioSlug}
-              </Text>
+              <View style={styles.studioCol}>
+                <Text style={styles.studioName} numberOfLines={1}>
+                  {s.studioName || s.studioSlug}
+                </Text>
+                {s.role === 'owner' && s.status === 'active' ? (
+                  <TouchableOpacity
+                    onPress={() => goPricingSettings(s)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit pricing"
+                  >
+                    <Text style={styles.editPricingLink}>Edit pricing →</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               <Badge
                 label={formatRole(s.role)}
                 variant={roleToBadgeVariant(s.role)}
@@ -142,16 +161,25 @@ const styles = StyleSheet.create({
   },
   studioRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: spacing[3],
     gap: spacing[3],
+  },
+  studioCol: {
+    flex: 1,
+    minWidth: 0,
   },
   studioName: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
     color: colors.ink,
-    flex: 1,
+  },
+  editPricingLink: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.clay,
+    marginTop: 4,
   },
   rowDivider: {
     marginVertical: 0,

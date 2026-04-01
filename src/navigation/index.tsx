@@ -19,6 +19,7 @@ import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
 import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
+import PricingSettingsScreen from '../screens/studio/PricingSettingsScreen';
 import MembersScreen from '../screens/members/MembersScreen';
 import InviteMemberScreen from '../screens/members/InviteMemberScreen';
 import MemberProfileScreen from '../screens/members/MemberProfileScreen';
@@ -108,6 +109,15 @@ function AppNavigator() {
       <AppStack.Screen
         name="SetupPricing"
         component={SetupPricingScreen}
+        options={{
+          headerShown: true,
+          title: 'Pricing',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="PricingSettings"
+        component={PricingSettingsScreen}
         options={{
           headerShown: true,
           title: 'Pricing',
