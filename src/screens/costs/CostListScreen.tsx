@@ -75,6 +75,74 @@ function parseLiveCost(data: unknown): LiveCostRow {
   return { grandTotal, summaryStatus };
 }
 
+function periodFromLivePayload(live: unknown): string {
+  if (!live || typeof live !== 'object') return '';
+  return String((live as Record<string, unknown>).period ?? '').trim();
+}
+
+function livePeriodMatchesMonth(
+  periodStr: string,
+  y: number,
+  mo: number
+): boolean {
+  const t = periodStr.trim();
+  if (!t) return false;
+  const parts = t.split('-');
+  if (parts.length < 2) return false;
+  return Number(parts[0]) === y && Number(parts[1]) === mo;
+}
+
+/**
+ * Backend may return full totals on GET .../live/{userId} (no query) like /live/mine,
+ * while .../live/{userId}?year=&month= can be empty. Merge both behaviors for the owner list.
+ */
+async function fetchMemberLiveCostRow(
+  tenantId: string,
+  userId: string,
+  y: number,
+  mo: number
+): Promise<LiveCostRow> {
+  const qs = `?year=${y}&month=${mo}`;
+  const want = `${y}-${String(mo).padStart(2, '0')}`;
+  const now = new Date();
+  const viewingCurrentMonth =
+    y === now.getFullYear() && mo === now.getMonth() + 1;
+
+  const tryBare = async (): Promise<LiveCostRow | null> => {
+    try {
+      const liveBare = await apiFetch<unknown>(
+        `/studios/${tenantId}/costs/live/${userId}`,
+        {},
+        tenantId
+      );
+      const rowBare = parseLiveCost(liveBare);
+      const pBare = periodFromLivePayload(liveBare);
+      const bareEmpty =
+        rowBare.grandTotal === 0 && rowBare.summaryStatus == null;
+      if (bareEmpty) return null;
+      if (!pBare && viewingCurrentMonth) return rowBare;
+      if (pBare && livePeriodMatchesMonth(pBare, y, mo)) return rowBare;
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  try {
+    const live = await apiFetch<unknown>(
+      `/studios/${tenantId}/costs/live/${userId}${qs}`,
+      {},
+      tenantId
+    );
+    let row = parseLiveCost(live);
+    const empty = row.grandTotal === 0 && row.summaryStatus == null;
+    if (!empty) return row;
+    return (await tryBare()) ?? row;
+  } catch {
+    return (await tryBare()) ?? { grandTotal: 0, summaryStatus: null };
+  }
+}
+
 function formatEuro(n: number): string {
   return `€${Number(n).toFixed(2)}`;
 }
@@ -137,19 +205,15 @@ export default function CostListScreen({ route }: { route: Route }) {
 
       const y = selectedYear;
       const mo = selectedMonth;
-      const qs = `?year=${y}&month=${mo}`;
       const entries = await Promise.all(
         active.map(async (m) => {
-          try {
-            const live = await apiFetch<unknown>(
-              `/studios/${tenantId}/costs/live/${m.userId}${qs}`,
-              {},
-              tenantId
-            );
-            return [m.userId, parseLiveCost(live)] as const;
-          } catch {
-            return [m.userId, { grandTotal: 0, summaryStatus: null }] as const;
-          }
+          const row = await fetchMemberLiveCostRow(
+            tenantId,
+            m.userId,
+            y,
+            mo
+          );
+          return [m.userId, row] as const;
         })
       );
       const next: Record<string, LiveCostRow> = {};

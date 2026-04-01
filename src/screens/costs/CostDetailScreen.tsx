@@ -114,6 +114,18 @@ function periodKey(year: number, month: number): string {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+function livePeriodMatchesMonthStr(
+  periodStr: string,
+  y: number,
+  mo: number
+): boolean {
+  const t = periodStr.trim();
+  if (!t) return false;
+  const parts = t.split('-');
+  if (parts.length < 2) return false;
+  return Number(parts[0]) === y && Number(parts[1]) === mo;
+}
+
 function normalizeHistoryPayload(
   raw: unknown,
   year: number,
@@ -416,13 +428,44 @@ export default function CostDetailScreen({ route }: { route: Route }) {
             if (live && typeof live === 'object') {
               const lo = live as Record<string, unknown>;
               const p = str(lo.period);
-              if (!p || p === wantPeriod) {
+              if (
+                !p ||
+                p === wantPeriod ||
+                livePeriodMatchesMonthStr(p, y, m)
+              ) {
                 o = lo;
                 parsed = parseCostData(o);
               }
             }
           } catch {
             /* keep my-history / empty */
+          }
+        }
+        if (memberCostLooksEmpty(parsed)) {
+          try {
+            const now = new Date();
+            const viewingCurrentMonth =
+              y === now.getFullYear() && m === now.getMonth() + 1;
+            const liveBare = await apiFetch<unknown>(
+              `/studios/${tenantId}/costs/live/${userId}`,
+              {},
+              tenantId
+            );
+            if (liveBare && typeof liveBare === 'object') {
+              const lb = liveBare as Record<string, unknown>;
+              const pBare = str(lb.period ?? '');
+              const tryParsed = parseCostData(lb);
+              if (
+                !memberCostLooksEmpty(tryParsed) &&
+                (livePeriodMatchesMonthStr(pBare, y, m) ||
+                  (!pBare && viewingCurrentMonth))
+              ) {
+                o = lb;
+                parsed = tryParsed;
+              }
+            }
+          } catch {
+            /* keep previous */
           }
         }
         setData(parsed);
