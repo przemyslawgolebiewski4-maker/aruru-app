@@ -144,6 +144,7 @@ export default function EventListScreen({ route }: { route: Route }) {
   const [description, setDescription] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
@@ -216,6 +217,7 @@ export default function EventListScreen({ route }: { route: Route }) {
     setMaxP('');
     setDescription('');
     setCreateError('');
+    setIsPublic(false);
     setShowForm(false);
   }
 
@@ -243,6 +245,7 @@ export default function EventListScreen({ route }: { route: Route }) {
             location: location.trim() || null,
             maxParticipants: parseInt(maxP, 10) || null,
             description: description.trim() || null,
+            public: isPublic,
           }),
         },
         tenantId
@@ -350,6 +353,25 @@ export default function EventListScreen({ route }: { route: Route }) {
             placeholder="Studio / address"
             containerStyle={styles.inputSpaced}
           />
+          <TouchableOpacity
+            style={styles.publicToggle}
+            onPress={() => setIsPublic((v) => !v)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.publicToggleLeft}>
+              <Text style={styles.publicToggleLabel}>
+                Publish to community feed
+              </Text>
+              <Text style={styles.publicToggleHint}>
+                Visible to all Aruru users
+              </Text>
+            </View>
+            <View style={[styles.toggleTrack, isPublic && styles.toggleTrackOn]}>
+              <View
+                style={[styles.toggleThumb, isPublic && styles.toggleThumbOn]}
+              />
+            </View>
+          </TouchableOpacity>
           <Input
             label="Max participants (optional)"
             value={maxP}
@@ -482,6 +504,44 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   inputSpaced: { marginTop: spacing[2] },
+  publicToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    marginTop: spacing[2],
+  },
+  publicToggleLeft: { flex: 1, gap: 2 },
+  publicToggleLabel: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  publicToggleHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  toggleTrack: {
+    width: 40,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    padding: 2,
+  },
+  toggleTrackOn: { backgroundColor: colors.moss },
+  toggleThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.surface,
+  },
+  toggleThumbOn: { alignSelf: 'flex-end' },
   descLabel: {
     fontFamily: typography.mono,
     fontSize: 11,
