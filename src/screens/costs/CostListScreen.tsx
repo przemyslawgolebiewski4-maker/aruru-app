@@ -172,7 +172,9 @@ export default function CostListScreen({ route }: { route: Route }) {
   const { studios } = useAuth();
 
   const currentStudio =
-    studios.find((s) => s.status === 'active') ?? studios[0];
+    studios.find((s) => s.tenantId === tenantId) ??
+    studios.find((s) => s.status === 'active') ??
+    studios[0];
 
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
