@@ -1,59 +1,74 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import EventFeedTab from './tabs/EventFeedTab';
+import StudioFinderTab from './tabs/StudioFinderTab';
+import ArtistsTab from './tabs/ArtistsTab';
+import ForumTab from './tabs/ForumTab';
+import SponsorsTab from './tabs/SponsorsTab';
+
+type Tab = 'feed' | 'studios' | 'artists' | 'forum' | 'sponsors';
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'feed', label: 'Feed' },
+  { key: 'studios', label: 'Studios' },
+  { key: 'artists', label: 'Artists' },
+  { key: 'forum', label: 'Forum' },
+  { key: 'sponsors', label: 'Sponsors' },
+];
 
 export default function CommunityScreen() {
+  const [activeTab, setActiveTab] = useState<Tab>('feed');
+
   return (
     <View style={styles.root}>
-      <View style={styles.iconWrap}>
-        <Svg width={60} height={60} viewBox="0 0 60 60">
-          <Circle cx={26} cy={32} r={18} fill={colors.clayLight} stroke={colors.clay} strokeWidth={0.5} />
-          <Circle cx={38} cy={28} r={16} fill={colors.mossLight} stroke={colors.moss} strokeWidth={0.5} />
-        </Svg>
+      <View style={styles.tabBar}>
+        {TABS.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[styles.tab, activeTab === t.key && styles.tabActive]}
+            onPress={() => setActiveTab(t.key)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabLabel, activeTab === t.key && styles.tabLabelActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
-      <Text style={styles.title}>Community</Text>
-      <Text style={styles.body}>
-        Connect with ceramic studios and artists.{'\n'}
-        Coming soon.
-      </Text>
-      <Text style={styles.sprint}>SPRINT 4</Text>
+      <View style={styles.content}>
+        {activeTab === 'feed' && <EventFeedTab />}
+        {activeTab === 'studios' && <StudioFinderTab />}
+        {activeTab === 'artists' && <ArtistsTab />}
+        {activeTab === 'forum' && <ForumTab />}
+        {activeTab === 'sponsors' && <SponsorsTab />}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
+  root: { flex: 1, backgroundColor: colors.cream },
+  tabBar: {
+    flexDirection: 'row',
     backgroundColor: colors.surface,
-    justifyContent: 'center',
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: spacing[2],
     alignItems: 'center',
-    padding: spacing[10],
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
-  iconWrap: {
-    marginBottom: spacing[6],
-  },
-  title: {
-    fontFamily: typography.display,
-    fontSize: fontSize['3xl'],
-    color: colors.ink,
-    textAlign: 'center',
-    marginBottom: spacing[4],
-    letterSpacing: -0.4,
-  },
-  body: {
-    fontFamily: typography.body,
-    fontSize: fontSize.lg,
-    color: colors.inkMid,
-    textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: spacing[6],
-  },
-  sprint: {
+  tabActive: { borderBottomColor: colors.clay },
+  tabLabel: {
     fontFamily: typography.mono,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.inkLight,
-    letterSpacing: 0.8,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
+  tabLabelActive: { color: colors.clay },
+  content: { flex: 1 },
 });
