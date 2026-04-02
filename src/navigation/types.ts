@@ -58,4 +58,6 @@ export type AppStackParamList = {
   BookStudio: { tenantId: string };
   CatalogManage: { tenantId: string };
   MaterialsShop: { tenantId: string };
+  Attendance: { tenantId: string };
+  AssistantsOverview: { tenantId: string };
 };

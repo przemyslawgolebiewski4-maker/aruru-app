@@ -36,6 +36,7 @@ import EventDetailScreen from '../screens/events/EventDetailScreen';
 import BookStudioScreen from '../screens/member/BookStudioScreen';
 import CatalogManageScreen from '../screens/materials/CatalogManageScreen';
 import MaterialsShopScreen from '../screens/materials/MaterialsShopScreen';
+import AttendanceScreen from '../screens/assistant/AttendanceScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -245,6 +246,15 @@ function AppNavigator() {
           title: route.params.taskTitle,
           ...appModalHeaderOptions,
         })}
+      />
+      <AppStack.Screen
+        name="Attendance"
+        component={AttendanceScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Attendance',
+        }}
       />
       <AppStack.Screen
         name="CostList"
