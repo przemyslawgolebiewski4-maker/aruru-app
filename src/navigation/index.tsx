@@ -37,6 +37,7 @@ import BookStudioScreen from '../screens/member/BookStudioScreen';
 import CatalogManageScreen from '../screens/materials/CatalogManageScreen';
 import MaterialsShopScreen from '../screens/materials/MaterialsShopScreen';
 import AttendanceScreen from '../screens/assistant/AttendanceScreen';
+import AssistantsOverviewScreen from '../screens/assistant/AssistantsOverviewScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -254,6 +255,15 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Attendance',
+        }}
+      />
+      <AppStack.Screen
+        name="AssistantsOverview"
+        component={AssistantsOverviewScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Assistants',
         }}
       />
       <AppStack.Screen
