@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import DateTimeField from '../../components/DateTimeField';
 import { SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -163,6 +164,8 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   const [logging, setLogging] = useState(false);
   const [logError, setLogError] = useState('');
   const [statusBusy, setStatusBusy] = useState(false);
+  const [editingDueDate, setEditingDueDate] = useState(false);
+  const [dueAtDate, setDueAtDate] = useState<Date | null>(null);
 
   const nameByUserId = useMemo(() => {
     const m = new Map<string, string>();
@@ -227,6 +230,14 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!task || editingDueDate) return;
+    const raw = task.dueAt;
+    setDueAtDate(
+      raw != null && String(raw).trim() !== '' ? new Date(String(raw)) : null
+    );
+  }, [task, editingDueDate]);
 
   const displayTitle = (task?.title ?? paramTitle ?? 'Task').trim();
 
@@ -362,11 +373,72 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
           </View>
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Due date</Text>
-            <Text
-              style={[styles.metaMono, overdue && styles.metaOverdue]}
-            >
-              {due || '—'}
-            </Text>
+            {isStaff ? (
+              editingDueDate ? (
+                <View style={{ gap: spacing[2], flex: 1, alignItems: 'flex-end' }}>
+                  <DateTimeField
+                    label="Due date"
+                    value={dueAtDate ?? new Date()}
+                    onChange={async (d) => {
+                      setDueAtDate(d);
+                      setEditingDueDate(false);
+                      try {
+                        await apiFetch(
+                          `/studios/${tenantId}/tasks/${taskId}`,
+                          {
+                            method: 'PATCH',
+                            body: JSON.stringify({ dueAt: d.toISOString() }),
+                          },
+                          tenantId
+                        );
+                        await load();
+                      } catch {
+                        /* silent */
+                      }
+                    }}
+                    mode="date"
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingDueDate(false);
+                      setDueAtDate(
+                        task.dueAt != null &&
+                          String(task.dueAt).trim() !== ''
+                          ? new Date(String(task.dueAt))
+                          : null
+                      );
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: typography.mono,
+                        fontSize: fontSize.xs,
+                        color: colors.inkLight,
+                      }}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => setEditingDueDate(true)}
+                  style={{ flex: 1, alignItems: 'flex-end' }}
+                >
+                  <Text
+                    style={[styles.metaMono, overdue && styles.metaOverdue]}
+                  >
+                    {due || 'Add due date'}
+                  </Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <Text
+                style={[styles.metaMono, overdue && styles.metaOverdue]}
+              >
+                {due || '—'}
+              </Text>
+            )}
           </View>
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Created by</Text>
