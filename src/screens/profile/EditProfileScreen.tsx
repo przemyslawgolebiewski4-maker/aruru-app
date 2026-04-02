@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
@@ -11,6 +12,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
 export default function EditProfileScreen({ navigation }: Props) {
   const { user, refresh } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [city, setCity] = useState(user?.city ?? '');
@@ -28,6 +30,10 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    setAvatarUrl(user?.avatarUrl ?? '');
+  }, [user?.avatarUrl]);
 
   async function onSave() {
     setError('');
@@ -209,26 +215,7 @@ const styles = StyleSheet.create({
   content: { padding: spacing[4], gap: spacing[4] },
   avatarSection: {
     alignItems: 'center',
-    gap: spacing[2],
     paddingVertical: spacing[4],
-  },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.clayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontFamily: typography.display,
-    fontSize: 32,
-    color: colors.clay,
-  },
-  avatarHint: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
   },
   emailRow: { gap: spacing[1] },
   fieldLabel: {

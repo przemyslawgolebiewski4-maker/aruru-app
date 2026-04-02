@@ -12,6 +12,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -49,13 +50,20 @@ function pickTags(r: Record<string, unknown>): string[] {
   return raw.map((x) => String(x)).filter(Boolean);
 }
 
-function parseStudioPayload(data: unknown): Record<string, unknown> {
+/** GET /studios/{tenantId} may include `logoUrl` or `logo_url`. */
+type StudioSettingsStudio = {
+  logoUrl?: string;
+};
+
+function parseStudioPayload(
+  data: unknown
+): Record<string, unknown> & Partial<StudioSettingsStudio> {
   if (!data || typeof data !== 'object') return {};
   const o = data as Record<string, unknown>;
   if (o.studio && typeof o.studio === 'object') {
-    return o.studio as Record<string, unknown>;
+    return o.studio as Record<string, unknown> & Partial<StudioSettingsStudio>;
   }
-  return o;
+  return o as Record<string, unknown> & Partial<StudioSettingsStudio>;
 }
 
 export default function StudioSettingsScreen({ route }: { route: Route }) {
@@ -68,6 +76,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     membership?.role === 'owner' && membership?.status === 'active';
 
   const [name, setName] = useState(studioName ?? '');
+  const [logoUrl, setLogoUrl] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [description, setDescription] = useState('');
@@ -105,6 +114,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       );
       const s = parseStudioPayload(data);
       setName(pickStr(s, 'name') || studioName || '');
+      setLogoUrl(pickStr(s, 'logoUrl', 'logo_url'));
       setCity(pickStr(s, 'city'));
       setCountry(pickStr(s, 'country'));
       setDescription(pickStr(s, 'description'));
@@ -184,6 +194,20 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.logoSection}>
+          <ImageUpload
+            currentUrl={logoUrl || null}
+            initials={name || 'S'}
+            size={80}
+            endpoint="/uploads/studio-logo"
+            tenantId={tenantId}
+            onSuccess={(url) => {
+              setLogoUrl(url);
+              void refresh();
+            }}
+            shape="rounded"
+          />
+        </View>
         <Input
           label="Studio name"
           value={name}
@@ -308,6 +332,7 @@ const styles = StyleSheet.create({
     padding: spacing[6],
     paddingBottom: spacing[10],
   },
+  logoSection: { alignItems: 'center', marginBottom: spacing[4] },
   centered: {
     flex: 1,
     justifyContent: 'center',
