@@ -119,7 +119,7 @@ export default function MemberDashboardScreen() {
           {},
           tenantId
         ),
-        apiFetch<unknown>(`/studios/${tenantId}/kiln`, {}, tenantId),
+        apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
         apiFetch<unknown>(`/studios/${tenantId}/events`, {}, tenantId),
       ]);
 
