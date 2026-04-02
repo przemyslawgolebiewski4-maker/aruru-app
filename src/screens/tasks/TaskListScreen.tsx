@@ -5,12 +5,12 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import DateTimeField from '../../components/DateTimeField';
 import { Avatar, Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -131,7 +131,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
   const [tab, setTab] = useState<TabKey>('all');
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
-  const [dueAtInput, setDueAtInput] = useState('');
+  const [dueAtDate, setDueAtDate] = useState<Date | null>(null);
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -260,9 +260,8 @@ export default function TaskListScreen({ route }: { route: Route }) {
         priority?: string;
       } = { title: t };
       if (selectedAssignee) body.assigneeUserId = selectedAssignee;
-      if (dueAtInput.trim()) {
-        const raw = dueAtInput.trim();
-        body.dueAt = raw.includes('T') ? raw : `${raw}T00:00:00`;
+      if (dueAtDate) {
+        body.dueAt = dueAtDate.toISOString();
       }
       await apiFetch(
         `/studios/${tenantId}/tasks`,
@@ -270,7 +269,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
         tenantId
       );
       setTitle('');
-      setDueAtInput('');
+      setDueAtDate(null);
       setShowForm(false);
       await load();
     } catch (e: unknown) {
@@ -364,13 +363,41 @@ export default function TaskListScreen({ route }: { route: Route }) {
               );
             })}
           </ScrollView>
-          <TextInput
-            value={dueAtInput}
-            onChangeText={setDueAtInput}
-            placeholder="YYYY-MM-DD (optional)"
-            placeholderTextColor={colors.inkFaint}
-            style={styles.dueInput}
-          />
+          <View style={{ marginTop: spacing[2] }}>
+          {dueAtDate ? (
+            <View style={{ gap: spacing[2] }}>
+              <DateTimeField
+                label="Due date"
+                value={dueAtDate}
+                onChange={(d) => setDueAtDate(d)}
+                mode="date"
+              />
+              <TouchableOpacity onPress={() => setDueAtDate(null)}>
+                <Text
+                  style={{
+                    fontFamily: typography.mono,
+                    fontSize: fontSize.xs,
+                    color: colors.inkLight,
+                  }}
+                >
+                  Remove due date
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => setDueAtDate(new Date())}>
+              <Text
+                style={{
+                  fontFamily: typography.mono,
+                  fontSize: fontSize.xs,
+                  color: colors.clay,
+                }}
+              >
+                + Add due date (optional)
+              </Text>
+            </TouchableOpacity>
+          )}
+          </View>
           {createError ? (
             <Text style={styles.createErr}>{createError}</Text>
           ) : null}
@@ -382,6 +409,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
                 onPress={() => {
                   setShowForm(false);
                   setCreateError('');
+                  setDueAtDate(null);
                 }}
                 fullWidth
               />
@@ -554,15 +582,6 @@ const styles = StyleSheet.create({
     maxWidth: 100,
   },
   assigneeNameSel: { color: '#fff' },
-  dueInput: {
-    marginTop: 8,
-    fontFamily: typography.mono,
-    fontSize: fontSize.sm,
-    color: colors.ink,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-    paddingVertical: 8,
-  },
   createErr: {
     marginTop: 8,
     fontFamily: typography.body,
