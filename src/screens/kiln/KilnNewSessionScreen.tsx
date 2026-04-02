@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
+import DateTimeField from '../../components/DateTimeField';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -36,37 +37,25 @@ function typeDot(c: KilnType) {
   return colors.inkMid;
 }
 
-function todayYmd() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 export default function KilnNewSessionScreen({ route }: { route: Route }) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
 
   const [kilnType, setKilnType] = useState<KilnType>('bisque');
-  const [firedAt, setFiredAt] = useState(() => todayYmd());
+  const [scheduledDate, setScheduledDate] = useState<Date>(() => new Date());
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   async function onSubmit() {
     setError('');
-    if (!firedAt.trim()) {
-      setError('Date is required.');
-      return;
-    }
     setLoading(true);
     try {
       const kilnTypeBody: 'bisque' | 'glaze' | 'private' = kilnType;
-      const dateTrim = firedAt.trim();
+      const scheduledAt = scheduledDate.toISOString();
       const body = {
         firingType: kilnTypeBody,
-        scheduledAt: `${dateTrim}T00:00:00`,
+        scheduledAt,
         notes: notes.trim() || null,
       };
 
@@ -84,7 +73,7 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
         tenantId,
         firingId: id,
         kilnType: kilnTypeBody,
-        scheduledAt: dateTrim,
+        scheduledAt,
       });
     } catch (e: unknown) {
       if (e instanceof Error) {
@@ -137,12 +126,11 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
           })}
         </View>
 
-        <Input
-          label="DATE"
-          placeholder="YYYY-MM-DD"
-          value={firedAt}
-          onChangeText={setFiredAt}
-          keyboardType="numbers-and-punctuation"
+        <DateTimeField
+          label="Firing date"
+          value={scheduledDate}
+          onChange={(d) => setScheduledDate(d)}
+          mode="date"
         />
 
         <Input
