@@ -38,6 +38,9 @@ import CatalogManageScreen from '../screens/materials/CatalogManageScreen';
 import MaterialsShopScreen from '../screens/materials/MaterialsShopScreen';
 import AttendanceScreen from '../screens/assistant/AttendanceScreen';
 import AssistantsOverviewScreen from '../screens/assistant/AssistantsOverviewScreen';
+import ArtistProfileScreen from '../screens/community/ArtistProfileScreen';
+import ForumPostScreen from '../screens/community/ForumPostScreen';
+import StudioPublicProfileScreen from '../screens/community/StudioPublicProfileScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -124,6 +127,33 @@ function AppNavigator() {
       }}
     >
       <AppStack.Screen name="Main" component={MainTabNavigator} />
+      <AppStack.Screen
+        name="ArtistProfile"
+        component={ArtistProfileScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Artist',
+        }}
+      />
+      <AppStack.Screen
+        name="ForumPost"
+        component={ForumPostScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Discussion',
+        }}
+      />
+      <AppStack.Screen
+        name="StudioPublicProfile"
+        component={StudioPublicProfileScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Studio',
+        }}
+      />
       <AppStack.Screen
         name="EditProfile"
         component={EditProfileScreen}

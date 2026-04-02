@@ -60,4 +60,7 @@ export type AppStackParamList = {
   MaterialsShop: { tenantId: string };
   Attendance: { tenantId: string };
   AssistantsOverview: { tenantId: string };
+  ArtistProfile: { userId: string };
+  ForumPost: { postId: string };
+  StudioPublicProfile: { studioId: string; studioName: string };
 };
