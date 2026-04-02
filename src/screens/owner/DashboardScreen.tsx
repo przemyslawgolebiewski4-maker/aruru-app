@@ -168,6 +168,7 @@ export default function DashboardScreen() {
   const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [income, setIncome] = useState<IncomeData | null>(null);
+  const [summariesDue, setSummariesDue] = useState(0);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -187,6 +188,7 @@ export default function DashboardScreen() {
 
   const load = useCallback(async () => {
     if (studios.length === 0 || !tenantId) {
+      setSummariesDue(0);
       setStats({
         members: 0,
         firingsThisMonth: 0,
@@ -202,12 +204,18 @@ export default function DashboardScreen() {
 
     setLoading(true);
     try {
-      const [memRes, firRes, taskRes, incomeRes] = await Promise.allSettled([
-        apiFetch<unknown>(`/studios/${tenantId}/members`, {}, tenantId),
-        apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
-        apiFetch<unknown>(`/studios/${tenantId}/tasks`, {}, tenantId),
-        apiFetch<unknown>(`/studios/${tenantId}/costs/income`, {}, tenantId),
-      ]);
+      const [memRes, firRes, taskRes, incomeRes, summariesRes] =
+        await Promise.allSettled([
+          apiFetch<unknown>(`/studios/${tenantId}/members`, {}, tenantId),
+          apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
+          apiFetch<unknown>(`/studios/${tenantId}/tasks`, {}, tenantId),
+          apiFetch<unknown>(`/studios/${tenantId}/costs/income`, {}, tenantId),
+          apiFetch<{ summariesDue: number }>(
+            `/studios/${tenantId}/costs/summaries-due`,
+            {},
+            tenantId
+          ),
+        ]);
 
       const membersList =
         memRes.status === 'fulfilled'
@@ -228,6 +236,17 @@ export default function DashboardScreen() {
         setIncome(incomeRes.value as IncomeData);
       } else {
         setIncome(null);
+      }
+
+      let nextSummariesDue = 0;
+      if (summariesRes.status === 'fulfilled' && summariesRes.value) {
+        const due = (
+          summariesRes.value as { summariesDue?: number }
+        ).summariesDue ?? 0;
+        nextSummariesDue = due;
+        setSummariesDue(due);
+      } else {
+        setSummariesDue(0);
       }
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -324,11 +343,12 @@ export default function DashboardScreen() {
         members: activeCount,
         firingsThisMonth,
         openTasks,
-        summariesDue: 0,
+        summariesDue: nextSummariesDue,
       });
       setRecentFirings(topFirings);
       setRecentTasks(topTasks);
     } catch {
+      setSummariesDue(0);
       setStats({
         members: 0,
         firingsThisMonth: 0,
@@ -477,7 +497,7 @@ export default function DashboardScreen() {
   const membersVal = loading ? '—' : String(stats.members);
   const firingsVal = loading ? '—' : String(stats.firingsThisMonth);
   const tasksVal = loading ? '—' : String(stats.openTasks);
-  const summariesVal = loading ? '—' : String(stats.summariesDue);
+  const summariesVal = loading ? '—' : String(summariesDue);
 
   if (studios.length === 0) {
     return (
