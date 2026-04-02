@@ -11,7 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Badge, SectionLabel, Divider } from '../../components/ui';
+import { Avatar, Badge, Button, Divider, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -216,6 +216,45 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
     );
   }
 
+  async function onRemoveMember() {
+    const confirmed =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.confirm(
+            'Remove this member from the studio? They can be invited back later.'
+          )
+        : await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Remove member',
+              'Remove this member from the studio? They can be invited back later.',
+              [
+                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+                {
+                  text: 'Remove',
+                  style: 'destructive',
+                  onPress: () => resolve(true),
+                },
+              ]
+            );
+          });
+    if (!confirmed) return;
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/members/${userId}`,
+        { method: 'DELETE' },
+        tenantId
+      );
+      navigation.goBack();
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error ? e.message : 'Could not remove member.';
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
+    }
+  }
+
   const statusLabel =
     status === 'active'
       ? 'Active'
@@ -285,13 +324,22 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
         </View>
 
         {status === 'active' ? (
-          <TouchableOpacity
-            style={styles.suspendBtn}
-            onPress={confirmSuspend}
-            disabled={statusSaving}
-          >
-            <Text style={styles.suspendLabel}>Suspend member</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.suspendBtn}
+              onPress={confirmSuspend}
+              disabled={statusSaving}
+            >
+              <Text style={styles.suspendLabel}>Suspend member</Text>
+            </TouchableOpacity>
+            <Button
+              label="Remove from studio"
+              variant="ghost"
+              onPress={() => void onRemoveMember()}
+              fullWidth
+              style={styles.btnError}
+            />
+          </>
         ) : null}
 
         {status === 'suspended' ? (
@@ -460,6 +508,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
     color: colors.error,
+  },
+  btnError: {
+    marginTop: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.error,
   },
   reactivateBtn: {
     marginTop: spacing[3],
