@@ -467,6 +467,13 @@ export default function DashboardScreen() {
       ?.navigate('PricingSettings', { tenantId, studioName: name });
   }
 
+  function goAssistants() {
+    if (!tenantId) return;
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('AssistantsOverview', { tenantId });
+  }
+
   const membersVal = loading ? '—' : String(stats.members);
   const firingsVal = loading ? '—' : String(stats.firingsThisMonth);
   const tasksVal = loading ? '—' : String(stats.openTasks);
@@ -768,6 +775,17 @@ export default function DashboardScreen() {
               label="Catalog"
               variant="ghost"
               onPress={goCatalog}
+              fullWidth
+              style={styles.actionBtn}
+            />
+          </View>
+        ) : null}
+        {canManageMembers ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Assistants"
+              variant="ghost"
+              onPress={goAssistants}
               fullWidth
               style={styles.actionBtn}
             />
