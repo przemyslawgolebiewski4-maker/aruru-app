@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button, Input } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
@@ -12,6 +12,16 @@ type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 export default function EditProfileScreen(_props: Props) {
   const { user, refresh } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
+  const [bio, setBio] = useState(user?.bio ?? '');
+  const [city, setCity] = useState(user?.city ?? '');
+  const [visibility, setVisibility] = useState<Record<string, string>>(
+    user?.communityVisibility ?? {
+      profile: 'everyone',
+      studios: 'everyone',
+      events: 'only_me',
+      forum_activity: 'everyone',
+    }
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -27,7 +37,12 @@ export default function EditProfileScreen(_props: Props) {
     try {
       await apiFetch('/auth/me', {
         method: 'PATCH',
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({
+          name: name.trim(),
+          bio: bio.trim() || null,
+          city: city.trim() || null,
+          community_visibility: visibility,
+        }),
       });
       await refresh();
       setSuccess('Profile updated.');
@@ -60,10 +75,77 @@ export default function EditProfileScreen(_props: Props) {
         autoCapitalize="words"
       />
 
+      <Input
+        label="Bio (optional)"
+        value={bio}
+        onChangeText={(v) => {
+          setBio(v);
+          setSuccess('');
+        }}
+        placeholder="A short intro about you and your practice"
+        multiline
+        numberOfLines={2}
+      />
+
+      <Input
+        label="City (optional)"
+        value={city}
+        onChangeText={(v) => {
+          setCity(v);
+          setSuccess('');
+        }}
+        placeholder="e.g. Warsaw"
+      />
+
       <View style={styles.emailRow}>
         <Text style={styles.fieldLabel}>Email</Text>
         <Text style={styles.emailValue}>{user?.email ?? '—'}</Text>
         <Text style={styles.emailHint}>Email cannot be changed.</Text>
+      </View>
+
+      <View style={styles.privacySection}>
+        <Text style={styles.privacyTitle}>Community visibility</Text>
+        <Text style={styles.privacyHint}>
+          Control what others see on your public profile.
+        </Text>
+        {[
+          { key: 'profile', label: 'Name & bio' },
+          { key: 'studios', label: 'My studios' },
+          { key: 'events', label: 'My events' },
+          { key: 'forum_activity', label: 'Forum activity' },
+        ].map((item) => (
+          <View key={item.key} style={styles.privacyRow}>
+            <Text style={styles.privacyLabel}>{item.label}</Text>
+            <View style={styles.visOptions}>
+              {['everyone', 'my_studios', 'only_me'].map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[
+                    styles.visChip,
+                    visibility[item.key] === opt && styles.visChipActive,
+                  ]}
+                  onPress={() =>
+                    setVisibility((v) => ({ ...v, [item.key]: opt }))
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.visChipLabel,
+                      visibility[item.key] === opt && styles.visChipLabelActive,
+                    ]}
+                  >
+                    {opt === 'everyone'
+                      ? 'Everyone'
+                      : opt === 'my_studios'
+                        ? 'My studios'
+                        : 'Only me'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ))}
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -123,6 +205,49 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
   },
+  privacySection: {
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+  },
+  privacyTitle: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  privacyHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: -spacing[2],
+  },
+  privacyRow: { gap: spacing[1] },
+  privacyLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  visOptions: { flexDirection: 'row', gap: spacing[2] },
+  visChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+    borderRadius: 999,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  visChipActive: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  visChipLabel: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+  },
+  visChipLabelActive: { color: colors.surface },
   error: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,

@@ -10,6 +10,10 @@ export interface AuthUser {
   name: string;
   avatarUrl?: string;
   emailVerified: boolean;
+  bio?: string | null;
+  city?: string | null;
+  /** Present when API returns camelCase; map from `community_visibility` if needed */
+  communityVisibility?: Record<string, string>;
 }
 
 export interface StudioMembership {
