@@ -575,18 +575,26 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <StatCard label="Members" value={membersVal} accent="clay" />
-        <StatCard label="Firings this month" value={firingsVal} accent="moss" />
-        <StatCard label="Open tasks" value={tasksVal} accent="none" />
-        <TouchableOpacity
-          style={styles.statCardTap}
-          onPress={goCosts}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Open cost summaries"
-        >
-          <StatCard label="Summaries due" value={summariesVal} accent="none" />
-        </TouchableOpacity>
+        <View style={styles.statCardWrap}>
+          <StatCard label="Members" value={membersVal} accent="clay" />
+        </View>
+        <View style={styles.statCardWrap}>
+          <StatCard label="Firings" value={firingsVal} accent="moss" />
+        </View>
+        <View style={styles.statCardWrap}>
+          <StatCard label="Open tasks" value={tasksVal} accent="none" />
+        </View>
+        <View style={styles.statCardWrap}>
+          <TouchableOpacity
+            style={styles.statCardTap}
+            onPress={goCosts}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Open cost summaries"
+          >
+            <StatCard label="Summaries due" value={summariesVal} accent="none" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Divider />
@@ -943,6 +951,9 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     marginBottom: spacing[6],
   },
+  statCardWrap: {
+    width: '48%',
+  },
   incomeCards: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -993,8 +1004,7 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   statCardTap: {
-    flex: 1,
-    minWidth: '45%',
+    width: '100%',
   },
   listLoading: {
     paddingVertical: spacing[6],
