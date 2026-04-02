@@ -1,71 +1,339 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
+import { useAuth } from '../../hooks/useAuth';
+import { apiFetch } from '../../services/api';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
-function BellIcon() {
+type NotifType =
+  | 'forum_reply'
+  | 'forum_reply_thread'
+  | 'new_member'
+  | 'new_event';
+
+type Notification = {
+  id: string;
+  type: NotifType;
+  read: boolean;
+  actorName: string;
+  title: string;
+  body: string;
+  refId?: string;
+  refType?: string;
+  createdAt?: string;
+};
+
+function timeAgo(iso?: string): string {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return `${Math.floor(diff / 86400)}d`;
+}
+
+function NotifIcon({ type }: { type: NotifType }) {
+  const bg =
+    type === 'forum_reply' || type === 'forum_reply_thread'
+      ? colors.clayLight
+      : type === 'new_member'
+        ? colors.mossLight
+        : colors.cream;
+  const label =
+    type === 'forum_reply' || type === 'forum_reply_thread'
+      ? '💬'
+      : type === 'new_member'
+        ? '👤'
+        : '📅';
   return (
-    <Svg width={48} height={48} viewBox="0 0 48 48">
-      <Path
-        d="M22 10c0-1.1.9-2 2-2s2 .9 2 2v1.1c3.5.5 6 3.5 6 7.1v5l2 3H12l2-3v-5c0-3.6 2.5-6.6 6-7.1V10z"
-        fill="none"
-        stroke={colors.clay}
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-      />
-      <Path
-        d="M18 36h12"
-        stroke={colors.clay}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <Path
-        d="M21 36a3 3 0 006 0"
-        fill="none"
-        stroke={colors.clay}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-    </Svg>
+    <View style={[styles.icon, { backgroundColor: bg }]}>
+      <Text style={styles.iconText}>{label}</Text>
+    </View>
   );
 }
 
+function parseNotification(raw: Record<string, unknown>): Notification | null {
+  const id = String(raw.id ?? raw._id ?? '').trim();
+  if (!id) return null;
+  const type = String(raw.type ?? 'new_event') as NotifType;
+  return {
+    id,
+    type: ['forum_reply', 'forum_reply_thread', 'new_member', 'new_event'].includes(
+      type
+    )
+      ? type
+      : 'new_event',
+    read: Boolean(raw.read ?? raw.is_read),
+    actorName: String(raw.actorName ?? raw.actor_name ?? ''),
+    title: String(raw.title ?? ''),
+    body: String(raw.body ?? ''),
+    refId:
+      raw.refId != null
+        ? String(raw.refId)
+        : raw.ref_id != null
+          ? String(raw.ref_id)
+          : undefined,
+    refType:
+      raw.refType != null
+        ? String(raw.refType)
+        : raw.ref_type != null
+          ? String(raw.ref_type)
+          : undefined,
+    createdAt:
+      raw.createdAt != null
+        ? String(raw.createdAt)
+        : raw.created_at != null
+          ? String(raw.created_at)
+          : undefined,
+  };
+}
+
 export default function NotificationsScreen() {
+  const navigation =
+    useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
+  const { studios } = useAuth();
+  const currentStudio =
+    studios.find((s) => s.status === 'active') ?? studios[0];
+  const fallbackTenantId = currentStudio?.tenantId ?? '';
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [unread, setUnread] = useState(0);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await apiFetch<{
+        notifications?: unknown[];
+        unread?: number;
+      }>('/notifications', {}, '');
+      const rawList = Array.isArray(res.notifications) ? res.notifications : [];
+      const list = rawList
+        .map((item) =>
+          item && typeof item === 'object'
+            ? parseNotification(item as Record<string, unknown>)
+            : null
+        )
+        .filter((n): n is Notification => n != null);
+      setNotifications(list);
+      setUnread(typeof res.unread === 'number' ? res.unread : list.filter((n) => !n.read).length);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not load notifications.');
+      setNotifications([]);
+      setUnread(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  async function markAllRead() {
+    try {
+      await apiFetch('/notifications/read-all', { method: 'POST' }, '');
+      await load();
+    } catch {
+      /* silent */
+    }
+  }
+
+  async function onPressNotif(item: Notification) {
+    const stack =
+      navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
+    try {
+      await apiFetch(`/notifications/${item.id}/read`, { method: 'POST' }, '');
+      await load();
+    } catch {
+      /* still try navigation */
+    }
+
+    const rt = (item.refType ?? '').toLowerCase();
+    if (rt === 'forum_post' && item.refId) {
+      stack?.navigate('ForumPost', { postId: item.refId });
+      return;
+    }
+    if ((rt === 'studio' || rt === 'tenant') && item.refId) {
+      stack?.navigate('Members', { tenantId: item.refId });
+      return;
+    }
+    if (item.type === 'new_member' && (item.refId || fallbackTenantId)) {
+      stack?.navigate('Members', {
+        tenantId: item.refId ?? fallbackTenantId,
+      });
+      return;
+    }
+    if (item.type === 'new_event' && (item.refId || fallbackTenantId)) {
+      stack?.navigate('EventList', {
+        tenantId: item.refId ?? fallbackTenantId,
+      });
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.root, styles.center]}>
+        <ActivityIndicator color={colors.clay} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.root, styles.center]}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.root}>
-      <View style={styles.iconWrap}>
-        <BellIcon />
+      <View style={styles.headerBar}>
+        {unread > 0 ? (
+          <TouchableOpacity
+            onPress={() => void markAllRead()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Mark all notifications as read"
+          >
+            <Text style={styles.markAllRead}>Mark all read</Text>
+          </TouchableOpacity>
+        ) : (
+          <View />
+        )}
       </View>
-      <Text style={styles.title}>Notifications</Text>
-      <Text style={styles.body}>You&apos;re all caught up.</Text>
+
+      {notifications.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyText}>No notifications yet.</Text>
+          <Text style={styles.emptyHint}>
+            You&apos;ll see forum replies, new members and events here.
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          style={styles.list}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.row,
+                item.read ? styles.rowRead : styles.rowUnread,
+              ]}
+              onPress={() => void onPressNotif(item)}
+              activeOpacity={0.75}
+            >
+              <NotifIcon type={item.type} />
+              <View style={styles.textWrap}>
+                <Text
+                  style={[styles.title, !item.read && styles.titleUnread]}
+                  numberOfLines={2}
+                >
+                  {item.title}
+                </Text>
+                <Text style={styles.body} numberOfLines={2}>
+                  {item.body}
+                </Text>
+              </View>
+              <Text style={styles.time}>{timeAgo(item.createdAt)}</Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
+  root: { flex: 1, backgroundColor: colors.cream },
+  list: { flex: 1 },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[1],
+    minHeight: 36,
+  },
+  markAllRead: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+  },
+  row: {
+    flexDirection: 'row',
+    padding: spacing[4],
+    gap: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+    alignItems: 'flex-start',
+  },
+  rowUnread: { backgroundColor: colors.surface },
+  rowRead: { backgroundColor: colors.cream },
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    padding: spacing[10],
+    justifyContent: 'center',
   },
-  iconWrap: {
-    marginBottom: spacing[5],
-  },
+  iconText: { fontSize: 18 },
+  textWrap: { flex: 1, gap: 2 },
   title: {
-    fontFamily: typography.display,
-    fontSize: 24,
-    color: colors.ink,
-    textAlign: 'center',
-    marginBottom: spacing[3],
-    letterSpacing: -0.3,
-  },
-  body: {
     fontFamily: typography.body,
     fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  titleUnread: { fontWeight: '500' },
+  body: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 16,
+  },
+  time: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing[4],
+    gap: spacing[2],
+  },
+  emptyText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
     color: colors.inkLight,
     textAlign: 'center',
-    lineHeight: 22,
+  },
+  errorText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
   },
 });
