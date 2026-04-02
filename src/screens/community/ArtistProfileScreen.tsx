@@ -21,7 +21,12 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ArtistProfile'>;
 
-type Studio = { tenantId: string; studioName: string; role: string };
+type Studio = {
+  tenantId: string;
+  studioName: string;
+  role: string;
+  tenantSlug?: string;
+};
 
 type Artist = {
   id: string;
@@ -120,7 +125,7 @@ export default function ArtistProfileScreen({ route }: Props) {
                 style={styles.studioRow}
                 onPress={() =>
                   navigation.navigate('StudioPublicProfile', {
-                    studioId: s.tenantId,
+                    studioSlug: s.tenantSlug ?? '',
                     studioName: s.studioName,
                   })
                 }

@@ -18,40 +18,30 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudioPublicProfile'>;
 
+type FeedEvent = {
+  id: string;
+  title: string;
+  kind: string;
+  startsAt?: string;
+  endsAt?: string;
+  location?: string;
+  maxParticipants?: number;
+};
+
 type StudioProfile = {
   id: string;
   name: string;
   slug: string;
   city: string;
   country: string;
-  description?: string;
+  publicDescription?: string;
   tags: string[];
   memberCount: number;
   instagramUrl?: string;
   websiteUrl?: string;
   shopUrl?: string;
+  upcomingEvents: FeedEvent[];
 };
-
-type FeedEvent = {
-  id: string;
-  title: string;
-  kind: string;
-  startsAt?: string;
-  location?: string;
-  tenantId?: string;
-};
-
-function fallbackStudio(studioId: string, studioName: string): StudioProfile {
-  return {
-    id: studioId,
-    name: studioName,
-    slug: '',
-    city: '',
-    country: '',
-    tags: [],
-    memberCount: 0,
-  };
-}
 
 function kindLabel(kind: string): string {
   switch (kind) {
@@ -78,7 +68,7 @@ function formatDate(iso?: string): string {
 }
 
 export default function StudioPublicProfileScreen({ route }: Props) {
-  const { studioId, studioName } = route.params;
+  const { studioSlug, studioName } = route.params;
   const { studios } = useAuth();
   const tenantId =
     (studios.find((s) => s.status === 'active') ?? studios[0])?.tenantId ?? '';
@@ -91,40 +81,31 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    const slug = studioSlug?.trim();
+    if (!slug) {
+      setError('Studio not found.');
+      setStudio(null);
+      setEvents([]);
+      setLoading(false);
+      return;
+    }
     try {
-      const [studioRes, feedRes] = await Promise.allSettled([
-        apiFetch<{ studios: StudioProfile[] }>(
-          `/community/studios?city=`,
-          {},
-          tenantId
-        ),
-        apiFetch<{ events: FeedEvent[] }>('/community/feed', {}, tenantId),
-      ]);
-
-      if (studioRes.status === 'fulfilled') {
-        const list = studioRes.value.studios ?? [];
-        const found = list.find((s) => s.id === studioId);
-        setStudio(found ?? fallbackStudio(studioId, studioName));
-      } else {
-        setStudio(fallbackStudio(studioId, studioName));
-      }
-
-      if (feedRes.status === 'fulfilled') {
-        const studioEvents = (feedRes.value.events ?? [])
-          .filter((e) => e.tenantId === studioId)
-          .slice(0, 5);
-        setEvents(studioEvents);
-      } else {
-        setEvents([]);
-      }
+      const encoded = encodeURIComponent(slug);
+      const res = await apiFetch<StudioProfile>(
+        `/community/studios/${encoded}`,
+        {},
+        tenantId
+      );
+      setStudio(res);
+      setEvents(res.upcomingEvents ?? []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studio.');
-      setStudio(fallbackStudio(studioId, studioName));
+      setStudio(null);
       setEvents([]);
     } finally {
       setLoading(false);
     }
-  }, [studioId, studioName, tenantId]);
+  }, [studioSlug, tenantId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -162,7 +143,7 @@ export default function StudioPublicProfileScreen({ route }: Props) {
       <View style={styles.header}>
         <View style={styles.avatarLg}>
           <Text style={styles.avatarText}>
-            {studio.name
+            {(studio.name || studioName)
               .split(' ')
               .map((w) => w[0])
               .join('')
@@ -170,14 +151,14 @@ export default function StudioPublicProfileScreen({ route }: Props) {
               .toUpperCase()}
           </Text>
         </View>
-        <Text style={styles.name}>{studio.name}</Text>
+        <Text style={styles.name}>{studio.name || studioName}</Text>
         {studio.city || studio.country ? (
           <Text style={styles.location}>
             {[studio.city, studio.country].filter(Boolean).join(', ')}
           </Text>
         ) : null}
-        {studio.description ? (
-          <Text style={styles.description}>{studio.description}</Text>
+        {studio.publicDescription ? (
+          <Text style={styles.description}>{studio.publicDescription}</Text>
         ) : null}
         <Text style={styles.memberCount}>{studio.memberCount} members</Text>
         {tags.length > 0 ? (

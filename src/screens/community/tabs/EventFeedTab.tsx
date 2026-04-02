@@ -18,8 +18,9 @@ import type { AppStackParamList, MainTabParamList } from '../../../navigation/ty
 
 type FeedEvent = {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   studioName: string;
+  studioSlug?: string;
   title: string;
   description?: string;
   kind: string;
@@ -117,11 +118,11 @@ export default function EventFeedTab() {
     }, [load])
   );
 
-  function goStudio(studioTenantId: string, studioName: string) {
+  function goStudio(slug: string, studioName: string) {
     navigation
       .getParent<NativeStackNavigationProp<AppStackParamList>>()
       ?.navigate('StudioPublicProfile', {
-        studioId: studioTenantId,
+        studioSlug: slug,
         studioName,
       });
   }
@@ -158,7 +159,7 @@ export default function EventFeedTab() {
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.studioRow}
-            onPress={() => goStudio(e.tenantId, e.studioName)}
+            onPress={() => goStudio(e.studioSlug ?? '', e.studioName)}
             activeOpacity={0.7}
           >
             <View style={styles.avatar}>

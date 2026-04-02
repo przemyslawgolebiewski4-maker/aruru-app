@@ -63,5 +63,5 @@ export type AppStackParamList = {
   AssistantsOverview: { tenantId: string };
   ArtistProfile: { userId: string };
   ForumPost: { postId: string };
-  StudioPublicProfile: { studioId: string; studioName: string };
+  StudioPublicProfile: { studioSlug: string; studioName: string };
 };

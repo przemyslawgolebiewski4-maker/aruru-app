@@ -83,7 +83,7 @@ export default function StudioFinderTab() {
     const stackNav =
       navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
     stackNav?.navigate('StudioPublicProfile', {
-      studioId: studio.id,
+      studioSlug: studio.slug,
       studioName: studio.name,
     });
   }

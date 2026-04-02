@@ -149,11 +149,11 @@ function AppNavigator() {
       <AppStack.Screen
         name="StudioPublicProfile"
         component={StudioPublicProfileScreen}
-        options={{
+        options={({ route }) => ({
           ...appModalHeaderOptions,
           headerShown: true,
-          title: 'Studio',
-        }}
+          title: route.params.studioName || 'Studio',
+        })}
       />
       <AppStack.Screen
         name="EditProfile"
