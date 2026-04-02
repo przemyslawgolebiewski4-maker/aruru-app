@@ -20,6 +20,7 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
 import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import PricingSettingsScreen from '../screens/studio/PricingSettingsScreen';
+import StudioSettingsScreen from '../screens/studio/StudioSettingsScreen';
 import MembersScreen from '../screens/members/MembersScreen';
 import InviteMemberScreen from '../screens/members/InviteMemberScreen';
 import MemberProfileScreen from '../screens/members/MemberProfileScreen';
@@ -194,6 +195,15 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Pricing',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="StudioSettings"
+        component={StudioSettingsScreen}
+        options={{
+          headerShown: true,
+          title: 'Studio settings',
           ...appModalHeaderOptions,
         }}
       />

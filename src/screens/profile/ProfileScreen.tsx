@@ -120,6 +120,13 @@ export default function ProfileScreen() {
     });
   }
 
+  function goStudioSettings(studio: (typeof studios)[number]) {
+    stackNav?.navigate('StudioSettings', {
+      tenantId: studio.tenantId,
+      studioName: studio.studioName || studio.studioSlug,
+    });
+  }
+
   return (
     <ScrollView
       style={styles.scroll}
@@ -146,14 +153,24 @@ export default function ProfileScreen() {
                   {s.studioName || s.studioSlug}
                 </Text>
                 {s.role === 'owner' && s.status === 'active' ? (
-                  <TouchableOpacity
-                    onPress={() => goPricingSettings(s)}
-                    hitSlop={8}
-                    accessibilityRole="button"
-                    accessibilityLabel="Edit pricing"
-                  >
-                    <Text style={styles.editPricingLink}>Edit pricing →</Text>
-                  </TouchableOpacity>
+                  <View style={styles.ownerStudioLinks}>
+                    <TouchableOpacity
+                      onPress={() => goStudioSettings(s)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Studio settings"
+                    >
+                      <Text style={styles.editPricingLink}>Studio settings →</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => goPricingSettings(s)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit pricing"
+                    >
+                      <Text style={styles.editPricingLink}>Edit pricing →</Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : null}
               </View>
               <Badge
@@ -276,11 +293,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     color: colors.ink,
   },
+  ownerStudioLinks: {
+    gap: spacing[1],
+    marginTop: 2,
+  },
   editPricingLink: {
     fontFamily: typography.mono,
     fontSize: 11,
     color: colors.clay,
-    marginTop: 4,
+    marginTop: 2,
   },
   rowDivider: {
     marginVertical: 0,
