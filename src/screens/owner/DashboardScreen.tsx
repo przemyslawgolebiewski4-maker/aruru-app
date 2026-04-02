@@ -487,6 +487,27 @@ export default function DashboardScreen() {
       ?.navigate('PricingSettings', { tenantId, studioName: name });
   }
 
+  function goStudioSettings() {
+    if (!canManageMembers) {
+      Alert.alert(
+        'Studio settings',
+        'Only studio owners can edit studio settings.'
+      );
+      return;
+    }
+    if (!tenantId) return;
+    const name =
+      currentStudio?.studioName?.trim() ||
+      currentStudio?.studioSlug ||
+      'Studio';
+    const stack =
+      navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
+    stack?.navigate('StudioSettings', {
+      tenantId,
+      studioName: name,
+    });
+  }
+
   function goAssistants() {
     if (!tenantId) return;
     navigation
@@ -825,6 +846,17 @@ export default function DashboardScreen() {
               label="Pricing"
               variant="ghost"
               onPress={goPricing}
+              fullWidth
+              style={styles.actionBtn}
+            />
+          </View>
+        ) : null}
+        {canManageMembers ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Studio settings"
+              variant="ghost"
+              onPress={goStudioSettings}
               fullWidth
               style={styles.actionBtn}
             />
