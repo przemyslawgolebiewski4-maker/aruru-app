@@ -422,6 +422,13 @@ export default function DashboardScreen() {
     }
   }
 
+  function goAttendance() {
+    if (!tenantId) return;
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('Attendance', { tenantId });
+  }
+
   function goEvents() {
     if (!tenantId) {
       Alert.alert('Events', 'Create or join a studio first.');
@@ -706,15 +713,17 @@ export default function DashboardScreen() {
             style={styles.actionBtn}
           />
         </View>
-        <View style={styles.actionQuarter}>
-          <Button
-            label="Members"
-            variant="ghost"
-            onPress={goMembers}
-            fullWidth
-            style={styles.actionBtn}
-          />
-        </View>
+        {currentStudio?.role !== 'assistant' ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Members"
+              variant="ghost"
+              onPress={goMembers}
+              fullWidth
+              style={styles.actionBtn}
+            />
+          </View>
+        ) : null}
         <View style={styles.actionQuarter}>
           <Button
             label="Tasks"
@@ -726,13 +735,24 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.actionQuarter}>
           <Button
-            label="Costs"
+            label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
             variant="ghost"
             onPress={goCosts}
             fullWidth
             style={styles.actionBtn}
           />
         </View>
+        {currentStudio?.role === 'assistant' ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Attendance"
+              variant="ghost"
+              onPress={goAttendance}
+              fullWidth
+              style={styles.actionBtn}
+            />
+          </View>
+        ) : null}
         <View style={styles.actionQuarter}>
           <Button
             label="Events"
