@@ -9,7 +9,7 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
-export default function EditProfileScreen(_props: Props) {
+export default function EditProfileScreen({ navigation }: Props) {
   const { user, refresh } = useAuth();
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
@@ -51,7 +51,7 @@ export default function EditProfileScreen(_props: Props) {
         }),
       });
       await refresh();
-      setSuccess('Profile updated.');
+      navigation.goBack();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not update profile.');
     } finally {
