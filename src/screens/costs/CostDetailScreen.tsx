@@ -423,7 +423,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
         if (memberCostLooksEmpty(parsed)) {
           try {
             const live = await apiFetch<unknown>(
-              `/studios/${tenantId}/costs/live/${userId}${q}`,
+              `/studios/${tenantId}/costs/live/mine?year=${y}&month=${m}`,
               {},
               tenantId
             );
@@ -449,7 +449,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
             const viewingCurrentMonth =
               y === now.getFullYear() && m === now.getMonth() + 1;
             const liveBare = await apiFetch<unknown>(
-              `/studios/${tenantId}/costs/live/${userId}`,
+              `/studios/${tenantId}/costs/live/mine`,
               {},
               tenantId
             );
