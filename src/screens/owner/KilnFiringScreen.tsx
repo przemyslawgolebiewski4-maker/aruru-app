@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
 } from 'react-native';
+import DateTimeField from '../../components/DateTimeField';
 import { Button, Avatar, Badge, SectionLabel, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
@@ -27,7 +28,7 @@ interface Props {
 export default function KilnFiringScreen({ navigation, route }: Props) {
   const [step, setStep] = useState<Step>('session');
   const [kilnType, setKilnType] = useState<KilnType>('bisque');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<Date>(new Date());
   const [members, setMembers] = useState<MemberEntry[]>([
     { userId: '1', name: 'Anna Nowak', weightKg: '' },
     { userId: '2', name: 'Tomáš Kovář', weightKg: '' },
@@ -110,13 +111,11 @@ export default function KilnFiringScreen({ navigation, route }: Props) {
             ))}
           </View>
 
-          <SectionLabel>Date</SectionLabel>
-          <TextInput
-            style={styles.dateInput}
+          <DateTimeField
+            label="Date"
             value={date}
-            onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.inkFaint}
+            onChange={(d) => setDate(d)}
+            mode="date"
           />
 
           <Button
@@ -183,7 +182,9 @@ export default function KilnFiringScreen({ navigation, route }: Props) {
             <Divider />
             <View style={styles.summaryRow}>
               <Text style={styles.summaryKey}>Date</Text>
-              <Text style={styles.summaryVal}>{date}</Text>
+              <Text style={styles.summaryVal}>
+                {date.toISOString().split('T')[0]}
+              </Text>
             </View>
             <Divider />
             <View style={styles.summaryRow}>
@@ -291,17 +292,6 @@ const styles = StyleSheet.create({
     color: colors.inkMid,
   },
   typeBtnTextSelected: { color: colors.clayDark, fontFamily: typography.bodyMedium },
-  dateInput: {
-    borderWidth: 0.5,
-    borderColor: colors.borderStrong,
-    borderRadius: radius.sm,
-    padding: spacing[3],
-    fontFamily: typography.mono,
-    fontSize: fontSize.base,
-    color: colors.ink,
-    backgroundColor: colors.surface,
-    marginBottom: spacing[2],
-  },
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
