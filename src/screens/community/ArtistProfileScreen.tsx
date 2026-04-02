@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import type {
   NativeStackNavigationProp,
@@ -27,6 +28,9 @@ type Artist = {
   name: string;
   bio?: string;
   city?: string;
+  instagramUrl?: string;
+  websiteUrl?: string;
+  shopUrl?: string;
   studios: Studio[];
   showEvents: boolean;
 };
@@ -89,6 +93,10 @@ export default function ArtistProfileScreen({ route }: Props) {
     );
 
   const studioList = artist.studios ?? [];
+  const ig = artist.instagramUrl?.trim();
+  const web = artist.websiteUrl?.trim();
+  const shop = artist.shopUrl?.trim();
+  const hasLinks = Boolean(ig || web || shop);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -226,5 +234,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     marginTop: 2,
+  },
+  linkRow: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+    paddingVertical: spacing[1],
   },
 });

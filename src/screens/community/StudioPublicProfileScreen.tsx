@@ -5,6 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
+  Linking,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -25,6 +27,9 @@ type StudioProfile = {
   description?: string;
   tags: string[];
   memberCount: number;
+  instagramUrl?: string;
+  websiteUrl?: string;
+  shopUrl?: string;
 };
 
 type FeedEvent = {
@@ -147,6 +152,10 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     );
 
   const tags = studio.tags ?? [];
+  const ig = studio.instagramUrl?.trim();
+  const web = studio.websiteUrl?.trim();
+  const shop = studio.shopUrl?.trim();
+  const hasLinks = Boolean(ig || web || shop);
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -199,6 +208,30 @@ export default function StudioPublicProfileScreen({ route }: Props) {
                 <Badge label={kindLabel(e.kind)} variant="neutral" />
               </View>
             ))}
+          </View>
+        </>
+      ) : null}
+
+      {hasLinks ? (
+        <>
+          <Divider />
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Links</Text>
+            {ig ? (
+              <TouchableOpacity onPress={() => void Linking.openURL(ig)}>
+                <Text style={styles.linkRow}>Instagram</Text>
+              </TouchableOpacity>
+            ) : null}
+            {web ? (
+              <TouchableOpacity onPress={() => void Linking.openURL(web)}>
+                <Text style={styles.linkRow}>Website</Text>
+              </TouchableOpacity>
+            ) : null}
+            {shop ? (
+              <TouchableOpacity onPress={() => void Linking.openURL(shop)}>
+                <Text style={styles.linkRow}>Shop</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </>
       ) : null}
@@ -303,5 +336,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     marginTop: 2,
+  },
+  linkRow: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+    paddingVertical: spacing[1],
   },
 });

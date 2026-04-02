@@ -14,14 +14,17 @@ export default function EditProfileScreen(_props: Props) {
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [city, setCity] = useState(user?.city ?? '');
-  const [visibility, setVisibility] = useState<Record<string, string>>(
-    user?.communityVisibility ?? {
-      profile: 'everyone',
-      studios: 'everyone',
-      events: 'only_me',
-      forum_activity: 'everyone',
-    }
-  );
+  const [instagramUrl, setInstagramUrl] = useState(user?.instagramUrl ?? '');
+  const [websiteUrl, setWebsiteUrl] = useState(user?.websiteUrl ?? '');
+  const [shopUrl, setShopUrl] = useState(user?.shopUrl ?? '');
+  const [visibility, setVisibility] = useState<Record<string, string>>(() => ({
+    profile: 'everyone',
+    studios: 'everyone',
+    events: 'only_me',
+    forum_activity: 'everyone',
+    links: 'everyone',
+    ...user?.communityVisibility,
+  }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -41,6 +44,9 @@ export default function EditProfileScreen(_props: Props) {
           name: name.trim(),
           bio: bio.trim() || null,
           city: city.trim() || null,
+          instagram_url: instagramUrl.trim() || null,
+          website_url: websiteUrl.trim() || null,
+          shop_url: shopUrl.trim() || null,
           community_visibility: visibility,
         }),
       });
@@ -97,6 +103,42 @@ export default function EditProfileScreen(_props: Props) {
         placeholder="e.g. Warsaw"
       />
 
+      <Input
+        label="Instagram"
+        value={instagramUrl}
+        onChangeText={(v) => {
+          setInstagramUrl(v);
+          setSuccess('');
+        }}
+        placeholder="https://instagram.com/yourprofile"
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+
+      <Input
+        label="Website"
+        value={websiteUrl}
+        onChangeText={(v) => {
+          setWebsiteUrl(v);
+          setSuccess('');
+        }}
+        placeholder="https://yourwebsite.com"
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+
+      <Input
+        label="Shop"
+        value={shopUrl}
+        onChangeText={(v) => {
+          setShopUrl(v);
+          setSuccess('');
+        }}
+        placeholder="https://etsy.com/shop/yourshop"
+        autoCapitalize="none"
+        keyboardType="url"
+      />
+
       <View style={styles.emailRow}>
         <Text style={styles.fieldLabel}>Email</Text>
         <Text style={styles.emailValue}>{user?.email ?? '—'}</Text>
@@ -113,6 +155,7 @@ export default function EditProfileScreen(_props: Props) {
           { key: 'studios', label: 'My studios' },
           { key: 'events', label: 'My events' },
           { key: 'forum_activity', label: 'Forum activity' },
+          { key: 'links', label: 'Social links' },
         ].map((item) => (
           <View key={item.key} style={styles.privacyRow}>
             <Text style={styles.privacyLabel}>{item.label}</Text>

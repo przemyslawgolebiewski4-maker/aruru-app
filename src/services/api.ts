@@ -12,6 +12,9 @@ export interface AuthUser {
   emailVerified: boolean;
   bio?: string | null;
   city?: string | null;
+  instagramUrl?: string | null;
+  websiteUrl?: string | null;
+  shopUrl?: string | null;
   /** Present when API returns camelCase; map from `community_visibility` if needed */
   communityVisibility?: Record<string, string>;
 }
