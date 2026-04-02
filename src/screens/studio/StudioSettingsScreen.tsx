@@ -80,7 +80,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -133,7 +132,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   async function onSave() {
     if (!isOwner) return;
     setError('');
-    setSuccess('');
     if (!name.trim()) {
       setError('Studio name is required.');
       return;
@@ -159,7 +157,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         tenantId
       );
       await refresh();
-      setSuccess('Studio updated.');
+      navigation.goBack();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not save studio.');
     } finally {
@@ -189,20 +187,14 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Studio name"
           value={name}
-          onChangeText={(v) => {
-            setName(v);
-            setSuccess('');
-          }}
+          onChangeText={setName}
           placeholder="e.g. Clayground Berlin"
           autoCapitalize="words"
         />
         <Input
           label="City"
           value={city}
-          onChangeText={(v) => {
-            setCity(v);
-            setSuccess('');
-          }}
+          onChangeText={setCity}
           placeholder="e.g. Berlin"
           autoCapitalize="words"
           containerStyle={styles.fieldGap}
@@ -210,10 +202,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Country"
           value={country}
-          onChangeText={(v) => {
-            setCountry(v);
-            setSuccess('');
-          }}
+          onChangeText={setCountry}
           placeholder="e.g. Germany"
           autoCapitalize="words"
           containerStyle={styles.fieldGap}
@@ -221,10 +210,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Description (internal)"
           value={description}
-          onChangeText={(v) => {
-            setDescription(v);
-            setSuccess('');
-          }}
+          onChangeText={setDescription}
           placeholder="Notes for your team…"
           multiline
           numberOfLines={3}
@@ -234,10 +220,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Public description (optional)"
           value={publicDescription}
-          onChangeText={(v) => {
-            setPublicDescription(v);
-            setSuccess('');
-          }}
+          onChangeText={setPublicDescription}
           placeholder="Tell the community about your studio"
           multiline
           numberOfLines={3}
@@ -279,10 +262,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Instagram"
           value={instagramUrl}
-          onChangeText={(v) => {
-            setInstagramUrl(v);
-            setSuccess('');
-          }}
+          onChangeText={setInstagramUrl}
           placeholder="https://instagram.com/..."
           autoCapitalize="none"
           keyboardType="url"
@@ -291,10 +271,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Website"
           value={websiteUrl}
-          onChangeText={(v) => {
-            setWebsiteUrl(v);
-            setSuccess('');
-          }}
+          onChangeText={setWebsiteUrl}
           placeholder="https://yourstudio.com"
           autoCapitalize="none"
           keyboardType="url"
@@ -303,10 +280,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <Input
           label="Shop"
           value={shopUrl}
-          onChangeText={(v) => {
-            setShopUrl(v);
-            setSuccess('');
-          }}
+          onChangeText={setShopUrl}
           placeholder="https://..."
           autoCapitalize="none"
           keyboardType="url"
@@ -314,7 +288,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        {success ? <Text style={styles.success}>{success}</Text> : null}
 
         <Button
           label="Save changes"
@@ -377,12 +350,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.error,
-    marginTop: spacing[3],
-  },
-  success: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.moss,
     marginTop: spacing[3],
   },
   saveBtn: { marginTop: spacing[4] },
