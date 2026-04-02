@@ -287,9 +287,11 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
 
   async function submitLog() {
     if (!isStaff) return;
-    const n = parseFloat(hoursInput.replace(',', '.'));
-    if (!Number.isFinite(n) || n <= 0) {
-      setLogError('Enter hours greater than 0.');
+    const n = hoursInput.trim()
+      ? parseFloat(hoursInput.replace(',', '.'))
+      : 0;
+    if (isNaN(n) || n < 0) {
+      setLogError('Hours must be 0 or more.');
       return;
     }
     const ok =
@@ -419,7 +421,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
                 setLogError('');
               }}
               keyboardType="decimal-pad"
-              placeholder="0.0"
+              placeholder="Hours (optional)"
               placeholderTextColor={colors.inkFaint}
               style={styles.hoursField}
             />
