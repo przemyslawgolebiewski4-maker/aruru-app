@@ -89,18 +89,18 @@ export default function ImageUpload({
 
     setUploading(true);
     try {
-      const res = await apiFetch<{ avatarUrl?: string; logoUrl?: string }>(
-        endpoint,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            imageBase64: picked.base64,
-            mimeType: picked.mimeType,
-          }),
-        },
-        tenantId
-      );
-      const url = res.avatarUrl ?? res.logoUrl ?? '';
+      const res = await apiFetch<{
+        avatarUrl?: string;
+        logoUrl?: string;
+        logo_url?: string;
+      }>(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({
+          imageBase64: picked.base64,
+          mimeType: picked.mimeType,
+        }),
+      }, tenantId);
+      const url = res.avatarUrl ?? res.logoUrl ?? res.logo_url ?? '';
       if (url) onSuccess(url);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed.');

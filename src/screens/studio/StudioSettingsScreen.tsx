@@ -8,16 +8,18 @@ import {
   Platform,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import ImageUpload from '../../components/ImageUpload';
-import { Button, Input } from '../../components/ui';
+import { Button, Input, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { alertMessage } from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'StudioSettings'>;
 type Route = RouteProp<AppStackParamList, 'StudioSettings'>;
@@ -89,6 +91,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -172,6 +175,36 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       setError(e instanceof Error ? e.message : 'Could not save studio.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function openStudioPortal() {
+    setPortalLoading(true);
+    try {
+      const res = await apiFetch<{
+        portalUrl?: string;
+        portal_url?: string;
+      }>(
+        '/stripe/studio/portal',
+        {
+          method: 'POST',
+          body: JSON.stringify({ tenant_id: tenantId }),
+        },
+        tenantId
+      );
+      const url = res.portalUrl ?? res.portal_url;
+      if (url) {
+        void Linking.openURL(url);
+      } else {
+        alertMessage('Billing', 'No billing portal link returned.');
+      }
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not open billing portal.'
+      );
+    } finally {
+      setPortalLoading(false);
     }
   }
 
@@ -321,6 +354,18 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           fullWidth
           style={styles.saveBtn}
         />
+
+        <View style={styles.subscriptionSection}>
+          <SectionLabel>Subscription</SectionLabel>
+          <Button
+            label="Manage subscription ↗"
+            variant="ghost"
+            onPress={() => void openStudioPortal()}
+            loading={portalLoading}
+            fullWidth
+            style={styles.subscriptionBtn}
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -378,4 +423,6 @@ const styles = StyleSheet.create({
     marginTop: spacing[3],
   },
   saveBtn: { marginTop: spacing[4] },
+  subscriptionBtn: { marginTop: spacing[2] },
+  subscriptionSection: { marginTop: spacing[6] },
 });
