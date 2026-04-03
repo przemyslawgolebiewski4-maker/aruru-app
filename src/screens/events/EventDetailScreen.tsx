@@ -5,11 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import { Badge, SectionLabel } from '../../components/ui';
+import { Badge, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -163,19 +162,15 @@ export default function EventDetailScreen({ route }: { route: Route }) {
       {isStaff && isPublished ? (
         <>
           <SectionLabel>ACTIONS</SectionLabel>
-          <TouchableOpacity
-            style={styles.cancelBtn}
+          <Button
+            label="Cancel event"
+            variant="danger"
             onPress={() => void onCancelEvent()}
             disabled={cancelling}
-            accessibilityRole="button"
+            loading={cancelling}
+            fullWidth
             accessibilityLabel="Cancel event"
-          >
-            {cancelling ? (
-              <ActivityIndicator color={colors.error} />
-            ) : (
-              <Text style={styles.cancelBtnText}>Cancel event</Text>
-            )}
-          </TouchableOpacity>
+          />
         </>
       ) : null}
 
@@ -239,22 +234,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
     marginBottom: spacing[2],
-  },
-  cancelBtn: {
-    borderWidth: 0.5,
-    borderColor: colors.error,
-    marginTop: spacing[2],
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  cancelBtnText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.error,
   },
   cancelledCard: {
     backgroundColor: colors.errorLight,

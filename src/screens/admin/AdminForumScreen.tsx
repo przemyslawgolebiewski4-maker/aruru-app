@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
-import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
+import { Button } from '../../components/ui';
+import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
 
 type Post = {
@@ -126,15 +126,14 @@ export default function AdminForumScreen() {
                 {p.replyCount} replies · {p.authorEmail}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.deleteBtn}
+            <Button
+              label="Delete"
+              variant="danger"
               onPress={() => void deletePost(p)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
               accessibilityLabel={`Delete post ${p.title}`}
-            >
-              <Text style={styles.deleteBtnText}>Delete</Text>
-            </TouchableOpacity>
+              style={styles.deleteBtn}
+            />
           </View>
         </View>
       )}
@@ -186,13 +185,6 @@ const styles = StyleSheet.create({
   deleteBtn: {
     paddingHorizontal: spacing[2],
     paddingVertical: spacing[1],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.error + '44',
-  },
-  deleteBtnText: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.error,
+    minHeight: 40,
   },
 });

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
@@ -12,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
+import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type User = {
@@ -129,15 +129,14 @@ export default function AdminUsersScreen() {
                   {u.adminRole ? ' · Admin' : ''}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.deleteBtn}
+              <Button
+                label="Delete"
+                variant="danger"
                 onPress={() => void deleteUser(u)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
                 accessibilityLabel={`Delete user ${u.email}`}
-              >
-                <Text style={styles.deleteBtnText}>Delete</Text>
-              </TouchableOpacity>
+                style={styles.deleteBtn}
+              />
             </View>
           )}
         />
@@ -221,13 +220,6 @@ const styles = StyleSheet.create({
   deleteBtn: {
     paddingHorizontal: spacing[2],
     paddingVertical: spacing[1],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.error + '44',
-  },
-  deleteBtnText: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.error,
+    minHeight: 40,
   },
 });

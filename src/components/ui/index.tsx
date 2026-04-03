@@ -11,6 +11,7 @@ import {
   TextStyle,
   StyleProp,
   Platform,
+  type TouchableOpacityProps,
 } from 'react-native';
 import {
   colors,
@@ -33,6 +34,9 @@ interface ButtonProps {
   disabled?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  hitSlop?: TouchableOpacityProps['hitSlop'];
 }
 
 export function Button({
@@ -43,6 +47,9 @@ export function Button({
   disabled = false,
   fullWidth = false,
   style,
+  accessibilityLabel,
+  accessibilityHint,
+  hitSlop,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -78,6 +85,10 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityHint={accessibilityHint}
+      hitSlop={hitSlop}
     >
       {loading ? (
         <View style={styles.btnLoadingSlot}>

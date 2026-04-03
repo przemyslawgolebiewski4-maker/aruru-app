@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   TextInput,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { alertMessage } from '../../utils/confirmAction';
 
@@ -154,15 +154,13 @@ export default function AdminPricingScreen() {
         />
       </View>
       <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+        <Button
+          label="Save changes"
+          variant="primary"
           onPress={() => void save()}
-          disabled={saving}
-        >
-          <Text style={styles.saveBtnText}>
-            {saving ? 'Saving...' : 'Save changes'}
-          </Text>
-        </TouchableOpacity>
+          loading={saving}
+          fullWidth
+        />
       </View>
     </ScrollView>
   );
@@ -248,16 +246,4 @@ const styles = StyleSheet.create({
     minHeight: 80,
   },
   actions: { paddingHorizontal: spacing[4] },
-  saveBtn: {
-    backgroundColor: colors.clay,
-    borderRadius: radius.md,
-    padding: spacing[3],
-    alignItems: 'center',
-  },
-  saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: {
-    fontFamily: typography.body,
-    fontSize: fontSize.md,
-    color: colors.surface,
-  },
 });

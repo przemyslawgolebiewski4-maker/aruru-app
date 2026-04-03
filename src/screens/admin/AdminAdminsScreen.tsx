@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   TextInput,
   Switch,
@@ -13,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
+import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type AdminUser = {
@@ -167,9 +167,11 @@ export default function AdminAdminsScreen() {
           <Text style={styles.sectionLabel}>
             Admin accounts ({admins.length})
           </Text>
-          <TouchableOpacity onPress={() => setShowAdd(!showAdd)}>
-            <Text style={styles.addBtn}>+ Add admin</Text>
-          </TouchableOpacity>
+          <Button
+            label="+ Add admin"
+            variant="ghost"
+            onPress={() => setShowAdd(!showAdd)}
+          />
         </View>
 
         {showAdd ? (
@@ -197,21 +199,19 @@ export default function AdminAdminsScreen() {
               </View>
             ))}
             <View style={styles.addActions}>
-              <TouchableOpacity
-                style={styles.btn}
+              <Button
+                label="Cancel"
+                variant="secondary"
                 onPress={() => setShowAdd(false)}
-              >
-                <Text style={styles.btnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btn, styles.btnPrimary]}
+                style={styles.addActionBtn}
+              />
+              <Button
+                label="Add admin"
+                variant="primary"
                 onPress={() => void addAdmin()}
-                disabled={adding}
-              >
-                <Text style={[styles.btnText, { color: colors.surface }]}>
-                  {adding ? 'Adding...' : 'Add admin'}
-                </Text>
-              </TouchableOpacity>
+                loading={adding}
+                style={styles.addActionBtn}
+              />
             </View>
           </View>
         ) : null}
@@ -232,14 +232,14 @@ export default function AdminAdminsScreen() {
                   <Text style={styles.adminEmail}>{a.email}</Text>
                 </View>
                 {!isMe ? (
-                  <TouchableOpacity
+                  <Button
+                    label="Remove"
+                    variant="danger"
                     onPress={() => void removeAdmin(a)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityRole="button"
                     accessibilityLabel={`Remove admin ${a.email}`}
-                  >
-                    <Text style={styles.removeText}>Remove</Text>
-                  </TouchableOpacity>
+                    style={styles.removeBtn}
+                  />
                 ) : null}
               </View>
               {isMe || allPerms ? (
@@ -292,11 +292,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  addBtn: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.clay,
-  },
   addCard: {
     backgroundColor: colors.surface,
     borderWidth: 0.5,
@@ -348,18 +343,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginTop: spacing[1],
   },
-  btn: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  btnPrimary: { backgroundColor: colors.clay, borderColor: colors.clay },
-  btnText: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
+  addActionBtn: { flex: 1 },
+  removeBtn: {
+    minHeight: 40,
+    paddingVertical: spacing[1],
+    paddingHorizontal: spacing[2],
   },
   adminCard: {
     backgroundColor: colors.surface,
@@ -397,11 +385,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
-  },
-  removeText: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.error,
   },
   fullAccessText: {
     fontFamily: typography.mono,

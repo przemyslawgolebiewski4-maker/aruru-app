@@ -4,11 +4,9 @@ import {
   Text,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   ActivityIndicator,
   TextInput,
   Linking,
-  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,6 +17,7 @@ import {
   confirmNeutral,
   pickTrialExtensionDays,
 } from '../../utils/confirmAction';
+import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type Studio = {
@@ -202,39 +201,31 @@ export default function AdminStudiosScreen() {
               </View>
               <View style={styles.actions}>
                 {s.subscriptionStatus === 'trial' && (
-                  <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => extendTrial(s)}
-                  >
-                    <Text style={styles.actionBtnText}>Extend trial</Text>
-                  </TouchableOpacity>
+                  <Button
+                    label="Extend trial"
+                    variant="secondary"
+                    onPress={() => void extendTrial(s)}
+                  />
                 )}
                 {s.stripeCustomerId ? (
-                  <TouchableOpacity
-                    style={styles.actionBtn}
+                  <Button
+                    label="Open in Stripe ↗"
+                    variant="secondary"
                     onPress={() => openStripeCustomer(s)}
-                  >
-                    <Text style={styles.actionBtnText}>Open in Stripe ↗</Text>
-                  </TouchableOpacity>
+                  />
                 ) : null}
                 {s.subscriptionStatus === 'suspended' ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionBtnMoss]}
+                  <Button
+                    label="Reactivate"
+                    variant="secondary"
                     onPress={() => void reactivateStudio(s)}
-                  >
-                    <Text style={[styles.actionBtnText, { color: colors.moss }]}>
-                      Reactivate
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 ) : (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionBtnDanger]}
+                  <Button
+                    label="Suspend"
+                    variant="danger"
                     onPress={() => void suspendStudio(s)}
-                  >
-                    <Text style={[styles.actionBtnText, { color: colors.error }]}>
-                      Suspend
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 )}
               </View>
             </View>
@@ -303,24 +294,4 @@ const styles = StyleSheet.create({
   },
   statusText: { fontFamily: typography.mono, fontSize: 9 },
   actions: { flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' },
-  actionBtn: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    minHeight: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...(Platform.OS === 'web'
-      ? { cursor: 'pointer' as const, userSelect: 'none' as const }
-      : {}),
-  },
-  actionBtnDanger: { borderColor: colors.error + '44' },
-  actionBtnMoss: { borderColor: colors.moss + '44' },
-  actionBtnText: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-  },
 });

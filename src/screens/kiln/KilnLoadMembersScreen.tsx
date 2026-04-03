@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -366,18 +365,15 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
         </>
       ) : null}
 
-      <TouchableOpacity
-        style={styles.closeGhost}
+      <Button
+        label="Close session"
+        variant="secondary"
         onPress={() => void handleCloseSession()}
         disabled={closing}
-        accessibilityRole="button"
-      >
-        {closing ? (
-          <ActivityIndicator color={colors.moss} />
-        ) : (
-          <Text style={styles.closeGhostText}>Close session</Text>
-        )}
-      </TouchableOpacity>
+        loading={closing}
+        fullWidth
+        style={styles.closeSessionBtn}
+      />
     </ScrollView>
   );
 }
@@ -495,20 +491,8 @@ const styles = StyleSheet.create({
     color: colors.mossDark,
     fontWeight: '500',
   },
-  closeGhost: {
+  closeSessionBtn: {
     marginTop: spacing[6],
-    paddingVertical: 14,
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
     borderColor: colors.moss,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    backgroundColor: 'transparent',
-  },
-  closeGhostText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.moss,
   },
 });

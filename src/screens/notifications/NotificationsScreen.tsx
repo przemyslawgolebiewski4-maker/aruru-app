@@ -12,7 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
-import { Avatar } from '../../components/ui';
+import { Avatar, Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
@@ -212,14 +212,14 @@ export default function NotificationsScreen() {
     <View style={styles.root}>
       <View style={styles.headerBar}>
         {unread > 0 ? (
-          <TouchableOpacity
+          <Button
+            label="Mark all read"
+            variant="ghost"
             onPress={() => void markAllRead()}
             hitSlop={8}
-            accessibilityRole="button"
             accessibilityLabel="Mark all notifications as read"
-          >
-            <Text style={styles.markAllRead}>Mark all read</Text>
-          </TouchableOpacity>
+            style={styles.markAllReadBtn}
+          />
         ) : (
           <View />
         )}
@@ -287,10 +287,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing[1],
     minHeight: 36,
   },
-  markAllRead: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.clay,
+  markAllReadBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: spacing[1],
+    minHeight: 36,
   },
   row: {
     flexDirection: 'row',

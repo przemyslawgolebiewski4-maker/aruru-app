@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
-  TouchableOpacity,
 } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -176,14 +175,14 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
           fullWidth
         />
 
-        <TouchableOpacity
-          style={styles.skipBtn}
+        <Button
+          label="Skip for now"
+          variant="ghost"
           onPress={() => resetToMain(navigation)}
-          accessibilityRole="button"
+          fullWidth
           accessibilityLabel="Skip pricing setup"
-        >
-          <Text style={styles.skipText}>Skip for now</Text>
-        </TouchableOpacity>
+          style={styles.skipBelowPrimary}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -291,19 +290,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
   },
-  skipBtn: {
+  skipBelowPrimary: {
     marginTop: spacing[3],
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    borderWidth: 0.5,
-    borderColor: colors.clay,
-    borderRadius: radius.sm,
-    backgroundColor: 'transparent',
-  },
-  skipText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.inkLight,
   },
 });

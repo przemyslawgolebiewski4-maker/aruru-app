@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -13,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import { AvatarImage } from '../../components/AvatarImage';
-import { Divider } from '../../components/ui';
+import { Button, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 
@@ -218,21 +217,14 @@ export default function ForumPostScreen({ route }: Props) {
           placeholderTextColor={colors.inkLight}
           multiline
         />
-        <TouchableOpacity
-          style={[
-            styles.sendBtn,
-            (!reply.trim() || posting) && styles.sendBtnDisabled,
-          ]}
+        <Button
+          label="Send"
+          variant="primary"
           onPress={() => void onReply()}
           disabled={!reply.trim() || posting}
-          activeOpacity={0.8}
-        >
-          {posting ? (
-            <ActivityIndicator color={colors.surface} size="small" />
-          ) : (
-            <Text style={styles.sendLabel}>Send</Text>
-          )}
-        </TouchableOpacity>
+          loading={posting}
+          style={styles.sendBtn}
+        />
       </View>
     </View>
   );
@@ -375,15 +367,7 @@ const styles = StyleSheet.create({
     maxHeight: 80,
   },
   sendBtn: {
-    backgroundColor: colors.clay,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-  },
-  sendBtnDisabled: { opacity: 0.4 },
-  sendLabel: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.surface,
+    flexShrink: 0,
+    alignSelf: 'flex-end',
   },
 });

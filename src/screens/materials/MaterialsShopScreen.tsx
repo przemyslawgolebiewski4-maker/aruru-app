@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Badge, Divider } from '../../components/ui';
+import { Badge, Button, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
 import type { AppStackParamList } from '../../navigation/types';
@@ -288,18 +288,14 @@ export default function MaterialsShopScreen({ route }: Props) {
             </Text>
             <Text style={styles.cartTotal}>€{cartTotal.toFixed(2)}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.orderBtn}
+          <Button
+            label="Order →"
+            variant="primary"
             onPress={() => void onOrder()}
+            loading={ordering}
             disabled={ordering}
-            activeOpacity={0.8}
-          >
-            {ordering ? (
-              <ActivityIndicator color={colors.surface} size="small" />
-            ) : (
-              <Text style={styles.orderBtnLabel}>Order →</Text>
-            )}
-          </TouchableOpacity>
+            style={styles.orderBtn}
+          />
         </View>
       ) : null}
     </View>
@@ -440,21 +436,7 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   orderBtn: {
-    backgroundColor: colors.clay,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing[4],
-    paddingVertical: spacing[3],
-    minHeight: 44,
     minWidth: 96,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...(Platform.OS === 'web'
-      ? { cursor: 'pointer' as const, userSelect: 'none' as const }
-      : {}),
-  },
-  orderBtnLabel: {
-    fontFamily: typography.body,
-    fontSize: fontSize.md,
-    color: colors.surface,
+    flexShrink: 0,
   },
 });

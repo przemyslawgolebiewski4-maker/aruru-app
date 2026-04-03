@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,6 +14,7 @@ import {
   confirmDestructive,
   confirmNeutral,
 } from '../../utils/confirmAction';
+import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type Sponsor = {
@@ -158,22 +158,16 @@ export default function AdminSponsorsScreen() {
                 <Text style={styles.link}>{s.websiteUrl}</Text>
               ) : null}
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnApprove]}
+                <Button
+                  label="Approve → send email"
+                  variant="primary"
                   onPress={() => void approve(s.id, s.companyName)}
-                >
-                  <Text style={[styles.btnText, { color: colors.moss }]}>
-                    Approve → send email
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnDanger]}
+                />
+                <Button
+                  label="Reject"
+                  variant="danger"
                   onPress={() => void reject(s.id, s.companyName)}
-                >
-                  <Text style={[styles.btnText, { color: colors.error }]}>
-                    Reject
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
             </View>
           ))}
@@ -199,14 +193,11 @@ export default function AdminSponsorsScreen() {
                     <Text style={styles.link}>{s.websiteUrl}</Text>
                   ) : null}
                 </View>
-                <TouchableOpacity
-                  style={[styles.btn, styles.btnDanger]}
+                <Button
+                  label="Suspend"
+                  variant="danger"
                   onPress={() => void suspend(s.id, s.companyName)}
-                >
-                  <Text style={[styles.btnText, { color: colors.error }]}>
-                    Suspend
-                  </Text>
-                </TouchableOpacity>
+                />
               </View>
             </View>
           ))
@@ -280,14 +271,4 @@ const styles = StyleSheet.create({
     color: colors.clay,
   },
   actions: { flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' },
-  btn: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  btnApprove: { borderColor: colors.moss + '44' },
-  btnDanger: { borderColor: colors.error + '44' },
-  btnText: { fontFamily: typography.mono, fontSize: fontSize.xs },
 });

@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -320,25 +319,29 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
             />
           </View>
           {canManageSession ? (
-            <TouchableOpacity
-              style={styles.closeGhost}
+            <Button
+              label="Close session"
+              variant="secondary"
               onPress={() => void confirmClose()}
               disabled={loading}
-            >
-              <Text style={styles.closeGhostText}>Close session</Text>
-            </TouchableOpacity>
+              loading={loading}
+              fullWidth
+              style={styles.closeSessionBtn}
+            />
           ) : null}
         </View>
       ) : null}
 
       {isClosed && canManageSession ? (
-        <TouchableOpacity
-          style={styles.reopenBtn}
+        <Button
+          label="Reopen session"
+          variant="ghost"
           onPress={() => void confirmReopen()}
           disabled={loading}
-        >
-          <Text style={styles.reopenText}>Reopen session</Text>
-        </TouchableOpacity>
+          loading={loading}
+          fullWidth
+          style={styles.reopenBtn}
+        />
       ) : null}
 
       <SectionLabel>{'MEMBERS & WEIGHTS'}</SectionLabel>
@@ -468,31 +471,11 @@ const styles = StyleSheet.create({
     gap: spacing[3],
   },
   btnFlex: { width: '100%' },
-  closeGhost: {
-    paddingVertical: 11,
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
+  closeSessionBtn: {
     borderColor: colors.moss,
-    alignItems: 'center',
-  },
-  closeGhostText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.moss,
   },
   reopenBtn: {
     marginBottom: spacing[4],
-    paddingVertical: 11,
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.borderStrong,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  reopenText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.clay,
   },
   emptyItems: {
     fontFamily: typography.body,

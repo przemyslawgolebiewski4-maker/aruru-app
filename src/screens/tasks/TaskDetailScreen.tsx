@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/DateTimeField';
-import { SectionLabel } from '../../components/ui';
+import { Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -498,17 +498,14 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
               style={styles.hoursField}
             />
             <Text style={styles.hoursWord}>hours</Text>
-            <TouchableOpacity
-              style={styles.logBtn}
+            <Button
+              label="Log"
+              variant="primary"
               onPress={() => void submitLog()}
+              loading={logging}
               disabled={logging}
-            >
-              {logging ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.logBtnText}>Log</Text>
-              )}
-            </TouchableOpacity>
+              style={styles.logBtn}
+            />
           </View>
           {logError ? <Text style={styles.logErr}>{logError}</Text> : null}
         </>
@@ -666,18 +663,8 @@ const styles = StyleSheet.create({
     color: colors.inkMid,
   },
   logBtn: {
-    backgroundColor: colors.clay,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: radius.sm,
     minWidth: 72,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logBtnText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.sm,
-    color: '#fff',
+    flexShrink: 0,
   },
   logErr: {
     marginTop: 8,

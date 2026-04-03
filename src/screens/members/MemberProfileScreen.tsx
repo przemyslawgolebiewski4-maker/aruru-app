@@ -307,13 +307,14 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
 
         {status === 'active' ? (
           <>
-            <TouchableOpacity
-              style={styles.suspendBtn}
-              onPress={confirmSuspend}
+            <Button
+              label="Suspend member"
+              variant="danger"
+              onPress={() => void confirmSuspend()}
               disabled={statusSaving}
-            >
-              <Text style={styles.suspendLabel}>Suspend member</Text>
-            </TouchableOpacity>
+              fullWidth
+              style={styles.statusActionBtn}
+            />
             <Button
               label="Remove from studio"
               variant="ghost"
@@ -325,13 +326,15 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
         ) : null}
 
         {status === 'suspended' ? (
-          <TouchableOpacity
-            style={styles.reactivateBtn}
-            onPress={() => patchStatus('active')}
+          <Button
+            label="Reactivate member"
+            variant="secondary"
+            onPress={() => void patchStatus('active')}
             disabled={statusSaving}
-          >
-            <Text style={styles.reactivateLabel}>Reactivate member</Text>
-          </TouchableOpacity>
+            loading={statusSaving}
+            fullWidth
+            style={styles.reactivateBtn}
+          />
         ) : null}
       </View>
 
@@ -368,12 +371,15 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
             </TouchableOpacity>
           ))}
           {assignedPlanId ? (
-            <TouchableOpacity
+            <Button
+              label="Remove plan"
+              variant="ghost"
               onPress={() => void onAssignPlan(null)}
               disabled={assigningPlan}
-            >
-              <Text style={styles.unassignLabel}>Remove plan</Text>
-            </TouchableOpacity>
+              loading={assigningPlan}
+              fullWidth
+              style={styles.unassignBtn}
+            />
           ) : null}
         </>
       )}
@@ -476,20 +482,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.md,
   },
-  suspendBtn: {
+  statusActionBtn: {
     marginTop: spacing[3],
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.error,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  suspendLabel: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.error,
   },
   btnError: {
     marginTop: spacing[3],
@@ -498,18 +492,10 @@ const styles = StyleSheet.create({
   },
   reactivateBtn: {
     marginTop: spacing[3],
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
     borderColor: colors.moss,
-    alignItems: 'center',
-    backgroundColor: 'transparent',
   },
-  reactivateLabel: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.moss,
+  unassignBtn: {
+    marginTop: spacing[2],
   },
   emptyPlans: {
     fontFamily: typography.body,
@@ -543,14 +529,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.sm,
     color: colors.inkLight,
-  },
-  unassignLabel: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.error,
-    textAlign: 'center',
-    paddingVertical: spacing[2],
-    marginTop: spacing[1],
   },
   costsSection: {
     marginTop: spacing[6],
