@@ -105,7 +105,7 @@ export default function AdminSponsorsScreen() {
   async function suspend(id: string) {
     try {
       await apiFetch(
-        `/admin/sponsors/${id}/reject`,
+        `/admin/sponsors/${id}/suspend`,
         { method: 'POST' },
         tenantId
       );
