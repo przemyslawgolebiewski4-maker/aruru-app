@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   },
   statPill: {
     backgroundColor: colors.cream,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing[3],
     paddingVertical: 6,
     marginRight: spacing[2],

@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   btn: {
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.border,
   },

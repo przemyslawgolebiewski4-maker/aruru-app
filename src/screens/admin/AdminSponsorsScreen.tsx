@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   btn: {
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.border,
   },

@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   catChip: {
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },

@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
   },
   statPill: {
     backgroundColor: colors.cream,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing[3],
     paddingVertical: 6,
   },
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     backgroundColor: 'transparent',
   },
   tabActive: { backgroundColor: colors.clay },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
   },
   assigneePillSel: { backgroundColor: colors.clay },
   assigneePillUnsel: { backgroundColor: colors.cream },

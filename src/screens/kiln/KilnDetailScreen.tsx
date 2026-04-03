@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   pill: {
     backgroundColor: colors.cream,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing[3],
     paddingVertical: 6,
   },

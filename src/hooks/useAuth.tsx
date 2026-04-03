@@ -64,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               studio.tenantId
             );
           } catch {
-            // silent — nie blokuj logowania
+            // silent — do not block sign-in
           }
         }
       }

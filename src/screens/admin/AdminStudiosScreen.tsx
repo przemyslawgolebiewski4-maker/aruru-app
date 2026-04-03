@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TextInput,
   Linking,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
@@ -298,16 +299,22 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: spacing[2],
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   statusText: { fontFamily: typography.mono, fontSize: 9 },
   actions: { flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' },
   actionBtn: {
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.border,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web'
+      ? { cursor: 'pointer' as const, userSelect: 'none' as const }
+      : {}),
   },
   actionBtnDanger: { borderColor: colors.error + '44' },
   actionBtnMoss: { borderColor: colors.moss + '44' },

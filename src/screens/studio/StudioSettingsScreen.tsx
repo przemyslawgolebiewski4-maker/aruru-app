@@ -14,7 +14,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   tagChip: {
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[1],
-    borderRadius: 999,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.border,
   },

@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     paddingHorizontal: spacing[2],
     paddingVertical: spacing[1],
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.error + '44',
   },

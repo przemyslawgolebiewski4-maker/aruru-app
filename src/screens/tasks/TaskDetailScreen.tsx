@@ -688,7 +688,7 @@ const styles = StyleSheet.create({
   totalPill: {
     alignSelf: 'flex-start',
     backgroundColor: colors.mossLight,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     paddingVertical: 4,
     paddingHorizontal: 12,
     marginBottom: 12,

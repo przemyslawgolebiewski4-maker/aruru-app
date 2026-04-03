@@ -12,7 +12,14 @@ import {
   StyleProp,
   Platform,
 } from 'react-native';
-import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
+import {
+  colors,
+  typography,
+  fontSize,
+  spacing,
+  radius,
+  controlRadius,
+} from '../../theme/tokens';
 
 // ─── Button ────────────────────────────────────────────────────────────────
 
@@ -39,9 +46,15 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
+  const webBtnPointer =
+    Platform.OS === 'web'
+      ? ({ cursor: 'pointer', userSelect: 'none' } as ViewStyle)
+      : {};
+
   const containerStyle: StyleProp<ViewStyle> = [
     styles.btn,
     styles[`btn_${variant}`],
+    webBtnPointer,
     fullWidth && { width: '100%' },
     isDisabled && { opacity: 0.5 },
     style ?? {},
@@ -52,6 +65,13 @@ export function Button({
     styles[`btnLabel_${variant}`],
   ];
 
+  const spinnerColor =
+    variant === 'primary'
+      ? '#fff'
+      : variant === 'danger'
+        ? colors.error
+        : colors.clay;
+
   return (
     <TouchableOpacity
       style={containerStyle}
@@ -60,10 +80,9 @@ export function Button({
       activeOpacity={0.75}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={variant === 'primary' ? '#fff' : colors.clay}
-        />
+        <View style={styles.btnLoadingSlot}>
+          <ActivityIndicator size="small" color={spinnerColor} />
+        </View>
       ) : (
         <Text style={labelStyle}>{label}</Text>
       )}
@@ -262,10 +281,16 @@ const styles = StyleSheet.create({
   btn: {
     paddingVertical: 11,
     paddingHorizontal: 20,
-    borderRadius: radius.sm,
+    borderRadius: controlRadius,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    minHeight: 44,
+  },
+  btnLoadingSlot: {
+    minHeight: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   btn_primary: {
     backgroundColor: colors.clay,

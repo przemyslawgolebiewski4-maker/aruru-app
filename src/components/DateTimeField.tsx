@@ -96,7 +96,7 @@ function NativeDateTimeField({
   minimumDate,
 }: Props) {
   const [show, setShow] = useState(false);
-  // lazy import żeby web bundle nie próbował importować native modułu
+  // Lazy require so the web bundle does not pull in the native datetime module.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const RNDateTimePicker = require('@react-native-community/datetimepicker')
     .default;

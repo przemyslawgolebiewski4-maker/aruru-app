@@ -76,6 +76,9 @@ export const radius = {
   full: 999,
 };
 
+/** Buttons, tabs, chips — subtle rounded rectangle (same as `radius.sm`). */
+export const controlRadius = radius.sm;
+
 export const shadow = {
   none: {},
   sm: {

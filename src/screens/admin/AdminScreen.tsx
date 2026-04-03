@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.clayBorder,
     paddingHorizontal: spacing[2],
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: radius.sm,
     marginTop: spacing[1],
   },
   roleBadgeText: {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   alertBadge: {
     paddingHorizontal: spacing[2],
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: radius.sm,
   },
   alertBadgeText: { fontFamily: typography.mono, fontSize: 9 },
   alertInfo: { flex: 1 },

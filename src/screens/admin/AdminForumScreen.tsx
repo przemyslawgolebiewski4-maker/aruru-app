@@ -10,7 +10,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
 
 type Post = {
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   deleteBtn: {
     paddingHorizontal: spacing[2],
     paddingVertical: spacing[1],
-    borderRadius: 6,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.error + '44',
   },

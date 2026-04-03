@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   tab: {
     paddingHorizontal: spacing[3],
     paddingVertical: spacing[2],
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -440,9 +441,16 @@ const styles = StyleSheet.create({
   },
   orderBtn: {
     backgroundColor: colors.clay,
-    borderRadius: radius.md,
+    borderRadius: radius.sm,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
+    minHeight: 44,
+    minWidth: 96,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...(Platform.OS === 'web'
+      ? { cursor: 'pointer' as const, userSelect: 'none' as const }
+      : {}),
   },
   orderBtnLabel: {
     fontFamily: typography.body,

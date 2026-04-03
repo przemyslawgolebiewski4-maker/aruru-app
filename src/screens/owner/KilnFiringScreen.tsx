@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   stepPill: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.borderStrong,
   },

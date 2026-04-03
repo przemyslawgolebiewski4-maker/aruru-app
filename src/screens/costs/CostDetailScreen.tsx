@@ -277,17 +277,17 @@ async function fetchPdfFromEndpoint(
       {},
       tenantId
     );
-    // Przypadek 1: zewnętrzny URL
+    // Case 1: external URL
     if (res.pdfUrl && typeof res.pdfUrl === 'string') {
       return res.pdfUrl;
     }
-    // Przypadek 2: HTML base64 (nowy format)
+    // Case 2: HTML base64 (new format)
     if (res.htmlBase64 && typeof res.htmlBase64 === 'string') {
       const filename =
         typeof res.filename === 'string' ? res.filename : 'aruru-costs.html';
       const html = atob(res.htmlBase64);
       if (typeof window !== 'undefined') {
-        // Otwórz w nowym oknie z przyciskiem print
+        // Open in a new window for print
         const win = window.open('', '_blank');
         if (win) {
           win.document.write(html);
@@ -297,7 +297,7 @@ async function fetchPdfFromEndpoint(
       }
       return 'html_exported';
     }
-    // Przypadek 3: PDF base64 (stary format, fallback)
+    // Case 3: PDF base64 (legacy fallback)
     if (res.pdfBase64 && typeof res.pdfBase64 === 'string') {
       const filename =
         typeof res.filename === 'string' ? res.filename : 'aruru-costs.pdf';

@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
   },
   pillRow: {
     backgroundColor: colors.cream,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     paddingVertical: spacing[2],
     paddingHorizontal: spacing[4],
     marginBottom: 16,

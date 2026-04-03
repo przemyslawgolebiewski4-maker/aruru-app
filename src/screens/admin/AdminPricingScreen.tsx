@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     width: 56,
     borderWidth: 0.5,
     borderColor: colors.border,
-    borderRadius: 6,
+    borderRadius: radius.sm,
     padding: spacing[1],
     paddingHorizontal: spacing[2],
     fontFamily: typography.mono,

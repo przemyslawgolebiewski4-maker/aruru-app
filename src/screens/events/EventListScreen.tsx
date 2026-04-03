@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   pillRow: {
     alignSelf: 'flex-start',
     backgroundColor: colors.cream,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     paddingVertical: spacing[2],
     paddingHorizontal: spacing[4],
     marginBottom: 16,
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   kindPill: {
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     backgroundColor: colors.cream,
   },
   kindPillSelected: {
