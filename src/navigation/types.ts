@@ -15,6 +15,7 @@ export type MainTabParamList = {
   Community: undefined;
   Notifications: undefined;
   Profile: undefined;
+  Admin: undefined;
 };
 
 export type AppStackParamList = {
@@ -66,4 +67,10 @@ export type AppStackParamList = {
   ArtistProfile: { userId: string };
   ForumPost: { postId: string };
   StudioPublicProfile: { studioSlug: string; studioName: string };
+  AdminStudios: undefined;
+  AdminSponsors: undefined;
+  AdminForum: undefined;
+  AdminAdmins: undefined;
+  AdminPricing: undefined;
+  AdminUsers: undefined;
 };

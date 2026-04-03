@@ -42,6 +42,7 @@ import AssistantsOverviewScreen from '../screens/assistant/AssistantsOverviewScr
 import ArtistProfileScreen from '../screens/community/ArtistProfileScreen';
 import ForumPostScreen from '../screens/community/ForumPostScreen';
 import StudioPublicProfileScreen from '../screens/community/StudioPublicProfileScreen';
+import AdminSectionPlaceholder from '../screens/admin/AdminSectionPlaceholder';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -367,6 +368,60 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Materials',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminStudios"
+        component={AdminSectionPlaceholder}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Studios',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminSponsors"
+        component={AdminSectionPlaceholder}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Sponsors',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminForum"
+        component={AdminSectionPlaceholder}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Community',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminAdmins"
+        component={AdminSectionPlaceholder}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Admins',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminPricing"
+        component={AdminSectionPlaceholder}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Pricing',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminUsers"
+        component={AdminSectionPlaceholder}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Users',
         }}
       />
     </AppStack.Navigator>

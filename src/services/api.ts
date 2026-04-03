@@ -17,6 +17,14 @@ export interface AuthUser {
   shopUrl?: string | null;
   /** Present when API returns camelCase; map from `community_visibility` if needed */
   communityVisibility?: Record<string, string>;
+  adminRole?: string;
+  adminPermissions?: {
+    studios?: boolean;
+    sponsors?: boolean;
+    community?: boolean;
+    billing?: boolean;
+    users?: boolean;
+  };
 }
 
 export interface StudioMembership {

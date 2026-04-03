@@ -2,14 +2,19 @@ import React from 'react';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { colors, typography } from '../theme/tokens';
 import type { MainTabParamList } from './types';
+import { useAuth } from '../hooks/useAuth';
 import DashboardScreen from '../screens/owner/DashboardScreen';
 import CommunityScreen from '../screens/community/CommunityScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import AdminScreen from '../screens/admin/AdminScreen';
 
 const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 
 export function MainTabNavigator() {
+  const { user } = useAuth();
+  const showAdminTab = user?.adminRole === 'aruru_admin';
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -59,6 +64,16 @@ export function MainTabNavigator() {
         component={ProfileScreen}
         options={{ title: 'Profile' }}
       />
+      {showAdminTab ? (
+        <Tab.Screen
+          name="Admin"
+          component={AdminScreen}
+          options={{
+            title: 'Admin',
+            tabBarLabel: 'Admin',
+          }}
+        />
+      ) : null}
     </Tab.Navigator>
   );
 }
