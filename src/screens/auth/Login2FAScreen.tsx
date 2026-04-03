@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
-import { authLogin2faEmailSend, ApiError } from '../../services/api';
+import { authLogin2faEmailSend } from '../../services/api';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AuthStackParamList } from '../../navigation/types';
@@ -37,11 +37,7 @@ export default function Login2FAScreen({ navigation, route }: Props) {
       const res = await authLogin2faEmailSend(pendingToken);
       setSendHint(res.message ?? 'Check your e-mail for a code.');
     } catch (e: unknown) {
-      if (e instanceof ApiError && e.status === 429) {
-        setError('Please wait about a minute before requesting another code.');
-      } else {
-        setError(e instanceof Error ? e.message : 'Could not send code.');
-      }
+      setError(e instanceof Error ? e.message : 'Could not send code.');
     } finally {
       setSendLoading(false);
     }

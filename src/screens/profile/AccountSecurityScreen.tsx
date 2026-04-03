@@ -19,7 +19,11 @@ import {
   email2faDisable,
   disableAll2fa,
   resendVerifyEmail,
+  getAuthDataExport,
+  ApiError,
+  AUTH_DATA_EXPORT_FORBIDDEN_MESSAGE,
 } from '../../services/api';
+import { saveAruruDataExport } from '../../utils/saveJsonExport';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -41,6 +45,9 @@ export default function AccountSecurityScreen(_props: Props) {
   const [totpCode, setTotpCode] = useState('');
   const [disablePassword, setDisablePassword] = useState('');
   const [resendHint, setResendHint] = useState('');
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [exportHint, setExportHint] = useState('');
 
   const load = useCallback(async () => {
     setError('');
@@ -61,6 +68,29 @@ export default function AccountSecurityScreen(_props: Props) {
       void load();
     }, [load])
   );
+
+  async function onDownloadDataExport() {
+    setExportError('');
+    setExportHint('');
+    setExportBusy(true);
+    try {
+      const data = await getAuthDataExport();
+      await saveAruruDataExport(data);
+      setExportHint(
+        'Export ready. On web the file downloads automatically; on mobile use Share to save it to Files or another app.'
+      );
+    } catch (e: unknown) {
+      if (e instanceof ApiError && e.status === 403) {
+        setExportError(AUTH_DATA_EXPORT_FORBIDDEN_MESSAGE);
+      } else {
+        setExportError(
+          e instanceof Error ? e.message : 'Could not export your data.'
+        );
+      }
+    } finally {
+      setExportBusy(false);
+    }
+  }
 
   async function onResendVerify() {
     setResendHint('');
@@ -179,6 +209,24 @@ export default function AccountSecurityScreen(_props: Props) {
       <Text style={styles.lead}>
         Protect your account with a second step at sign-in.
       </Text>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Your data</Text>
+        <Text style={styles.cardBody}>
+          Download a JSON copy of the personal data Aruru holds about you
+          (profile, studio memberships, notifications, sponsor profile if any,
+          forum posts and replies, tasks you created, and related metadata).
+        </Text>
+        <Button
+          label="Download my data"
+          onPress={() => void onDownloadDataExport()}
+          loading={exportBusy}
+          variant="secondary"
+          fullWidth
+        />
+        {exportHint ? <Text style={styles.hint}>{exportHint}</Text> : null}
+        {exportError ? <Text style={styles.error}>{exportError}</Text> : null}
+      </View>
 
       {!verified ? (
         <View style={styles.card}>

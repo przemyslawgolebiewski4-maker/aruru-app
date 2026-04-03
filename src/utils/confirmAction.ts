@@ -11,6 +11,22 @@ export function alertMessage(title: string, message: string): void {
   Alert.alert(title, message);
 }
 
+/** Like `alertMessage`, then runs `onDismiss` (web: after blocking alert; native: OK press). */
+export function alertMessageThen(
+  title: string,
+  message: string,
+  onDismiss: () => void
+): void {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') {
+      window.alert(`${title}\n\n${message}`);
+    }
+    onDismiss();
+    return;
+  }
+  Alert.alert(title, message, [{ text: 'OK', onPress: onDismiss }]);
+}
+
 /**
  * Cross-platform confirmation. On web, `Alert.alert` with action buttons is unreliable
  * (callbacks may never run), so we use `window.confirm` for destructive flows.

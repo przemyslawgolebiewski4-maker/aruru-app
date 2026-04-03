@@ -15,7 +15,7 @@ import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/u
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
-import { confirmDestructive } from '../../utils/confirmAction';
+import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
 
 const DELETE_LABEL_GRAY = '#9E9890';
 
@@ -77,7 +77,13 @@ export default function ProfileScreen() {
           body: JSON.stringify({}),
         });
       }
-      await signOut();
+      alertMessageThen(
+        'Account deleted',
+        'Your account has been removed. Data held in Aruru — including sponsor profile, notifications, forum activity, and other records tied to your account — is deleted in line with our backend policy.',
+        () => {
+          void signOut();
+        }
+      );
     } catch (e: unknown) {
       setDeleteError(
         e instanceof Error ? e.message : 'Could not delete account.'
@@ -224,6 +230,10 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <Divider style={styles.rowDivider} />
+      <Text style={styles.deleteExportHint}>
+        You can download a copy of your data first: Security & two-factor → Your
+        data.
+      </Text>
       <TouchableOpacity
         style={styles.deleteAccountBtn}
         onPress={() => void handleDeleteAccount()}
@@ -356,6 +366,15 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
     color: colors.error,
+  },
+  deleteExportHint: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+    textAlign: 'center',
+    lineHeight: 16,
+    marginBottom: spacing[2],
+    paddingHorizontal: spacing[2],
   },
   deleteAccountBtn: {
     paddingVertical: 11,

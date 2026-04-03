@@ -151,6 +151,14 @@ export class ApiError extends Error {
   }
 }
 
+/** Shown for HTTP 429 on auth-related public POST routes (login, register, etc.). */
+export const AUTH_RATE_LIMIT_MESSAGE =
+  'Zbyt wiele prób, spróbuj za chwilę.';
+
+/** GET /auth/data-export when the account no longer exists or access is denied. */
+export const AUTH_DATA_EXPORT_FORBIDDEN_MESSAGE =
+  'This account is no longer available.';
+
 export async function apiFetch<T>(
   path: string,
   options: ApiFetchInit = {},
@@ -176,6 +184,11 @@ export async function apiFetch<T>(
   if (!res.ok) {
     const raw = await res.text().catch(() => '');
     const trimmed = raw.trim();
+
+    if (res.status === 429) {
+      throw new ApiError(AUTH_RATE_LIMIT_MESSAGE, 429);
+    }
+
     let message = `HTTP ${res.status}`;
 
     if (trimmed) {
@@ -327,6 +340,11 @@ export async function authLogin2faComplete(args: {
 
 export async function finalizeLoginSession(accessToken: string): Promise<void> {
   await setToken(accessToken);
+}
+
+/** GDPR-style export: Bearer only, no X-Tenant-ID. */
+export async function getAuthDataExport(): Promise<Record<string, unknown>> {
+  return apiFetch<Record<string, unknown>>('/auth/data-export', {});
 }
 
 export async function getMe(): Promise<MeResponse> {
