@@ -15,7 +15,27 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input, SectionLabel } from '../../components/ui';
-import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
+import {
+  colors,
+  typography,
+  fontSize,
+  spacing,
+  radius,
+} from '../../theme/tokens';
+
+const TRIAL_AMBER = '#EF9F27';
+
+function trialDaysLeft(iso?: string): number {
+  if (!iso) return 999;
+  return Math.ceil(
+    (new Date(iso).getTime() - Date.now()) / 86400000
+  );
+}
+
+function formatTierLabel(tier?: string): string {
+  const t = (tier ?? 'solo').trim() || 'solo';
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
@@ -74,6 +94,10 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const { studios, refresh } = useAuth();
 
   const membership = studios.find((s) => s.tenantId === tenantId);
+  const currentStudio =
+    membership ??
+    studios.find((s) => s.status === 'active') ??
+    studios[0];
   const isOwner =
     membership?.role === 'owner' && membership?.status === 'active';
 
@@ -92,6 +116,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [portalLoading, setPortalLoading] = useState(false);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -206,6 +231,176 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     } finally {
       setPortalLoading(false);
     }
+  }
+
+  async function openCheckout() {
+    setCheckoutLoading(true);
+    try {
+      const tier = currentStudio?.subscriptionTier ?? 'solo';
+      const res = await apiFetch<{
+        checkoutUrl?: string;
+        checkout_url?: string;
+      }>(
+        '/stripe/studio/checkout',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            tenant_id: tenantId,
+            tier,
+          }),
+        },
+        tenantId
+      );
+      const url = res.checkoutUrl ?? res.checkout_url;
+      if (url) {
+        void Linking.openURL(url);
+      }
+    } catch {
+      alertMessage('Error', 'Could not open checkout.');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }
+
+  function subscriptionStatusUI() {
+    const status = currentStudio?.subscriptionStatus ?? '';
+    const tier = formatTierLabel(currentStudio?.subscriptionTier);
+
+    if (status === 'trial') {
+      const days = trialDaysLeft(currentStudio?.trialEndsAt);
+      if (days > 7) {
+        return (
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: colors.moss }]} />
+            <Text style={[styles.statusText, { color: colors.ink }]}>
+              Trial — {days} days remaining
+            </Text>
+          </View>
+        );
+      }
+      if (days > 0) {
+        return (
+          <>
+            <View style={styles.statusBadge}>
+              <View
+                style={[styles.statusDot, { backgroundColor: TRIAL_AMBER }]}
+              />
+              <Text style={[styles.statusText, { color: colors.ink }]}>
+                Trial ending soon — {days} days left
+              </Text>
+            </View>
+            <Button
+              label="Subscribe now"
+              variant="primary"
+              onPress={() => void openStudioPortal()}
+              loading={portalLoading}
+              fullWidth
+              style={styles.subscriptionBtn}
+            />
+          </>
+        );
+      }
+      return (
+        <>
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: colors.error }]} />
+            <Text style={[styles.statusText, { color: colors.error }]}>
+              Trial expired
+            </Text>
+          </View>
+          <Button
+            label="Subscribe to continue"
+            variant="primary"
+            onPress={() => void openCheckout()}
+            loading={checkoutLoading}
+            fullWidth
+            style={styles.subscriptionBtn}
+          />
+        </>
+      );
+    }
+
+    if (status === 'active') {
+      return (
+        <>
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: colors.moss }]} />
+            <Text style={[styles.statusText, { color: colors.ink }]}>
+              Active — {tier} plan
+            </Text>
+          </View>
+          <Button
+            label="Manage subscription ↗"
+            variant="ghost"
+            onPress={() => void openStudioPortal()}
+            loading={portalLoading}
+            fullWidth
+            style={styles.subscriptionBtn}
+          />
+        </>
+      );
+    }
+
+    if (status === 'past_due') {
+      return (
+        <>
+          <View style={styles.statusBadge}>
+            <View style={[styles.statusDot, { backgroundColor: colors.error }]} />
+            <Text style={[styles.statusText, { color: colors.error }]}>
+              Payment failed
+            </Text>
+          </View>
+          <Text style={styles.statusHint}>
+            Update your payment method to avoid losing access.
+          </Text>
+          <Button
+            label="Update payment ↗"
+            variant="ghost"
+            onPress={() => void openStudioPortal()}
+            loading={portalLoading}
+            fullWidth
+            style={styles.subscriptionBtn}
+          />
+        </>
+      );
+    }
+
+    if (status === 'cancelled') {
+      return (
+        <>
+          <View style={styles.statusBadge}>
+            <View
+              style={[styles.statusDot, { backgroundColor: colors.inkLight }]}
+            />
+            <Text style={[styles.statusText, { color: colors.inkLight }]}>
+              Cancelled
+            </Text>
+          </View>
+          <Text style={styles.statusHint}>
+            Your access ends 30 days after cancellation.
+          </Text>
+          <Button
+            label="Resubscribe ↗"
+            variant="ghost"
+            onPress={() => void openCheckout()}
+            loading={checkoutLoading}
+            fullWidth
+            style={styles.subscriptionBtn}
+          />
+        </>
+      );
+    }
+
+    return (
+      <Button
+        label="Manage subscription ↗"
+        variant="ghost"
+        onPress={() => void openStudioPortal()}
+        loading={portalLoading}
+        fullWidth
+        style={styles.subscriptionBtn}
+      />
+    );
   }
 
   if (!isOwner) return null;
@@ -357,14 +552,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
 
         <View style={styles.subscriptionSection}>
           <SectionLabel>Subscription</SectionLabel>
-          <Button
-            label="Manage subscription ↗"
-            variant="ghost"
-            onPress={() => void openStudioPortal()}
-            loading={portalLoading}
-            fullWidth
-            style={styles.subscriptionBtn}
-          />
+          {subscriptionStatusUI()}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -425,4 +613,27 @@ const styles = StyleSheet.create({
   saveBtn: { marginTop: spacing[4] },
   subscriptionBtn: { marginTop: spacing[2] },
   subscriptionSection: { marginTop: spacing[6] },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginBottom: spacing[3],
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    flex: 1,
+  },
+  statusHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+    marginBottom: spacing[2],
+  },
 });
