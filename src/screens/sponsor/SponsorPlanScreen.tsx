@@ -1,19 +1,45 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { apiFetch } from '../../services/api';
 import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import { alertMessage } from '../../utils/confirmAction';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SponsorPlan'>;
 
-export default function SponsorPlanScreen(_props: Props) {
-  const [loading, setLoading] = useState(false);
+const BASIC_FEATURES = [
+  '1 post per month',
+  'Stats dashboard',
+  'Profile in Sponsors directory',
+  'Logo on your posts',
+] as const;
 
-  async function openCheckout() {
+const STANDARD_FEATURES = [
+  '2 posts per month',
+  'Stats dashboard',
+  'Profile in Sponsors directory',
+  'Logo on your posts',
+  'Logo in landing page footer',
+] as const;
+
+export default function SponsorPlanScreen(_props: Props) {
+  const [selectedPlan, setSelectedPlan] = useState<'basic' | 'standard'>(
+    'basic'
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function subscribe() {
     setLoading(true);
+    setError('');
     try {
       const res = await apiFetch<{
         checkoutUrl?: string;
@@ -22,53 +48,176 @@ export default function SponsorPlanScreen(_props: Props) {
         '/stripe/sponsor/checkout',
         {
           method: 'POST',
-          body: JSON.stringify({}),
+          body: JSON.stringify({ plan: selectedPlan }),
         },
         ''
       );
       const url = res.checkoutUrl ?? res.checkout_url;
-      if (url) void Linking.openURL(url);
-      else alertMessage('Checkout', 'No checkout URL returned.');
-    } catch {
-      alertMessage('Error', 'Could not open checkout. Please try again.');
+      if (url) {
+        void Linking.openURL(url);
+      } else {
+        setError('Could not open checkout. Please try again.');
+      }
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : 'Could not open checkout.'
+      );
     } finally {
       setLoading(false);
     }
   }
 
+  const planLabel = selectedPlan === 'basic' ? 'Basic' : 'Standard';
+
   return (
-    <View style={styles.root}>
-      <Text style={styles.title}>Sponsor plans</Text>
-      <Text style={styles.body}>
-        Choose a subscription to activate your partner profile in the Sponsors
-        directory and publish posts to the community feed.
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text style={styles.screenTitle}>Choose your plan</Text>
+      <Text style={styles.subtitle}>
+        Activate your partner profile and start reaching the Aruru community.
       </Text>
+
+      <TouchableOpacity
+        style={[
+          styles.planCard,
+          selectedPlan === 'basic' && styles.planCardSelected,
+        ]}
+        onPress={() => setSelectedPlan('basic')}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityState={{ selected: selectedPlan === 'basic' }}
+      >
+        <Text style={styles.planName}>Basic</Text>
+        <Text style={styles.planPrice}>€29 / month</Text>
+        {BASIC_FEATURES.map((line) => (
+          <Text key={line} style={styles.planFeature}>
+            · {line}
+          </Text>
+        ))}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.planCard,
+          selectedPlan === 'standard' && styles.planCardSelected,
+        ]}
+        onPress={() => setSelectedPlan('standard')}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityState={{ selected: selectedPlan === 'standard' }}
+      >
+        <Text style={styles.planName}>Standard</Text>
+        <Text style={styles.planPrice}>€59 / month</Text>
+        <View style={styles.popularBadge}>
+          <Text style={styles.popularBadgeText}>Most popular</Text>
+        </View>
+        {STANDARD_FEATURES.map((line) => (
+          <Text key={line} style={styles.planFeature}>
+            · {line}
+          </Text>
+        ))}
+      </TouchableOpacity>
+
       <Button
-        label="Subscribe"
-        onPress={() => void openCheckout()}
+        label={`Subscribe to ${planLabel}`}
+        onPress={() => void subscribe()}
         loading={loading}
         fullWidth
       />
-    </View>
+
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Text style={styles.note}>
+        You can cancel anytime from your Stripe billing portal. No long-term
+        commitment.
+      </Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  scroll: {
     flex: 1,
     backgroundColor: colors.cream,
+  },
+  scrollContent: {
     padding: spacing[6],
-    gap: spacing[4],
+    paddingBottom: spacing[10],
   },
-  title: {
+  screenTitle: {
     fontFamily: typography.bodyMedium,
-    fontSize: fontSize.lg,
+    fontSize: fontSize['2xl'],
     color: colors.ink,
+    marginBottom: spacing[2],
   },
-  body: {
+  subtitle: {
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.inkLight,
     lineHeight: 22,
+    marginBottom: spacing[5],
+  },
+  planCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    marginBottom: spacing[3],
+  },
+  planCardSelected: {
+    borderColor: colors.clay,
+    borderWidth: 1.5,
+  },
+  planName: {
+    fontFamily: typography.body,
+    fontSize: fontSize.lg,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  planPrice: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xl,
+    color: colors.clay,
+    marginBottom: spacing[2],
+  },
+  planFeature: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    marginBottom: 4,
+  },
+  popularBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.mossLight,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: spacing[2],
+    marginTop: spacing[1],
+  },
+  popularBadgeText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.moss,
+  },
+  error: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: spacing[3],
+  },
+  note: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: spacing[2],
+    paddingHorizontal: spacing[4],
   },
 });
