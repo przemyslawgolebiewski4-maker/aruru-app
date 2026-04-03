@@ -56,6 +56,7 @@ function studioInitials(name: string) {
 
 export default function ProfileScreen() {
   const { user, studios, signOut } = useAuth();
+  const isSponsor = user?.userRole === 'sponsor';
   const navigation = useNavigation();
   const stackNav =
     navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
@@ -128,7 +129,9 @@ export default function ProfileScreen() {
       <SectionLabel>Your studios</SectionLabel>
       {studios.length === 0 ? (
         <Text style={styles.empty}>
-          No studios yet. Create one to get started.
+          {isSponsor
+            ? 'No studios linked to this account.'
+            : 'No studios yet. Create one to get started.'}
         </Text>
       ) : (
         studios.map((s, i) => (
@@ -179,17 +182,19 @@ export default function ProfileScreen() {
         ))
       )}
 
-      <Button
-        label="+ Create studio"
-        variant="ghost"
-        onPress={() =>
-          navigation
-            .getParent<NativeStackNavigationProp<AppStackParamList>>()
-            ?.navigate('CreateStudio')
-        }
-        fullWidth
-        style={styles.createStudioBtn}
-      />
+      {!isSponsor && (
+        <Button
+          label="+ Create studio"
+          variant="ghost"
+          onPress={() =>
+            navigation
+              .getParent<NativeStackNavigationProp<AppStackParamList>>()
+              ?.navigate('CreateStudio')
+          }
+          fullWidth
+          style={styles.createStudioBtn}
+        />
+      )}
 
       <View style={{ height: spacing[8] }} />
 

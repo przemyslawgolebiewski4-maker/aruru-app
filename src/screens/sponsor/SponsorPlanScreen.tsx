@@ -18,10 +18,14 @@ export default function SponsorPlanScreen(_props: Props) {
       const res = await apiFetch<{
         checkoutUrl?: string;
         checkout_url?: string;
-      }>('/stripe/sponsor/checkout', {
-        method: 'POST',
-        body: JSON.stringify({}),
-      });
+      }>(
+        '/stripe/sponsor/checkout',
+        {
+          method: 'POST',
+          body: JSON.stringify({}),
+        },
+        ''
+      );
       const url = res.checkoutUrl ?? res.checkout_url;
       if (url) void Linking.openURL(url);
       else alertMessage('Checkout', 'No checkout URL returned.');
