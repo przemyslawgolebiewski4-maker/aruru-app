@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRoute } from '@react-navigation/native';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth, TwoFactorRequiredError } from '../../hooks/useAuth';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AuthStackParamList } from '../../navigation/types';
@@ -34,6 +34,14 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await signIn(email.trim().toLowerCase(), password);
     } catch (e: unknown) {
+      if (e instanceof TwoFactorRequiredError) {
+        navigation.navigate('Login2FA', {
+          pendingToken: e.pendingToken,
+          methods: e.methods.length ? e.methods : ['totp', 'email'],
+          email: email.trim().toLowerCase(),
+        });
+        return;
+      }
       setError(e instanceof Error ? e.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);

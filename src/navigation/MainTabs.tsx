@@ -3,6 +3,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { colors, typography } from '../theme/tokens';
 import type { MainTabParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
+import { userHasAdminTabAccess } from '../services/api';
 import DashboardScreen from '../screens/owner/DashboardScreen';
 import CommunityScreen from '../screens/community/CommunityScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
@@ -13,7 +14,7 @@ const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 
 export function MainTabNavigator() {
   const { user } = useAuth();
-  const showAdminTab = user?.adminRole === 'aruru_admin';
+  const showAdminTab = userHasAdminTabAccess(user);
 
   return (
     <Tab.Navigator

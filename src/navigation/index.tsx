@@ -13,12 +13,14 @@ import { colors, typography, fontSize, spacing } from '../theme/tokens';
 
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
+import Login2FAScreen from '../screens/auth/Login2FAScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import AccountSecurityScreen from '../screens/profile/AccountSecurityScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
 import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import PricingSettingsScreen from '../screens/studio/PricingSettingsScreen';
@@ -148,6 +150,22 @@ function AuthNavigator({
     >
       <AuthStack.Screen name="Onboarding" component={OnboardingScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen
+        name="Login2FA"
+        component={Login2FAScreen}
+        options={{
+          headerShown: true,
+          title: 'Verify sign-in',
+          headerTintColor: colors.ink,
+          headerStyle: { backgroundColor: colors.surface },
+          headerShadowVisible: false,
+          headerTitleStyle: {
+            fontFamily: typography.bodyMedium,
+            fontSize: fontSize.md,
+            color: colors.ink,
+          },
+        }}
+      />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
@@ -206,6 +224,15 @@ function AppNavigator() {
             fontSize: fontSize.md,
             color: colors.ink,
           },
+        }}
+      />
+      <AppStack.Screen
+        name="AccountSecurity"
+        component={AccountSecurityScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Security',
         }}
       />
       <AppStack.Screen

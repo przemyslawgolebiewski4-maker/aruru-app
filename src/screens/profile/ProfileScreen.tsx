@@ -118,6 +118,11 @@ export default function ProfileScreen() {
         />
         <Text style={styles.name}>{user?.name ?? '—'}</Text>
         <Text style={styles.email}>{user?.email ?? ''}</Text>
+        {user?.emailVerified ? (
+          <Text style={styles.verifiedHint}>E-mail verified</Text>
+        ) : (
+          <Text style={styles.unverifiedHint}>E-mail not verified</Text>
+        )}
       </View>
 
       <SectionLabel>Your studios</SectionLabel>
@@ -196,6 +201,13 @@ export default function ProfileScreen() {
         fullWidth
         style={styles.accountBtn}
       />
+      <Button
+        label="Security & two-factor"
+        variant="ghost"
+        onPress={() => stackNav?.navigate('AccountSecurity')}
+        fullWidth
+        style={styles.accountBtn}
+      />
       <Divider style={styles.rowDivider} />
       <TouchableOpacity
         style={styles.signOutBtn}
@@ -258,6 +270,20 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.sm,
     color: colors.inkLight,
+    marginTop: spacing[2],
+    textAlign: 'center',
+  },
+  verifiedHint: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.mossDark,
+    marginTop: spacing[2],
+    textAlign: 'center',
+  },
+  unverifiedHint: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.clay,
     marginTop: spacing[2],
     textAlign: 'center',
   },

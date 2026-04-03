@@ -1,6 +1,11 @@
 export type AuthStackParamList = {
   Onboarding: undefined;
   Login: { passwordResetBanner?: boolean } | undefined;
+  Login2FA: {
+    pendingToken: string;
+    methods: ('totp' | 'email')[];
+    email: string;
+  };
   Register: undefined;
   VerifyEmail: {
     email?: string;
@@ -23,6 +28,7 @@ export type MainTabParamList = {
 export type AppStackParamList = {
   Main: undefined;
   EditProfile: undefined;
+  AccountSecurity: undefined;
   CreateStudio: undefined;
   SetupPricing: { tenantId: string; studioName: string };
   PricingSettings: { tenantId: string; studioName: string };

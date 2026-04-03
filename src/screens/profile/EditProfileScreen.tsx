@@ -4,14 +4,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import { apiFetch, type AuthUser } from '../../services/api';
+import { patchMe, type PatchMeBody } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
 export default function EditProfileScreen({ navigation }: Props) {
-  const { user, refresh, mergeServerUser } = useAuth();
+  const { user, refresh, setUserFull } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
@@ -35,6 +35,15 @@ export default function EditProfileScreen({ navigation }: Props) {
     setAvatarUrl(user?.avatarUrl ?? '');
   }, [user?.avatarUrl]);
 
+  useEffect(() => {
+    if (user?.communityVisibility) {
+      setVisibility((v) => ({
+        ...v,
+        ...user.communityVisibility,
+      }));
+    }
+  }, [user?.communityVisibility]);
+
   async function onSave() {
     setError('');
     setSuccess('');
@@ -44,32 +53,21 @@ export default function EditProfileScreen({ navigation }: Props) {
     }
     setSaving(true);
     try {
-      const res = await apiFetch<AuthUser | { user: AuthUser }>('/auth/me', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          name: name.trim(),
-          bio: bio.trim() || null,
-          city: city.trim() || null,
-          instagram_url: instagramUrl.trim() || null,
-          website_url: websiteUrl.trim() || null,
-          shop_url: shopUrl.trim() || null,
-          community_visibility: visibility,
-        }),
-      });
-      const patchUser =
-        res &&
-        typeof res === 'object' &&
-        'user' in res &&
-        res.user &&
-        typeof res.user.id === 'string'
-          ? res.user
-          : res && typeof res === 'object' && 'id' in res && typeof (res as AuthUser).id === 'string'
-            ? (res as AuthUser)
-            : null;
-      if (patchUser) {
-        mergeServerUser(patchUser);
+      const body: PatchMeBody = {
+        name: name.trim(),
+        bio: bio.trim() || null,
+        city: city.trim() || null,
+        instagram_url: instagramUrl.trim() || null,
+        website_url: websiteUrl.trim() || null,
+        shop_url: shopUrl.trim() || null,
+        community_visibility: visibility,
+      };
+      const trimmedAvatar = avatarUrl.trim();
+      if (trimmedAvatar) {
+        body.avatar_url = trimmedAvatar;
       }
-      await refresh();
+      const nextUser = await patchMe(body);
+      setUserFull(nextUser);
       navigation.goBack();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not update profile.');

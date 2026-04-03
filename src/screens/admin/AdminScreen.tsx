@@ -10,7 +10,11 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
-import { apiFetch } from '../../services/api';
+import {
+  apiFetch,
+  userHasAdminTabAccess,
+  type AuthUser,
+} from '../../services/api';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 
@@ -61,6 +65,14 @@ export default function AdminScreen() {
   const [error, setError] = useState('');
 
   const perms = user?.adminPermissions ?? {};
+  const isLegacyFullAdmin =
+    user?.adminRole === 'aruru_admin' &&
+    (!user?.adminPermissions ||
+      Object.keys(user.adminPermissions ?? {}).length === 0);
+
+  function can(key: keyof NonNullable<AuthUser['adminPermissions']>): boolean {
+    return isLegacyFullAdmin || Boolean(perms[key]);
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -81,7 +93,7 @@ export default function AdminScreen() {
     }, [load])
   );
 
-  if (!user || user.adminRole !== 'aruru_admin') {
+  if (!user || !userHasAdminTabAccess(user)) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>Access denied.</Text>
@@ -93,38 +105,38 @@ export default function AdminScreen() {
     Object.values(perms).length === 5 && Object.values(perms).every(Boolean);
 
   const MENU = [
-    perms.studios && {
+    can('studios') && {
       key: 'AdminStudios' as const,
       label: 'Studios',
       desc: 'Manage studios & tiers',
       color: colors.clay,
     },
-    perms.sponsors && {
+    can('sponsors') && {
       key: 'AdminSponsors' as const,
       label: 'Sponsors',
       desc: 'Approvals & profiles',
       color: colors.moss,
       alert: (data?.pendingSponsors ?? 0) > 0,
     },
-    perms.community && {
+    can('community') && {
       key: 'AdminForum' as const,
       label: 'Community',
       desc: 'Moderate posts & forum',
       color: colors.inkLight,
     },
-    allPerms && {
+    (isLegacyFullAdmin || allPerms) && {
       key: 'AdminAdmins' as const,
       label: 'Admins',
       desc: 'Manage admin accounts',
       color: colors.clay,
     },
-    perms.billing && {
+    can('billing') && {
       key: 'AdminPricing' as const,
       label: 'Pricing',
       desc: 'Edit subscription tiers',
       color: colors.inkLight,
     },
-    perms.users && {
+    can('users') && {
       key: 'AdminUsers' as const,
       label: 'Users',
       desc: 'Search & GDPR delete',
@@ -158,7 +170,7 @@ export default function AdminScreen() {
         <Text style={styles.headerSub}>aruru.xyz internal tools</Text>
         <View style={styles.roleBadge}>
           <Text style={styles.roleBadgeText}>
-            {allPerms ? 'Full access' : 'Limited access'}
+            {isLegacyFullAdmin || allPerms ? 'Full access' : 'Limited access'}
           </Text>
         </View>
       </View>

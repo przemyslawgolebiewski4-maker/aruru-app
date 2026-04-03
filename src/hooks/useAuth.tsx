@@ -1,14 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   getMe,
-  login,
   logout,
   clearAuth,
   getToken,
   setToken,
   apiFetch,
+  authLoginPassword,
+  finalizeLoginSession,
+  authLogin2faComplete,
+  TwoFactorRequiredError,
+  ApiError,
 } from '../services/api';
 import type { AuthUser, StudioMembership } from '../services/api';
+
+export { TwoFactorRequiredError } from '../services/api';
 
 function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
   return list.map((s) => ({
@@ -27,10 +33,17 @@ interface AuthState {
 
 interface AuthActions {
   signIn: (email: string, password: string) => Promise<void>;
+  completeSignInWith2FA: (
+    pendingToken: string,
+    method: 'totp' | 'email',
+    code: string
+  ) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
-  /** Merge fields from PATCH /auth/me (or similar) without dropping adminRole / adminPermissions. */
+  /** Replace user from PATCH /auth/me (full object — keeps admin + 2FA fields). */
+  setUserFull: (user: AuthUser) => void;
+  /** Merge partial fields (legacy). */
   mergeServerUser: (patch: Partial<AuthUser>) => void;
 }
 
@@ -96,10 +109,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signIn(email: string, password: string) {
     setError(null);
     try {
-      await login({ email, password });
+      const data = await authLoginPassword(email.trim().toLowerCase(), password);
+      if ('two_factor_required' in data && data.two_factor_required) {
+        throw new TwoFactorRequiredError(data.pending_token, data.methods);
+      }
+      if (!('access_token' in data)) {
+        throw new Error('Unexpected login response');
+      }
+      await finalizeLoginSession(data.access_token);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Login failed');
+      if (e instanceof TwoFactorRequiredError) throw e;
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : 'Login failed';
+      setError(msg);
+      throw e;
+    }
+  }
+
+  async function completeSignInWith2FA(
+    pendingToken: string,
+    method: 'totp' | 'email',
+    code: string
+  ) {
+    setError(null);
+    try {
+      const data = await authLogin2faComplete({
+        pending_token: pendingToken,
+        method,
+        code,
+      });
+      await finalizeLoginSession(data.access_token);
+      await refresh();
+    } catch (e: unknown) {
+      const msg =
+        e instanceof ApiError
+          ? e.message
+          : e instanceof Error
+            ? e.message
+            : 'Verification failed';
+      setError(msg);
       throw e;
     }
   }
@@ -112,6 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         {
           method: 'POST',
           body: JSON.stringify({ email, password, name }),
+          public: true,
         }
       );
       if (data?.access_token) {
@@ -127,6 +181,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logout();
     setUser(null);
     setStudios([]);
+  }
+
+  function setUserFull(next: AuthUser) {
+    setUser(next);
   }
 
   function mergeServerUser(patch: Partial<AuthUser>) {
@@ -150,9 +208,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         error,
         signIn,
+        completeSignInWith2FA,
         signUp,
         signOut,
         refresh,
+        setUserFull,
         mergeServerUser,
       }}
     >
