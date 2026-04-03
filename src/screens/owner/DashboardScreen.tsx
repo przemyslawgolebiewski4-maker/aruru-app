@@ -13,10 +13,10 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
+import { AvatarImage } from '../../components/AvatarImage';
 import {
   StatCard,
   Badge,
-  Avatar,
   Divider,
   SectionLabel,
   Button,
@@ -584,7 +584,26 @@ export default function DashboardScreen() {
           accessibilityRole="button"
           accessibilityLabel="Open profile"
         >
-          <Avatar name={user?.name ?? 'U'} size="md" />
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: colors.clayLight,
+              overflow: 'hidden',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AvatarImage
+              url={user?.avatarUrl}
+              initials={user?.name ?? user?.email ?? '?'}
+              size={36}
+              borderRadius={18}
+              bgColor={colors.clayLight}
+              textColor={colors.clay}
+            />
+          </View>
         </TouchableOpacity>
       </View>
 
