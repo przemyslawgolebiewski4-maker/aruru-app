@@ -44,7 +44,10 @@ import ForumPostScreen from '../screens/community/ForumPostScreen';
 import StudioPublicProfileScreen from '../screens/community/StudioPublicProfileScreen';
 import AdminStudiosScreen from '../screens/admin/AdminStudiosScreen';
 import AdminSponsorsScreen from '../screens/admin/AdminSponsorsScreen';
-import AdminSectionPlaceholder from '../screens/admin/AdminSectionPlaceholder';
+import AdminForumScreen from '../screens/admin/AdminForumScreen';
+import AdminAdminsScreen from '../screens/admin/AdminAdminsScreen';
+import AdminPricingScreen from '../screens/admin/AdminPricingScreen';
+import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -392,7 +395,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="AdminForum"
-        component={AdminSectionPlaceholder}
+        component={AdminForumScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
@@ -401,7 +404,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="AdminAdmins"
-        component={AdminSectionPlaceholder}
+        component={AdminAdminsScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
@@ -410,7 +413,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="AdminPricing"
-        component={AdminSectionPlaceholder}
+        component={AdminPricingScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
@@ -419,7 +422,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="AdminUsers"
-        component={AdminSectionPlaceholder}
+        component={AdminUsersScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
