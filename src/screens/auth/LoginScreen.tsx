@@ -8,15 +8,15 @@ import {
   Platform,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useRoute } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AuthStackParamList } from '../../navigation/types';
-import { alertMessage } from '../../utils/confirmAction';
-
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
+  const route = useRoute<Props['route']>();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -106,12 +106,7 @@ export default function LoginScreen({ navigation }: Props) {
 
           <Button
             label="Forgot password?"
-            onPress={() =>
-              alertMessage(
-                'Forgot password',
-                'Password reset is not available yet. Please contact your studio owner.'
-              )
-            }
+            onPress={() => navigation.navigate('ForgotPassword')}
             variant="ghost"
             fullWidth
             style={{ marginTop: spacing[2] }}
@@ -160,6 +155,20 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing[8],
+  },
+  resetBanner: {
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.mossBorder,
+    padding: spacing[3],
+    marginBottom: spacing[4],
+  },
+  resetBannerText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.mossDark,
+    lineHeight: 20,
   },
   errorBox: {
     backgroundColor: colors.errorLight,

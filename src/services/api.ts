@@ -63,24 +63,41 @@ export async function clearAuth(): Promise<void> {
 
 // ─── API fetch wrapper ─────────────────────────────────────────────────────
 
+export type ApiFetchInit = RequestInit & {
+  /** Omit Authorization and X-Tenant-ID (public auth routes). */
+  public?: boolean;
+};
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
-  options: RequestInit = {},
+  options: ApiFetchInit = {},
   tenantId?: string
 ): Promise<T> {
-  const token = await getToken();
+  const isPublic = options.public === true;
+  const { public: _pub, ...fetchInit } = options;
+  const token = isPublic ? null : await getToken();
 
   const headers: Record<string, string> = {
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(tenantId ? { 'X-Tenant-ID': tenantId } : {}),
-    ...(options.body !== undefined
+    ...(token && !isPublic ? { Authorization: `Bearer ${token}` } : {}),
+    ...(tenantId && !isPublic ? { 'X-Tenant-ID': tenantId } : {}),
+    ...(fetchInit.body !== undefined
       ? { 'Content-Type': 'application/json' }
       : {}),
   };
 
   const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options.headers as Record<string, string> ?? {}) },
+    ...fetchInit,
+    headers: { ...headers, ...(fetchInit.headers as Record<string, string> ?? {}) },
   });
 
   if (!res.ok) {
@@ -97,7 +114,7 @@ export async function apiFetch<T>(
       message = `HTTP ${res.status}`;
     }
 
-    throw new Error(message);
+    throw new ApiError(message, res.status);
   }
 
   const text = await res.text();
@@ -123,6 +140,40 @@ export async function register(payload: {
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+/** Same message whether or not the email exists (do not change for UX). */
+export const FORGOT_PASSWORD_SUCCESS_MESSAGE =
+  'If an account exists for this email, we sent password reset instructions.';
+
+export async function forgotPassword(payload: {
+  email: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/auth/forgot-password',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email: payload.email.trim().toLowerCase() }),
+      public: true,
+    }
+  );
+}
+
+export async function resetPassword(payload: {
+  token: string;
+  new_password: string;
+}): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(
+    '/auth/reset-password',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        token: payload.token.trim(),
+        new_password: payload.new_password,
+      }),
+      public: true,
+    }
+  );
 }
 
 export async function login(payload: {

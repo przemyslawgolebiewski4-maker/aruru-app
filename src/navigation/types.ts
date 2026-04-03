@@ -1,6 +1,6 @@
 export type AuthStackParamList = {
   Onboarding: undefined;
-  Login: undefined;
+  Login: { passwordResetBanner?: boolean } | undefined;
   Register: undefined;
   VerifyEmail: {
     email?: string;
@@ -8,6 +8,8 @@ export type AuthStackParamList = {
     token?: string;
     error?: string;
   };
+  ForgotPassword: undefined;
+  ResetPassword: { token?: string } | undefined;
 };
 
 export type MainTabParamList = {

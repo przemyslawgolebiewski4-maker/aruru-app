@@ -15,6 +15,8 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
@@ -67,49 +69,76 @@ export type { AuthStackParamList, AppStackParamList, MainTabParamList } from './
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
-function getWebVerifyEmailInitialState():
-  | {
-      routes: Array<{
-        name: 'VerifyEmail';
-        params: AuthStackParamList['VerifyEmail'];
-      }>;
-      index: number;
-    }
+type AuthRoute = {
+  [K in keyof AuthStackParamList]: {
+    name: K;
+    params: AuthStackParamList[K];
+  };
+}[keyof AuthStackParamList];
+
+function getWebAuthDeepLinkInitialState():
+  | { routes: AuthRoute[]; index: number }
   | undefined {
   if (typeof window === 'undefined') return undefined;
   const raw = window.location.pathname || '/';
   const path = raw.replace(/\/+$/, '') || '/';
   const parts = path.split('/').filter(Boolean);
   const last = parts[parts.length - 1] ?? '';
-  if (last !== 'verify-email') return undefined;
   const q = new URLSearchParams(window.location.search);
-  const email = q.get('email') ?? undefined;
-  const success = q.get('success') ?? undefined;
-  const token = q.get('token') ?? q.get('jwt_token') ?? undefined;
-  const error = q.get('error') ?? undefined;
-  if (!email && !success && !token && !error) return undefined;
-  return {
-    routes: [
-      {
-        name: 'VerifyEmail',
-        params: { email, success, token, error },
-      },
-    ],
-    index: 0,
-  };
+
+  if (last === 'reset-password') {
+    const rawToken = q.get('token') ?? undefined;
+    let token: string | undefined;
+    if (rawToken) {
+      try {
+        token = decodeURIComponent(rawToken.trim());
+      } catch {
+        token = rawToken.trim();
+      }
+    }
+    return {
+      routes: [
+        { name: 'Login', params: undefined },
+        {
+          name: 'ResetPassword',
+          params: { token },
+        },
+      ],
+      index: 1,
+    };
+  }
+
+  if (last === 'verify-email') {
+    const email = q.get('email') ?? undefined;
+    const success = q.get('success') ?? undefined;
+    const token = q.get('token') ?? q.get('jwt_token') ?? undefined;
+    const error = q.get('error') ?? undefined;
+    if (!email && !success && !token && !error) return undefined;
+    return {
+      routes: [
+        {
+          name: 'VerifyEmail',
+          params: { email, success, token, error },
+        },
+      ],
+      index: 0,
+    };
+  }
+
+  return undefined;
 }
 
 function AuthNavigator({
   initialRouteName,
-  verifyNavState,
+  deepLinkState,
 }: {
   initialRouteName: keyof AuthStackParamList;
-  verifyNavState: ReturnType<typeof getWebVerifyEmailInitialState>;
+  deepLinkState: ReturnType<typeof getWebAuthDeepLinkInitialState>;
 }) {
   return (
     <AuthStack.Navigator
-      {...(verifyNavState
-        ? { initialState: verifyNavState }
+      {...(deepLinkState
+        ? { initialState: deepLinkState }
         : { initialRouteName })}
       screenOptions={{
         headerShown: false,
@@ -121,6 +150,8 @@ function AuthNavigator({
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -437,7 +468,7 @@ export function RootNavigator() {
   const { user, loading: authLoading } = useAuth();
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
-  const [verifyNavState] = useState(() => getWebVerifyEmailInitialState());
+  const [authDeepLinkState] = useState(() => getWebAuthDeepLinkInitialState());
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
@@ -466,7 +497,7 @@ export function RootNavigator() {
   return (
     <AuthNavigator
       initialRouteName={onboardingDone ? 'Login' : 'Onboarding'}
-      verifyNavState={verifyNavState}
+      deepLinkState={authDeepLinkState}
     />
   );
 }
@@ -484,6 +515,19 @@ export function AppNavigationContainer() {
               token: (v) => v,
               error: (v) => v,
               email: (v) => v,
+            },
+          },
+          ForgotPassword: 'forgot-password',
+          ResetPassword: {
+            path: 'reset-password',
+            parse: {
+              token: (v: string) => {
+                try {
+                  return decodeURIComponent(v);
+                } catch {
+                  return v;
+                }
+              },
             },
           },
         },
