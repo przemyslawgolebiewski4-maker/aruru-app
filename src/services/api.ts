@@ -102,6 +102,9 @@ export interface StudioMembership {
   status: 'active' | 'invited' | 'suspended';
   /** From GET /auth/me — tenant logo (camelCase or normalized from logo_url). */
   logoUrl?: string;
+  subscriptionStatus?: string;
+  subscriptionTier?: string;
+  trialEndsAt?: string;
 }
 
 export interface MeResponse {
@@ -340,6 +343,18 @@ export async function getMe(): Promise<MeResponse> {
         logoUrl:
           (row.logoUrl ?? row.logo_url) != null
             ? String(row.logoUrl ?? row.logo_url)
+            : undefined,
+        subscriptionStatus:
+          row.subscriptionStatus != null || row.subscription_status != null
+            ? String(row.subscriptionStatus ?? row.subscription_status)
+            : undefined,
+        subscriptionTier:
+          row.subscriptionTier != null || row.subscription_tier != null
+            ? String(row.subscriptionTier ?? row.subscription_tier)
+            : undefined,
+        trialEndsAt:
+          row.trialEndsAt != null || row.trial_ends_at != null
+            ? String(row.trialEndsAt ?? row.trial_ends_at)
             : undefined,
       };
     }),

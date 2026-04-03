@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -131,6 +132,13 @@ function taskTitle(t: Record<string, unknown>): string {
   return String(t.title ?? 'Untitled').trim();
 }
 
+function trialDaysLeft(iso?: string): number {
+  if (!iso) return 0;
+  return Math.ceil(
+    (new Date(iso).getTime() - Date.now()) / 86400000
+  );
+}
+
 function IconTwoCircles60() {
   return (
     <Svg width={60} height={60} viewBox="0 0 60 60">
@@ -185,6 +193,32 @@ export default function DashboardScreen() {
     (currentStudio?.role === 'owner' ||
       currentStudio?.role === 'assistant') &&
     currentStudio?.status === 'active';
+
+  async function openCheckout() {
+    try {
+      const tier = currentStudio?.subscriptionTier ?? 'solo';
+      const res = await apiFetch<{
+        checkoutUrl?: string;
+        checkout_url?: string;
+      }>(
+        '/stripe/studio/checkout',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            tenant_id: currentStudio?.tenantId,
+            tier,
+          }),
+        },
+        currentStudio?.tenantId ?? ''
+      );
+      const url = res.checkoutUrl ?? res.checkout_url;
+      if (url) {
+        void Linking.openURL(url);
+      }
+    } catch {
+      alertMessage('Error', 'Could not open checkout. Please try again.');
+    }
+  }
 
   const load = useCallback(async () => {
     if (studios.length === 0 || !tenantId) {
@@ -520,6 +554,13 @@ export default function DashboardScreen() {
   const tasksVal = loading ? '—' : String(stats.openTasks);
   const summariesVal = loading ? '—' : String(summariesDue);
 
+  const ownerTrialDaysLeft =
+    currentStudio?.role === 'owner' &&
+    currentStudio?.status === 'active' &&
+    currentStudio?.subscriptionStatus === 'trial'
+      ? trialDaysLeft(currentStudio.trialEndsAt)
+      : null;
+
   if (studios.length === 0) {
     return (
       <ScrollView
@@ -636,6 +677,42 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {ownerTrialDaysLeft !== null && ownerTrialDaysLeft <= 7 ? (
+        <TouchableOpacity
+          style={styles.trialBanner}
+          onPress={() => void openCheckout()}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Open subscription checkout"
+        >
+          <Text style={styles.trialBannerText}>
+            {ownerTrialDaysLeft <= 0
+              ? 'Your trial has ended — subscribe to continue'
+              : `Trial ends in ${ownerTrialDaysLeft} day${
+                  ownerTrialDaysLeft === 1 ? '' : 's'
+                } — Subscribe`}
+          </Text>
+          <Text style={styles.trialBannerArrow}>→</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {currentStudio?.role === 'owner' &&
+      currentStudio?.status === 'active' &&
+      currentStudio?.subscriptionStatus === 'past_due' ? (
+        <TouchableOpacity
+          style={[styles.trialBanner, styles.trialBannerDanger]}
+          onPress={() => void openCheckout()}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Update payment method"
+        >
+          <Text style={styles.trialBannerText}>
+            Payment failed — update your payment method
+          </Text>
+          <Text style={styles.trialBannerArrow}>→</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <Divider />
 
@@ -1001,6 +1078,30 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing[2],
     marginBottom: spacing[6],
+  },
+  trialBanner: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  trialBannerDanger: {
+    backgroundColor: colors.errorLight,
+  },
+  trialBannerText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    flex: 1,
+  },
+  trialBannerArrow: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
   },
   statCardWrap: {
     width: '48%',

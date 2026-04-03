@@ -17,11 +17,18 @@ import type { AuthUser, StudioMembership } from '../services/api';
 export { TwoFactorRequiredError } from '../services/api';
 
 function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
-  return list.map((s) => ({
-    ...s,
-    logoUrl:
-      s.logoUrl ?? (s as { logo_url?: string }).logo_url,
-  }));
+  return list.map((s) => {
+    const row = s as StudioMembership & Record<string, unknown>;
+    return {
+      ...s,
+      logoUrl: s.logoUrl ?? (s as { logo_url?: string }).logo_url,
+      subscriptionStatus:
+        row.subscriptionStatus ?? (row.subscription_status as string | undefined),
+      subscriptionTier:
+        row.subscriptionTier ?? (row.subscription_tier as string | undefined),
+      trialEndsAt: row.trialEndsAt ?? (row.trial_ends_at as string | undefined),
+    };
+  });
 }
 
 interface AuthState {

@@ -15,6 +15,8 @@ export type AuthStackParamList = {
   };
   ForgotPassword: undefined;
   ResetPassword: { token?: string } | undefined;
+  PaymentSuccess: { type: 'studio' | 'sponsor'; tenantId?: string };
+  PaymentCancelled: undefined;
 };
 
 export type MainTabParamList = {
@@ -27,6 +29,8 @@ export type MainTabParamList = {
 
 export type AppStackParamList = {
   Main: undefined;
+  PaymentSuccess: { type: 'studio' | 'sponsor'; tenantId?: string };
+  PaymentCancelled: undefined;
   EditProfile: undefined;
   AccountSecurity: undefined;
   CreateStudio: undefined;

@@ -8,6 +8,7 @@
 ## Live URLs
 - Frontend: https://aruru.xyz
 - Backend (produkcja): https://aruru-backend-production.up.railway.app
+- **Stripe return (web linking):** `/payment-success` i `/payment-cancelled` — ekrany `PaymentSuccess` / `PaymentCancelled` w **AuthStack** i **AppStack** (zalogowany użytkownik po checkout); query: `type=studio|sponsor`, `tenant_id` / `tenantId`.
 
 ## Konfiguracja API (`EXPO_PUBLIC_API_URL`)
 - **Źródło prawdy w runtime:** `process.env.EXPO_PUBLIC_API_URL` (np. zmienna środowiskowa na **Vercel** przy buildzie web).
@@ -20,7 +21,7 @@
 ```
 src/
   navigation/
-    index.tsx      # RootNavigator, AuthStack, AppStack, deep linki (verify-email, reset-password)
+    index.tsx      # RootNavigator, AuthStack, AppStack, deep linki (verify-email, reset-password, payment-*)
     MainTabs.tsx   # Material top tabs (Studio, Community, Notifications, Profile, opcjonalnie Admin)
     types.ts       # AuthStackParamList, AppStackParamList, MainTabParamList
   screens/
@@ -37,6 +38,7 @@ src/
     materials/     # MaterialsShopScreen, CatalogManageScreen
     members/       # MembersScreen, MemberProfileScreen, InviteMemberScreen
     profile/       # ProfileScreen, EditProfileScreen, AccountSecurityScreen
+    payment/       # PaymentSuccessScreen, PaymentCancelledScreen
     studio/        # CreateStudioScreen, SetupPricingScreen, PricingSettingsScreen, StudioSettingsScreen
     notifications/ # NotificationsScreen
     admin/         # AdminScreen, AdminStudiosScreen, AdminSponsorsScreen, AdminForumScreen,
@@ -75,7 +77,8 @@ Mapowanie:
 ## Auth, profil i 2FA (frontend ↔ backend)
 - **Bearer:** `Authorization: Bearer <access_token>` dla chronionych żądań (domyślnie w `apiFetch`).
 - **Publiczne ścieżki** (bez Bearer): m.in. `POST /auth/login`, `POST /auth/register`, `POST /auth/login/2fa`, `POST /auth/login/2fa/email/send`, `POST /auth/forgot-password`, `POST /auth/reset-password` — w kodzie: `apiFetch(..., { public: true })`.
-- **GET /auth/me:** Bearer; **bez** nagłówka `X-Tenant-ID` (jak community). Odpowiedź: `{ user, studios }` — użytkownik normalizowany do camelCase (`normalizeAuthUser`).
+- **GET /auth/me:** Bearer; **bez** nagłówka `X-Tenant-ID` (jak community). Odpowiedź: `{ user, studios }` — użytkownik normalizowany do camelCase (`normalizeAuthUser`). Wpis studia może zawierać **`subscriptionStatus`**, **`subscriptionTier`**, **`trialEndsAt`** (camelCase lub snake_case w JSON → normalizacja w `getMe` / `normalizeStudios`).
+- **Owner dashboard:** przy `subscriptionStatus === 'trial'` i ≤7 dni do końca (lub trial skończony) oraz przy `past_due` — baner z `POST /stripe/studio/checkout` (checkout URL w przeglądarce).
 - **PATCH /auth/me:** body w **snake_case** (`name`, `avatar_url`, `bio`, `community_visibility`, …); odpowiedź to pełny publiczny user — po sukcesie **`setUserFull`**, żeby nie gubić `adminRole`, `adminPermissions`, pól `twoFactor*`.
 - **Logowanie:** `POST /auth/login` może zwrócić `access_token` albo `two_factor_required` + `pending_token` + `methods` → ekran **Login2FAScreen** (TOTP i/lub kod e-mail).
 - **Avatar:** `POST /uploads/avatar` z Bearer; **`tenantId` pusty** przy wywołaniu `apiFetch`, żeby nie wysłać `X-Tenant-ID`.

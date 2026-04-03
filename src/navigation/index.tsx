@@ -18,6 +18,8 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyEmailScreen from '../screens/auth/VerifyEmailScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
+import PaymentSuccessScreen from '../screens/payment/PaymentSuccessScreen';
+import PaymentCancelledScreen from '../screens/payment/PaymentCancelledScreen';
 import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import AccountSecurityScreen from '../screens/profile/AccountSecurityScreen';
@@ -127,6 +129,23 @@ function getWebAuthDeepLinkInitialState():
     };
   }
 
+  if (last === 'payment-success') {
+    const typeRaw = q.get('type') ?? 'studio';
+    const type = typeRaw === 'sponsor' ? 'sponsor' : 'studio';
+    const tenantId = q.get('tenant_id') ?? q.get('tenantId') ?? undefined;
+    return {
+      routes: [{ name: 'PaymentSuccess', params: { type, tenantId } }],
+      index: 0,
+    };
+  }
+
+  if (last === 'payment-cancelled') {
+    return {
+      routes: [{ name: 'PaymentCancelled', params: undefined }],
+      index: 0,
+    };
+  }
+
   return undefined;
 }
 
@@ -170,6 +189,8 @@ function AuthNavigator({
       <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+      <AuthStack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+      <AuthStack.Screen name="PaymentCancelled" component={PaymentCancelledScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -183,6 +204,8 @@ function AppNavigator() {
       }}
     >
       <AppStack.Screen name="Main" component={MainTabNavigator} />
+      <AppStack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
+      <AppStack.Screen name="PaymentCancelled" component={PaymentCancelledScreen} />
       <AppStack.Screen
         name="ArtistProfile"
         component={ArtistProfileScreen}
@@ -557,6 +580,14 @@ export function AppNavigationContainer() {
               },
             },
           },
+          PaymentSuccess: {
+            path: 'payment-success',
+            parse: {
+              type: (v?: string) => (v === 'sponsor' ? 'sponsor' : 'studio'),
+              tenantId: (v?: string) => v,
+            },
+          },
+          PaymentCancelled: 'payment-cancelled',
         },
       },
     }}>
