@@ -45,7 +45,12 @@ interface AuthActions {
     method: 'totp' | 'email',
     code: string
   ) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    opts?: { is_sponsor?: boolean }
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
   /** Replace user from PATCH /auth/me (full object — keeps admin + 2FA fields). */
@@ -164,14 +169,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function signUp(email: string, password: string, name: string) {
+  async function signUp(
+    email: string,
+    password: string,
+    name: string,
+    opts?: { is_sponsor?: boolean }
+  ) {
     setError(null);
     try {
       const data = await apiFetch<{ message?: string; access_token?: string }>(
         '/auth/register',
         {
           method: 'POST',
-          body: JSON.stringify({ email, password, name }),
+          body: JSON.stringify({
+            email,
+            password,
+            name,
+            is_sponsor: Boolean(opts?.is_sponsor),
+          }),
           public: true,
         }
       );

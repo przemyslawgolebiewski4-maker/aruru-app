@@ -25,6 +25,8 @@ export type MainTabParamList = {
   Notifications: undefined;
   Profile: undefined;
   Admin: undefined;
+  /** Sponsor hub (same stack as Community → Sponsors sub-tab; top-level tab for sponsor accounts). */
+  Sponsors: undefined;
 };
 
 export type AppStackParamList = {
@@ -85,4 +87,6 @@ export type AppStackParamList = {
   AdminAdmins: undefined;
   AdminPricing: undefined;
   AdminUsers: undefined;
+  SponsorPlan: undefined;
+  SponsorEditProfile: undefined;
 };

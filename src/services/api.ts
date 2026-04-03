@@ -28,6 +28,8 @@ export interface AuthUser {
   twoFactorTotpEnabled?: boolean;
   twoFactorEmailEnabled?: boolean;
   twoFactorPendingTotpSetup?: boolean;
+  /** e.g. `sponsor` — from GET /auth/me */
+  userRole?: string;
 }
 
 /** Normalize GET/PATCH /auth/me user payload (camelCase or snake_case). */
@@ -72,6 +74,7 @@ export function normalizeAuthUser(raw: Record<string, unknown>): AuthUser {
     twoFactorPendingTotpSetup: Boolean(
       raw.twoFactorPendingTotpSetup ?? raw.two_factor_pending_totp_setup
     ),
+    userRole: (raw.userRole ?? raw.user_role ?? undefined) as string | undefined,
   };
 }
 

@@ -6,6 +6,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
@@ -48,6 +49,7 @@ export default function RegisterScreen({ navigation }: Props) {
     {}
   );
   const [focused, setFocused] = useState<FieldKey | null>(null);
+  const [isSponsor, setIsSponsor] = useState(false);
 
   function runValidation(): boolean {
     const next: Partial<Record<FieldKey, string>> = {
@@ -65,7 +67,9 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      await signUp(email.trim().toLowerCase(), password, name.trim());
+      await signUp(email.trim().toLowerCase(), password, name.trim(), {
+        is_sponsor: isSponsor,
+      });
       navigation.navigate('VerifyEmail', { email: email.trim().toLowerCase() });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Registration failed.');
@@ -154,6 +158,39 @@ export default function RegisterScreen({ navigation }: Props) {
             }
           />
 
+          <TouchableOpacity
+            style={styles.sponsorToggle}
+            onPress={() => setIsSponsor(!isSponsor)}
+            activeOpacity={0.8}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: isSponsor }}
+          >
+            <View style={styles.sponsorToggleLeft}>
+              <Text style={styles.sponsorToggleLabel}>
+                I represent a supplier
+              </Text>
+              <Text style={styles.sponsorToggleSub}>
+                Clay, glazes, tools or equipment
+              </Text>
+            </View>
+            <View
+              style={[styles.toggleTrack, isSponsor && styles.toggleTrackOn]}
+            >
+              <View
+                style={[styles.toggleThumb, isSponsor && styles.toggleThumbOn]}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {isSponsor ? (
+            <View style={styles.sponsorInfo}>
+              <Text style={styles.sponsorInfoText}>
+                Your account will be reviewed before appearing in the Sponsors
+                section. You&apos;ll receive an email once approved.
+              </Text>
+            </View>
+          ) : null}
+
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
@@ -206,6 +243,58 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   form: { marginBottom: spacing[8] },
+  sponsorToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    marginBottom: spacing[2],
+  },
+  sponsorToggleLeft: { flex: 1, marginRight: spacing[3] },
+  sponsorToggleLabel: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  sponsorToggleSub: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 2,
+  },
+  toggleTrack: {
+    width: 40,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.border,
+    padding: 2,
+  },
+  toggleTrackOn: { backgroundColor: colors.moss },
+  toggleThumb: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.surface,
+  },
+  toggleThumbOn: { transform: [{ translateX: 18 }] },
+  sponsorInfo: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    marginBottom: spacing[2],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  sponsorInfoText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+  },
   errorBox: {
     backgroundColor: colors.errorLight,
     borderRadius: radius.sm,

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { useAuth } from '../../hooks/useAuth';
 import EventFeedTab from './tabs/EventFeedTab';
 import StudioFinderTab from './tabs/StudioFinderTab';
 import ArtistsTab from './tabs/ArtistsTab';
@@ -8,16 +9,41 @@ import ForumTab from './tabs/ForumTab';
 import SponsorsTab from './tabs/SponsorsTab';
 
 type Tab = 'feed' | 'studios' | 'artists' | 'forum' | 'sponsors';
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'feed', label: 'Feed' },
-  { key: 'studios', label: 'Studios' },
-  { key: 'artists', label: 'Artists' },
-  { key: 'forum', label: 'Forum' },
-  { key: 'sponsors', label: 'Sponsors' },
-];
 
 export default function CommunityScreen() {
+  const { user } = useAuth();
+  const isSponsor = user?.userRole === 'sponsor';
+
+  const TABS: { key: Tab; label: string }[] = useMemo(
+    () =>
+      isSponsor
+        ? [
+            { key: 'feed', label: 'Feed' },
+            { key: 'sponsors', label: 'Sponsors' },
+          ]
+        : [
+            { key: 'feed', label: 'Feed' },
+            { key: 'studios', label: 'Studios' },
+            { key: 'artists', label: 'Artists' },
+            { key: 'forum', label: 'Forum' },
+            { key: 'sponsors', label: 'Sponsors' },
+          ],
+    [isSponsor]
+  );
+
   const [activeTab, setActiveTab] = useState<Tab>('feed');
+
+  useEffect(() => {
+    if (isSponsor) {
+      setActiveTab('feed');
+    }
+  }, [isSponsor]);
+
+  useEffect(() => {
+    if (!TABS.some((t) => t.key === activeTab)) {
+      setActiveTab(TABS[0]?.key ?? 'feed');
+    }
+  }, [TABS, activeTab]);
 
   return (
     <View style={styles.root}>

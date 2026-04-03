@@ -54,6 +54,8 @@ import AdminForumScreen from '../screens/admin/AdminForumScreen';
 import AdminAdminsScreen from '../screens/admin/AdminAdminsScreen';
 import AdminPricingScreen from '../screens/admin/AdminPricingScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
+import SponsorPlanScreen from '../screens/sponsor/SponsorPlanScreen';
+import SponsorEditProfileScreen from '../screens/sponsor/SponsorEditProfileScreen';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
 const appModalHeaderOptions = {
@@ -256,6 +258,24 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Security',
+        }}
+      />
+      <AppStack.Screen
+        name="SponsorPlan"
+        component={SponsorPlanScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Sponsor plan',
+        }}
+      />
+      <AppStack.Screen
+        name="SponsorEditProfile"
+        component={SponsorEditProfileScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Edit partner profile',
         }}
       />
       <AppStack.Screen
