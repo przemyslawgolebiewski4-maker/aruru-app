@@ -10,6 +10,14 @@ import {
 } from '../services/api';
 import type { AuthUser, StudioMembership } from '../services/api';
 
+function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
+  return list.map((s) => ({
+    ...s,
+    logoUrl:
+      s.logoUrl ?? (s as { logo_url?: string }).logo_url,
+  }));
+}
+
 interface AuthState {
   user: AuthUser | null;
   studios: StudioMembership[];
@@ -42,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const me = await getMe();
       setUser(me.user);
-      setStudios(me.studios);
+      setStudios(normalizeStudios(me.studios));
 
       // Auto-accept pending invites
       for (const studio of me.studios) {
@@ -61,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Refresh again to get updated statuses
       if (me.studios.some((s) => s.status === 'invited')) {
         const updated = await getMe();
-        setStudios(updated.studios);
+        setStudios(normalizeStudios(updated.studios));
       }
     } catch {
       await clearAuth();

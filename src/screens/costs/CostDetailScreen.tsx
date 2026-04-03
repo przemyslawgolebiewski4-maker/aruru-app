@@ -22,6 +22,8 @@ type Route = RouteProp<AppStackParamList, 'CostDetail'>;
 type CostData = {
   period: string;
   memberName: string;
+  /** From live costs payload when API includes member avatar. */
+  memberAvatarUrl?: string;
   membershipFee: number;
   openStudioTotal: number;
   kilnTotal: number;
@@ -206,9 +208,16 @@ function parseCostData(o: Record<string, unknown>): CostData {
     };
   });
 
+  const avRaw = o.avatarUrl ?? o.avatar_url;
+  const memberAvatarUrl =
+    avRaw != null && String(avRaw).trim() !== ''
+      ? String(avRaw).trim()
+      : undefined;
+
   return {
     period: str(o.period),
     memberName: str(o.memberName ?? o.member_name),
+    memberAvatarUrl,
     membershipFee: num(o.membershipFee ?? o.membership_fee),
     openStudioTotal: num(o.openStudioTotal ?? o.open_studio_total),
     kilnTotal: num(o.kilnTotal ?? o.kiln_total),
@@ -317,7 +326,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
     memberEmail,
     year: routeYear,
     month: routeMonth,
-    memberAvatarUrl,
+    memberAvatarUrl: routeMemberAvatarUrl,
   } = route.params;
   const navigation = useNavigation<Nav>();
   const { user, studios } = useAuth();
@@ -653,7 +662,9 @@ export default function CostDetailScreen({ route }: { route: Route }) {
               <Avatar
                 name={displayName}
                 size="md"
-                imageUrl={memberAvatarUrl}
+                imageUrl={
+                  d?.memberAvatarUrl ?? routeMemberAvatarUrl
+                }
               />
               <Text style={styles.headerName}>{displayName}</Text>
             </View>

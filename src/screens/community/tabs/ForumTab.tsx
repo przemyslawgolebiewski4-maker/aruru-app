@@ -13,6 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
+import { AvatarImage } from '../../../components/AvatarImage';
 import { Button } from '../../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../../navigation/types';
@@ -24,6 +25,7 @@ type Post = {
   title: string;
   category: string;
   authorName: string;
+  authorAvatarUrl?: string;
   replyCount: number;
   viewCount: number;
   createdAt?: string;
@@ -48,6 +50,18 @@ function timeAgo(iso?: string): string {
 
 function categoryLabel(key: string): string {
   return CATEGORIES.find((c) => c.key === key)?.label ?? key;
+}
+
+function authorInitials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '?'
+  );
 }
 
 export default function ForumTab() {
@@ -77,7 +91,15 @@ export default function ForumTab() {
         {},
         tenantId
       );
-      setPosts(res.posts ?? []);
+      const rawPosts = res.posts ?? [];
+      setPosts(
+        rawPosts.map((p) => ({
+          ...p,
+          authorAvatarUrl:
+            p.authorAvatarUrl ??
+            (p as { author_avatar_url?: string }).author_avatar_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load forum.');
     } finally {
@@ -181,14 +203,28 @@ export default function ForumTab() {
               onPress={() => goPost(p.id)}
               activeOpacity={0.75}
             >
-              <Text style={styles.postTitle}>{p.title}</Text>
-              <Text style={styles.postMeta}>
-                {p.authorName} · {timeAgo(p.createdAt)} ·{' '}
-                {categoryLabel(p.category)}
-              </Text>
-              <View style={styles.statsRow}>
-                <Text style={styles.stat}>{p.replyCount} replies</Text>
-                <Text style={styles.stat}>{p.viewCount} views</Text>
+              <View style={styles.cardRow}>
+                <View style={styles.postAvatarWrap}>
+                  <AvatarImage
+                    url={p.authorAvatarUrl}
+                    initials={authorInitials(p.authorName)}
+                    size={40}
+                    borderRadius={20}
+                    bgColor={colors.clayLight}
+                    textColor={colors.clay}
+                  />
+                </View>
+                <View style={styles.cardBody}>
+                  <Text style={styles.postTitle}>{p.title}</Text>
+                  <Text style={styles.postMeta}>
+                    {p.authorName} · {timeAgo(p.createdAt)} ·{' '}
+                    {categoryLabel(p.category)}
+                  </Text>
+                  <View style={styles.statsRow}>
+                    <Text style={styles.stat}>{p.replyCount} replies</Text>
+                    <Text style={styles.stat}>{p.viewCount} views</Text>
+                  </View>
+                </View>
               </View>
             </TouchableOpacity>
           )}
@@ -322,6 +358,19 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     gap: spacing[1],
   },
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[3],
+  },
+  postAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: colors.clayLight,
+  },
+  cardBody: { flex: 1, minWidth: 0, gap: spacing[1] },
   postTitle: {
     fontFamily: typography.body,
     fontSize: fontSize.md,

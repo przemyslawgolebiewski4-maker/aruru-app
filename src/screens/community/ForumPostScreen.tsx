@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { AvatarImage } from '../../components/AvatarImage';
 import { Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -22,6 +23,7 @@ type Reply = {
   id: string;
   content: string;
   authorName: string;
+  authorAvatarUrl?: string;
   createdAt?: string;
 };
 
@@ -31,11 +33,24 @@ type PostDetail = {
   content: string;
   category: string;
   authorName: string;
+  authorAvatarUrl?: string;
   replyCount: number;
   viewCount: number;
   createdAt?: string;
   replies: Reply[];
 };
+
+function authorInitials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || '?'
+  );
+}
 
 function timeAgo(iso?: string): string {
   if (!iso) return '';
@@ -128,10 +143,24 @@ export default function ForumPostScreen({ route }: Props) {
           <Text style={styles.category}>
             {post.category.replace(/_/g, ' ')}
           </Text>
-          <Text style={styles.title}>{post.title}</Text>
-          <Text style={styles.meta}>
-            {post.authorName} · {timeAgo(post.createdAt)}
-          </Text>
+          <View style={styles.postAuthorRow}>
+            <View style={styles.postAvatarWrap}>
+              <AvatarImage
+                url={post.authorAvatarUrl}
+                initials={authorInitials(post.authorName)}
+                size={44}
+                borderRadius={22}
+                bgColor={colors.clayLight}
+                textColor={colors.clay}
+              />
+            </View>
+            <View style={styles.postAuthorText}>
+              <Text style={styles.title}>{post.title}</Text>
+              <Text style={styles.meta}>
+                {post.authorName} · {timeAgo(post.createdAt)}
+              </Text>
+            </View>
+          </View>
           <View style={styles.stats}>
             <Text style={styles.stat}>{post.replyCount} replies</Text>
             <Text style={styles.stat}>{post.viewCount} views</Text>
@@ -149,11 +178,27 @@ export default function ForumPostScreen({ route }: Props) {
             <Text style={styles.repliesLabel}>Replies</Text>
             {replies.map((r) => (
               <View key={r.id} style={styles.replyCard}>
-                <Text style={styles.replyAuthor}>
-                  {r.authorName}{' '}
-                  <Text style={styles.replyTime}>{timeAgo(r.createdAt)}</Text>
-                </Text>
-                <Text style={styles.replyContent}>{r.content}</Text>
+                <View style={styles.replyTop}>
+                  <View style={styles.replyAvatarWrap}>
+                    <AvatarImage
+                      url={r.authorAvatarUrl}
+                      initials={authorInitials(r.authorName)}
+                      size={32}
+                      borderRadius={16}
+                      bgColor={colors.mossLight}
+                      textColor={colors.moss}
+                    />
+                  </View>
+                  <View style={styles.replyHeadText}>
+                    <Text style={styles.replyAuthor}>
+                      {r.authorName}{' '}
+                      <Text style={styles.replyTime}>
+                        {timeAgo(r.createdAt)}
+                      </Text>
+                    </Text>
+                    <Text style={styles.replyContent}>{r.content}</Text>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
@@ -224,6 +269,19 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  postAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[3],
+  },
+  postAvatarWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: colors.clayLight,
+  },
+  postAuthorText: { flex: 1, minWidth: 0, gap: spacing[1] },
   title: {
     fontFamily: typography.body,
     fontSize: fontSize.xl,
@@ -266,6 +324,19 @@ const styles = StyleSheet.create({
     padding: spacing[3],
     gap: spacing[1],
   },
+  replyTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[2],
+  },
+  replyAvatarWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: colors.mossLight,
+  },
+  replyHeadText: { flex: 1, minWidth: 0, gap: spacing[1] },
   replyAuthor: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,

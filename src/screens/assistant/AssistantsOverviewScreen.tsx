@@ -27,6 +27,7 @@ type AssistantSummary = {
     checkedOutAt?: string;
     hours?: number;
     status: string;
+    avatarUrl?: string;
   }[];
 };
 
@@ -97,6 +98,11 @@ export default function AssistantsOverviewScreen({ route }: Props) {
           ...a,
           avatarUrl:
             a.avatarUrl ?? (a as { avatar_url?: string }).avatar_url,
+          sessions: (a.sessions ?? []).map((s) => ({
+            ...s,
+            avatarUrl:
+              s.avatarUrl ?? (s as { avatar_url?: string }).avatar_url,
+          })),
         }))
       );
     } catch (e: unknown) {
@@ -199,6 +205,12 @@ export default function AssistantsOverviewScreen({ route }: Props) {
                     .filter((s) => s.status === 'closed')
                     .map((s) => (
                       <View key={s.id} style={styles.sessionRow}>
+                        <Avatar
+                          name={a.name}
+                          size="sm"
+                          variant="moss"
+                          imageUrl={s.avatarUrl ?? a.avatarUrl}
+                        />
                         <Text style={styles.sessionDate}>
                           {formatDate(s.checkedInAt)}
                         </Text>

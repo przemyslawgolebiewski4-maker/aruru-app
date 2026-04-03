@@ -9,9 +9,10 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { SectionLabel, Divider } from '../../components/ui';
+import { Avatar, SectionLabel, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Attendance'>;
@@ -23,6 +24,7 @@ type Session = {
   hours?: number;
   status: string;
   date?: string;
+  avatarUrl?: string;
 };
 
 function formatTime(iso?: string): string {
@@ -70,6 +72,7 @@ function periodLabel(year: number, month: number): string {
 
 export default function AttendanceScreen({ route }: Props) {
   const { tenantId } = route.params;
+  const { user } = useAuth();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
@@ -93,7 +96,14 @@ export default function AttendanceScreen({ route }: Props) {
         {},
         tenantId
       );
-      setSessions(res.sessions ?? []);
+      const rawSessions = res.sessions ?? [];
+      setSessions(
+        rawSessions.map((s) => ({
+          ...s,
+          avatarUrl:
+            s.avatarUrl ?? (s as { avatar_url?: string }).avatar_url,
+        }))
+      );
       setTotalHours(res.totalHours ?? 0);
       setCheckedIn(res.checkedIn ?? false);
     } catch (e: unknown) {
@@ -239,6 +249,12 @@ export default function AttendanceScreen({ route }: Props) {
           .filter((s) => s.status === 'closed')
           .map((s) => (
             <View key={s.id} style={styles.sessionRow}>
+              <Avatar
+                name={user?.name ?? 'Me'}
+                size="sm"
+                variant="moss"
+                imageUrl={s.avatarUrl}
+              />
               <View style={styles.sessionMain}>
                 <Text style={styles.sessionDate}>
                   {formatDate(s.checkedInAt)}

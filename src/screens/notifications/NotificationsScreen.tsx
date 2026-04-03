@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { Avatar } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
@@ -26,6 +27,7 @@ type Notification = {
   type: NotifType;
   read: boolean;
   actorName: string;
+  actorAvatarUrl?: string;
   title: string;
   body: string;
   refId?: string;
@@ -75,6 +77,11 @@ function parseNotification(raw: Record<string, unknown>): Notification | null {
       : 'new_event',
     read: Boolean(raw.read ?? raw.is_read),
     actorName: String(raw.actorName ?? raw.actor_name ?? ''),
+    actorAvatarUrl: (() => {
+      const v = raw.actorAvatarUrl ?? raw.actor_avatar_url;
+      if (v == null || String(v).trim() === '') return undefined;
+      return String(v).trim();
+    })(),
     title: String(raw.title ?? ''),
     body: String(raw.body ?? ''),
     refId:
@@ -239,7 +246,16 @@ export default function NotificationsScreen() {
               onPress={() => void onPressNotif(item)}
               activeOpacity={0.75}
             >
-              <NotifIcon type={item.type} />
+              {item.actorAvatarUrl ? (
+                <Avatar
+                  name={item.actorName || '?'}
+                  size="md"
+                  variant="clay"
+                  imageUrl={item.actorAvatarUrl}
+                />
+              ) : (
+                <NotifIcon type={item.type} />
+              )}
               <View style={styles.textWrap}>
                 <Text
                   style={[styles.title, !item.read && styles.titleUnread]}

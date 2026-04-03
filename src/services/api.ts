@@ -25,6 +25,8 @@ export interface StudioMembership {
   studioSlug: string;
   role: 'owner' | 'assistant' | 'member';
   status: 'active' | 'invited' | 'suspended';
+  /** From GET /auth/me — tenant logo (camelCase or normalized from logo_url). */
+  logoUrl?: string;
 }
 
 export interface MeResponse {

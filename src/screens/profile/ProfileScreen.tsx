@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
+import { AvatarImage } from '../../components/AvatarImage';
 import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -72,6 +73,15 @@ function roleToBadgeVariant(
 
 function formatRole(role: string) {
   return role.charAt(0).toUpperCase() + role.slice(1);
+}
+
+function studioInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || '?';
 }
 
 export default function ProfileScreen() {
@@ -152,6 +162,16 @@ export default function ProfileScreen() {
         studios.map((s, i) => (
           <View key={s.tenantId}>
             <View style={styles.studioRow}>
+              <View style={styles.studioLogoWrap}>
+                <AvatarImage
+                  url={s.logoUrl}
+                  initials={studioInitials(s.studioName || s.studioSlug || '?')}
+                  size={44}
+                  borderRadius={10}
+                  bgColor={colors.mossLight}
+                  textColor={colors.moss}
+                />
+              </View>
               <View style={styles.studioCol}>
                 <Text style={styles.studioName} numberOfLines={1}>
                   {s.studioName || s.studioSlug}
@@ -283,10 +303,19 @@ const styles = StyleSheet.create({
   },
   studioRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing[3],
     gap: spacing[3],
+  },
+  studioLogoWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: colors.mossLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   studioCol: {
     flex: 1,
