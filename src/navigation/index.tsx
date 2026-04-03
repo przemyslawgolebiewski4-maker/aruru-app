@@ -42,6 +42,8 @@ import AssistantsOverviewScreen from '../screens/assistant/AssistantsOverviewScr
 import ArtistProfileScreen from '../screens/community/ArtistProfileScreen';
 import ForumPostScreen from '../screens/community/ForumPostScreen';
 import StudioPublicProfileScreen from '../screens/community/StudioPublicProfileScreen';
+import AdminStudiosScreen from '../screens/admin/AdminStudiosScreen';
+import AdminSponsorsScreen from '../screens/admin/AdminSponsorsScreen';
 import AdminSectionPlaceholder from '../screens/admin/AdminSectionPlaceholder';
 import type { AuthStackParamList, AppStackParamList } from './types';
 
@@ -372,7 +374,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="AdminStudios"
-        component={AdminSectionPlaceholder}
+        component={AdminStudiosScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
@@ -381,7 +383,7 @@ function AppNavigator() {
       />
       <AppStack.Screen
         name="AdminSponsors"
-        component={AdminSectionPlaceholder}
+        component={AdminSponsorsScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
