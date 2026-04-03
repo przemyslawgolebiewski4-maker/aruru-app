@@ -113,6 +113,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         tenantId
       );
       const s = parseStudioPayload(data);
+      console.log('Studio data:', JSON.stringify(s).slice(0, 200));
       setName(pickStr(s, 'name') || studioName || '');
       setLogoUrl(pickStr(s, 'logoUrl', 'logo_url'));
       setCity(pickStr(s, 'city'));
@@ -202,6 +203,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
             endpoint="/uploads/studio-logo"
             tenantId={tenantId}
             onSuccess={(url) => {
+              console.log('Logo uploaded:', url);
               setLogoUrl(url);
               void refresh();
             }}

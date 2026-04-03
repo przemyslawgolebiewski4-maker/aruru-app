@@ -67,14 +67,18 @@ export default function EditProfileScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <View style={styles.avatarSection}>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarInitial}>
-            {(name || user?.email || '?').charAt(0).toUpperCase()}
-          </Text>
-        </View>
-        <Text style={styles.avatarHint}>Avatar initials — based on your name</Text>
-      </View>
+      <ImageUpload
+        currentUrl={avatarUrl || null}
+        initials={name || user?.email || '?'}
+        size={80}
+        endpoint="/uploads/avatar"
+        tenantId=""
+        onSuccess={(url) => {
+          setAvatarUrl(url);
+          void refresh();
+        }}
+        shape="circle"
+      />
 
       <Input
         label="Display name"
@@ -213,10 +217,6 @@ export default function EditProfileScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
   content: { padding: spacing[4], gap: spacing[4] },
-  avatarSection: {
-    alignItems: 'center',
-    paddingVertical: spacing[4],
-  },
   emailRow: { gap: spacing[1] },
   fieldLabel: {
     fontFamily: typography.mono,
