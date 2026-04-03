@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
@@ -23,6 +22,7 @@ import {
 } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
+import { alertMessage } from '../../utils/confirmAction';
 import { apiFetch } from '../../services/api';
 import MemberDashboardScreen from '../member/MemberDashboardScreen';
 
@@ -375,14 +375,14 @@ export default function DashboardScreen() {
 
   function goKilnList() {
     if (!canManageKiln) {
-      Alert.alert(
+      alertMessage(
         'Kiln firings',
         'Only studio owners and assistants can manage firings.'
       );
       return;
     }
     if (!tenantId) {
-      Alert.alert('Kiln firings', 'Create or join a studio first.');
+      alertMessage('Kiln firings', 'Create or join a studio first.');
       return;
     }
     navigation
@@ -392,14 +392,14 @@ export default function DashboardScreen() {
 
   function goMembers() {
     if (!canManageMembers) {
-      Alert.alert(
+      alertMessage(
         'Members',
         'Only studio owners can manage members.'
       );
       return;
     }
     if (!tenantId) {
-      Alert.alert('Members', 'Create or join a studio first.');
+      alertMessage('Members', 'Create or join a studio first.');
       return;
     }
     navigation
@@ -409,7 +409,7 @@ export default function DashboardScreen() {
 
   function goTasks() {
     if (!tenantId) {
-      Alert.alert('Tasks', 'Create or join a studio first.');
+      alertMessage('Tasks', 'Create or join a studio first.');
       return;
     }
     navigation
@@ -419,7 +419,7 @@ export default function DashboardScreen() {
 
   function goCosts() {
     if (!tenantId) {
-      Alert.alert('Costs', 'Create or join a studio first.');
+      alertMessage('Costs', 'Create or join a studio first.');
       return;
     }
     const stack =
@@ -451,7 +451,7 @@ export default function DashboardScreen() {
 
   function goEvents() {
     if (!tenantId) {
-      Alert.alert('Events', 'Create or join a studio first.');
+      alertMessage('Events', 'Create or join a studio first.');
       return;
     }
     navigation
@@ -461,7 +461,7 @@ export default function DashboardScreen() {
 
   function goCatalog() {
     if (!tenantId) {
-      Alert.alert('Catalog', 'Create or join a studio first.');
+      alertMessage('Catalog', 'Create or join a studio first.');
       return;
     }
     navigation
@@ -471,11 +471,11 @@ export default function DashboardScreen() {
 
   function goPricing() {
     if (!canManageMembers) {
-      Alert.alert('Pricing', 'Only studio owners can edit pricing.');
+      alertMessage('Pricing', 'Only studio owners can edit pricing.');
       return;
     }
     if (!tenantId) {
-      Alert.alert('Pricing', 'Create or join a studio first.');
+      alertMessage('Pricing', 'Create or join a studio first.');
       return;
     }
     const name =
@@ -489,7 +489,7 @@ export default function DashboardScreen() {
 
   function goStudioSettings() {
     if (!canManageMembers) {
-      Alert.alert(
+      alertMessage(
         'Studio settings',
         'Only studio owners can edit studio settings.'
       );

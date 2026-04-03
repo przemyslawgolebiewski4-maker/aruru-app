@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -16,51 +15,22 @@ import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/u
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
+import { confirmDestructive } from '../../utils/confirmAction';
 
 const DELETE_LABEL_GRAY = '#9E9890';
 
-function confirmDeleteWeb(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (
-    !window.confirm(
-      'Delete your Aruru account?\n\nThis will permanently remove your profile and all your data. This cannot be undone.'
-    )
-  ) {
-    return false;
-  }
-  return window.confirm(
-    'Are you absolutely sure? This action is permanent and cannot be reversed.'
+async function confirmDeleteAccountFlow(): Promise<boolean> {
+  const step1 = await confirmDestructive(
+    'Delete your Aruru account?',
+    'This will permanently remove your profile and all your data. This cannot be undone.',
+    'Continue'
   );
-}
-
-function confirmDeleteNative(): Promise<boolean> {
-  return new Promise((resolve) => {
-    Alert.alert(
-      'Delete your Aruru account?',
-      'This will permanently remove your profile and all your data. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-        {
-          text: 'Continue',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Are you absolutely sure?',
-              'This action is permanent and cannot be reversed.',
-              [
-                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-                {
-                  text: 'Delete account',
-                  style: 'destructive',
-                  onPress: () => resolve(true),
-                },
-              ]
-            );
-          },
-        },
-      ]
-    );
-  });
+  if (!step1) return false;
+  return confirmDestructive(
+    'Are you absolutely sure?',
+    'This action is permanent and cannot be reversed.',
+    'Delete account'
+  );
 }
 
 function roleToBadgeVariant(
@@ -94,10 +64,7 @@ export default function ProfileScreen() {
 
   async function handleDeleteAccount() {
     setDeleteError('');
-    const ok =
-      typeof window !== 'undefined'
-        ? confirmDeleteWeb()
-        : await confirmDeleteNative();
+    const ok = await confirmDeleteAccountFlow();
     if (!ok) return;
     setDeleting(true);
     try {

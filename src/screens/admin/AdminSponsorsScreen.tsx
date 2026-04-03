@@ -201,7 +201,7 @@ export default function AdminSponsorsScreen() {
                 </View>
                 <TouchableOpacity
                   style={[styles.btn, styles.btnDanger]}
-                  onPress={() => void suspend(s.id)}
+                  onPress={() => void suspend(s.id, s.companyName)}
                 >
                   <Text style={[styles.btnText, { color: colors.error }]}>
                     Suspend

@@ -6,14 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
-  Platform,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Input, Badge, SectionLabel, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
+import {
+  alertMessage,
+  confirmDestructive,
+} from '../../utils/confirmAction';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'CatalogManage'>;
@@ -72,28 +74,6 @@ function parseCatalogPayload(data: unknown): CatalogItem[] {
       };
     })
     .filter((x): x is CatalogItem => x != null);
-}
-
-function confirmDeleteCatalogItem(): Promise<boolean> {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return Promise.resolve(
-      window.confirm('Delete this item from the catalog?')
-    );
-  }
-  return new Promise((resolve) => {
-    Alert.alert(
-      'Delete item',
-      'Delete this item from the catalog?',
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => resolve(true),
-        },
-      ]
-    );
-  });
 }
 
 export default function CatalogManageScreen({ route }: Props) {
@@ -170,7 +150,11 @@ export default function CatalogManageScreen({ route }: Props) {
   }
 
   async function onDelete(id: string) {
-    const ok = await confirmDeleteCatalogItem();
+    const ok = await confirmDestructive(
+      'Delete item',
+      'Delete this item from the catalog?',
+      'Delete'
+    );
     if (!ok) return;
     try {
       await apiFetch(
@@ -181,11 +165,7 @@ export default function CatalogManageScreen({ route }: Props) {
       await load();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Could not delete item.';
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      alertMessage('Error', msg);
     }
   }
 

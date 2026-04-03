@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, typography, fontSize, spacing } from '../theme/tokens';
 import { apiFetch } from '../services/api';
 
@@ -47,7 +48,6 @@ async function pickAndConvertToBase64(): Promise<
     });
   }
   try {
-    const ImagePicker = await import('expo-image-picker');
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return null;
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -134,10 +134,9 @@ export default function ImageUpload({
                 borderRadius={borderRadius}
               />
             ) : (
-              <NativeImage
-                uri={currentUrl}
-                size={size}
-                borderRadius={borderRadius}
+              <Image
+                source={{ uri: currentUrl }}
+                style={{ width: size, height: size, borderRadius }}
               />
             )
           ) : (

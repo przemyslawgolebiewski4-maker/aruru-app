@@ -15,6 +15,7 @@ import { apiFetch } from '../../services/api';
 import {
   alertMessage,
   confirmDestructive,
+  confirmNeutral,
   pickTrialExtensionDays,
 } from '../../utils/confirmAction';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
@@ -36,6 +37,7 @@ function statusColor(s: string): string {
   if (s === 'active') return colors.moss;
   if (s === 'trial') return colors.clay;
   if (s === 'past_due') return colors.error;
+  if (s === 'suspended') return colors.error;
   if (s === 'cancelled') return colors.inkLight;
   return colors.inkLight;
 }
@@ -125,6 +127,17 @@ export default function AdminStudiosScreen() {
     await patchStudio(studio.id, { subscriptionStatus: 'suspended' });
   }
 
+  /** No separate unsuspend route: PATCH accepts subscriptionStatus (same as suspend). */
+  async function reactivateStudio(studio: Studio) {
+    const ok = await confirmNeutral(
+      'Reactivate studio',
+      `Restore access for ${studio.name}? The owner will be able to use the studio again.`,
+      'Reactivate'
+    );
+    if (!ok) return;
+    await patchStudio(studio.id, { subscriptionStatus: 'active' });
+  }
+
   function openStripeCustomer(studio: Studio) {
     const id = studio.stripeCustomerId?.trim();
     if (!id) return;
@@ -203,14 +216,25 @@ export default function AdminStudiosScreen() {
                     <Text style={styles.actionBtnText}>Open in Stripe ↗</Text>
                   </TouchableOpacity>
                 ) : null}
-                <TouchableOpacity
-                  style={[styles.actionBtn, styles.actionBtnDanger]}
-                  onPress={() => suspendStudio(s)}
-                >
-                  <Text style={[styles.actionBtnText, { color: colors.error }]}>
-                    Suspend
-                  </Text>
-                </TouchableOpacity>
+                {s.subscriptionStatus === 'suspended' ? (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionBtnMoss]}
+                    onPress={() => void reactivateStudio(s)}
+                  >
+                    <Text style={[styles.actionBtnText, { color: colors.moss }]}>
+                      Reactivate
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionBtnDanger]}
+                    onPress={() => void suspendStudio(s)}
+                  >
+                    <Text style={[styles.actionBtnText, { color: colors.error }]}>
+                      Suspend
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )}
@@ -286,6 +310,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   actionBtnDanger: { borderColor: colors.error + '44' },
+  actionBtnMoss: { borderColor: colors.moss + '44' },
   actionBtnText: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,

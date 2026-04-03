@@ -9,6 +9,7 @@ import {
   TextInputProps,
   ViewStyle,
   TextStyle,
+  StyleProp,
   Platform,
 } from 'react-native';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
@@ -38,7 +39,7 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
-  const containerStyle: ViewStyle[] = [
+  const containerStyle: StyleProp<ViewStyle> = [
     styles.btn,
     styles[`btn_${variant}`],
     fullWidth && { width: '100%' },
@@ -46,7 +47,7 @@ export function Button({
     style ?? {},
   ];
 
-  const labelStyle: TextStyle[] = [
+  const labelStyle: StyleProp<TextStyle> = [
     styles.btnLabel,
     styles[`btnLabel_${variant}`],
   ];

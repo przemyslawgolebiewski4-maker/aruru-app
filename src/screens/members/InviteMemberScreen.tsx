@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +15,7 @@ import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
+import { alertMessage } from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'InviteMember'>;
 type Route = RouteProp<AppStackParamList, 'InviteMember'>;
@@ -63,7 +63,10 @@ export default function InviteMemberScreen({ route }: { route: Route }) {
         },
         tenantId
       );
-      Alert.alert('Invitation sent', 'They will receive an email shortly.');
+      alertMessage(
+        'Invitation sent',
+        'They will receive an email shortly.'
+      );
       navigation.goBack();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not send invitation.');

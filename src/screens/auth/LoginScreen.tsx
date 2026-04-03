@@ -6,13 +6,13 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AuthStackParamList } from '../../navigation/types';
+import { alertMessage } from '../../utils/confirmAction';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -107,7 +107,7 @@ export default function LoginScreen({ navigation }: Props) {
           <Button
             label="Forgot password?"
             onPress={() =>
-              Alert.alert(
+              alertMessage(
                 'Forgot password',
                 'Password reset is not available yet. Please contact your studio owner.'
               )

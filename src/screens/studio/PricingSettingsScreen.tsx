@@ -9,7 +9,6 @@ import {
   TextInput,
   ActivityIndicator,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,6 +18,10 @@ import { colors, typography, fontSize, spacing, radius } from '../../theme/token
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  alertMessage,
+  confirmDestructive,
+} from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'PricingSettings'>;
 type Route = RouteProp<AppStackParamList, 'PricingSettings'>;
@@ -66,28 +69,6 @@ function parseMembershipPlansPayload(data: unknown): MembershipPlan[] {
       };
     })
     .filter((x): x is MembershipPlan => x != null);
-}
-
-function confirmDeleteMembershipPlan(): Promise<boolean> {
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    return Promise.resolve(
-      window.confirm('Delete this membership plan?')
-    );
-  }
-  return new Promise((resolve) => {
-    Alert.alert(
-      'Delete plan',
-      'Delete this membership plan?',
-      [
-        { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => resolve(true),
-        },
-      ]
-    );
-  });
 }
 
 type PricingFieldProps = {
@@ -286,7 +267,11 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
   }
 
   async function onDeletePlan(id: string) {
-    const ok = await confirmDeleteMembershipPlan();
+    const ok = await confirmDestructive(
+      'Delete plan',
+      'Delete this membership plan?',
+      'Delete'
+    );
     if (!ok) return;
     try {
       await apiFetch(
@@ -298,11 +283,7 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : 'Could not delete plan.';
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      alertMessage('Error', msg);
     }
   }
 

@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
+import { alertMessage } from '../../utils/confirmAction';
 
 type Tier = { maxMembers: number | null; priceMonthly: number };
 type PricingData = { tiers: Record<string, Tier>; sponsorNote: string };

@@ -5,8 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +13,10 @@ import { Avatar, Badge, Button, Divider, SectionLabel } from '../../components/u
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
+import {
+  alertMessage,
+  confirmDestructive,
+} from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'MemberProfile'>;
 type Route = RouteProp<AppStackParamList, 'MemberProfile'>;
@@ -150,9 +152,9 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
         tenantId
       );
       setRole(next);
-      Alert.alert('Updated', 'Role saved.');
+      alertMessage('Updated', 'Role saved.');
     } catch (e: unknown) {
-      Alert.alert(
+      alertMessage(
         'Could not update',
         e instanceof Error ? e.message : 'Please try again.'
       );
@@ -175,7 +177,7 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
       setStatus(next);
       navigation.goBack();
     } catch (e: unknown) {
-      Alert.alert(
+      alertMessage(
         'Could not update',
         e instanceof Error ? e.message : 'Please try again.'
       );
@@ -199,51 +201,27 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : 'Could not assign plan.';
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      alertMessage('Error', msg);
     } finally {
       setAssigningPlan(false);
     }
   }
 
-  function confirmSuspend() {
-    Alert.alert(
+  async function confirmSuspend() {
+    const ok = await confirmDestructive(
       `Suspend ${memberName}?`,
       "They won't be able to access the studio.",
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Suspend',
-          style: 'destructive',
-          onPress: () => patchStatus('suspended'),
-        },
-      ]
+      'Suspend'
     );
+    if (ok) await patchStatus('suspended');
   }
 
   async function onRemoveMember() {
-    const confirmed =
-      Platform.OS === 'web' && typeof window !== 'undefined'
-        ? window.confirm(
-            'Remove this member from the studio? They can be invited back later.'
-          )
-        : await new Promise<boolean>((resolve) => {
-            Alert.alert(
-              'Remove member',
-              'Remove this member from the studio? They can be invited back later.',
-              [
-                { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-                {
-                  text: 'Remove',
-                  style: 'destructive',
-                  onPress: () => resolve(true),
-                },
-              ]
-            );
-          });
+    const confirmed = await confirmDestructive(
+      'Remove member',
+      'Remove this member from the studio? They can be invited back later.',
+      'Remove'
+    );
     if (!confirmed) return;
     try {
       await apiFetch(
@@ -255,11 +233,7 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : 'Could not remove member.';
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.alert(msg);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      alertMessage('Error', msg);
     }
   }
 

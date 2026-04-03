@@ -73,8 +73,15 @@ function parseLiveCost(data: unknown): LiveCostRow {
         ? o.grand_total
         : Number(o.grandTotal ?? o.grand_total ?? 0);
   const grandTotal = Number.isFinite(gt) ? gt : 0;
+  const summaryObj =
+    o.summary != null && typeof o.summary === 'object'
+      ? (o.summary as Record<string, unknown>)
+      : null;
   const raw =
-    o.summaryStatus ?? o.summary_status ?? o.summary?.status ?? o.status;
+    o.summaryStatus ??
+    o.summary_status ??
+    summaryObj?.status ??
+    o.status;
   const s = String(raw ?? '').toLowerCase();
   let summaryStatus: 'draft' | 'sent' | null = null;
   if (s === 'draft') summaryStatus = 'draft';
