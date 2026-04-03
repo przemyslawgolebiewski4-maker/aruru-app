@@ -30,6 +30,8 @@ interface AuthActions {
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** Merge fields from PATCH /auth/me (or similar) without dropping adminRole / adminPermissions. */
+  mergeServerUser: (patch: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<(AuthState & AuthActions) | null>(null);
@@ -69,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Refresh again to get updated statuses
       if (me.studios.some((s) => s.status === 'invited')) {
         const updated = await getMe();
+        setUser(updated.user);
         setStudios(normalizeStudios(updated.studios));
       }
     } catch {
@@ -126,9 +129,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStudios([]);
   }
 
+  function mergeServerUser(patch: Partial<AuthUser>) {
+    setUser((prev) => {
+      if (!prev) return null;
+      const next = { ...prev };
+      for (const [k, v] of Object.entries(patch)) {
+        if (v !== undefined) {
+          (next as Record<string, unknown>)[k] = v;
+        }
+      }
+      return next as AuthUser;
+    });
+  }
+
   return (
     <AuthContext.Provider
-      value={{ user, studios, loading, error, signIn, signUp, signOut, refresh }}
+      value={{
+        user,
+        studios,
+        loading,
+        error,
+        signIn,
+        signUp,
+        signOut,
+        refresh,
+        mergeServerUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type User = {
@@ -65,32 +65,21 @@ export default function AdminUsersScreen() {
   );
 
   async function deleteUser(u: User) {
-    Alert.alert(
+    const ok = await confirmDestructive(
       'Delete user (GDPR)',
       `Permanently anonymise ${u.email}? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiFetch(
-                `/admin/users/${u.id}`,
-                { method: 'DELETE' },
-                tenantId
-              );
-              await load();
-            } catch (e: unknown) {
-              Alert.alert(
-                'Error',
-                e instanceof Error ? e.message : 'Could not delete user.'
-              );
-            }
-          },
-        },
-      ]
+      'Delete'
     );
+    if (!ok) return;
+    try {
+      await apiFetch(`/admin/users/${u.id}`, { method: 'DELETE' }, tenantId);
+      await load();
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not delete user.'
+      );
+    }
   }
 
   return (
@@ -115,8 +104,10 @@ export default function AdminUsersScreen() {
         </View>
       ) : (
         <FlatList
+          style={styles.list}
           data={users}
           keyExtractor={(u) => u.id}
+          keyboardShouldPersistTaps="handled"
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           ListEmptyComponent={
             <View style={styles.center}>
@@ -141,6 +132,9 @@ export default function AdminUsersScreen() {
               <TouchableOpacity
                 style={styles.deleteBtn}
                 onPress={() => void deleteUser(u)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete user ${u.email}`}
               >
                 <Text style={styles.deleteBtnText}>Delete</Text>
               </TouchableOpacity>
@@ -154,6 +148,7 @@ export default function AdminUsersScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
+  list: { flex: 1 },
   searchBar: {
     padding: spacing[3],
     backgroundColor: colors.surface,

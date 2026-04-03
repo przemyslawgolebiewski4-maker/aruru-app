@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
@@ -80,13 +79,16 @@ export default function AdminPricingScreen() {
         },
         tenantId
       );
-      Alert.alert(
+      alertMessage(
         'Saved',
         'Pricing updated. New prices apply to new subscriptions.'
       );
       await load();
     } catch (e: unknown) {
-      Alert.alert('Error', e instanceof Error ? e.message : 'Could not save.');
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not save.'
+      );
     } finally {
       setSaving(false);
     }
@@ -106,7 +108,11 @@ export default function AdminPricingScreen() {
     );
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>Subscription tiers</Text>
         <Text style={styles.hint}>

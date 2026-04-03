@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
@@ -71,32 +70,25 @@ export default function AdminForumScreen() {
   );
 
   async function deletePost(post: Post) {
-    Alert.alert(
+    const ok = await confirmDestructive(
       'Delete post',
       `Delete "${post.title}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiFetch(
-                `/admin/forum/posts/${post.id}`,
-                { method: 'DELETE' },
-                tenantId
-              );
-              await load();
-            } catch (e: unknown) {
-              Alert.alert(
-                'Error',
-                e instanceof Error ? e.message : 'Could not delete.'
-              );
-            }
-          },
-        },
-      ]
+      'Delete'
     );
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/admin/forum/posts/${post.id}`,
+        { method: 'DELETE' },
+        tenantId
+      );
+      await load();
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not delete.'
+      );
+    }
   }
 
   if (loading)
@@ -136,6 +128,9 @@ export default function AdminForumScreen() {
             <TouchableOpacity
               style={styles.deleteBtn}
               onPress={() => void deletePost(p)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete post ${p.title}`}
             >
               <Text style={styles.deleteBtnText}>Delete</Text>
             </TouchableOpacity>

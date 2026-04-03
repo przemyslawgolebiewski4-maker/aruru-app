@@ -52,7 +52,7 @@ function timeLeft(iso?: string): string {
 
 export default function AdminScreen() {
   const { user, studios } = useAuth();
-  const navigation = useNavigation<Nav>();
+  const navigation = useNavigation();
   const tenantId =
     (studios.find((s) => s.status === 'active') ?? studios[0])?.tenantId ?? '';
 
@@ -138,8 +138,21 @@ export default function AdminScreen() {
     alert?: boolean;
   }[];
 
+  function goToAdminSection(key: AdminMenuRoute) {
+    const parent = navigation.getParent<Nav>();
+    if (parent) {
+      parent.navigate(key);
+    } else {
+      (navigation as { navigate: (name: AdminMenuRoute) => void }).navigate(key);
+    }
+  }
+
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Admin panel</Text>
         <Text style={styles.headerSub}>aruru.xyz internal tools</Text>
@@ -233,9 +246,7 @@ export default function AdminScreen() {
           <TouchableOpacity
             key={item.key}
             style={styles.menuItem}
-            onPress={() => {
-              navigation.getParent<Nav>()?.navigate(item.key);
-            }}
+            onPress={() => goToAdminSection(item.key)}
             activeOpacity={0.75}
           >
             <View style={styles.menuLeft}>

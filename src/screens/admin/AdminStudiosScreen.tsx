@@ -7,12 +7,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  Alert,
   Linking,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import {
+  alertMessage,
+  confirmDestructive,
+  pickTrialExtensionDays,
+} from '../../utils/confirmAction';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type Studio = {
@@ -87,25 +91,9 @@ export default function AdminStudiosScreen() {
   );
 
   async function extendTrial(studio: Studio) {
-    Alert.alert(
-      'Extend trial',
-      `Extend trial for ${studio.name} by how many days?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: '7 days',
-          onPress: () => void patchStudio(studio.id, { extendTrialDays: 7 }),
-        },
-        {
-          text: '14 days',
-          onPress: () => void patchStudio(studio.id, { extendTrialDays: 14 }),
-        },
-        {
-          text: '30 days',
-          onPress: () => void patchStudio(studio.id, { extendTrialDays: 30 }),
-        },
-      ]
-    );
+    const days = await pickTrialExtensionDays(studio.name);
+    if (days == null) return;
+    await patchStudio(studio.id, { extendTrialDays: days });
   }
 
   async function patchStudio(id: string, body: object) {
@@ -120,7 +108,7 @@ export default function AdminStudiosScreen() {
       );
       await load();
     } catch (e: unknown) {
-      Alert.alert(
+      alertMessage(
         'Error',
         e instanceof Error ? e.message : 'Could not update studio.'
       );
@@ -128,19 +116,13 @@ export default function AdminStudiosScreen() {
   }
 
   async function suspendStudio(studio: Studio) {
-    Alert.alert(
+    const ok = await confirmDestructive(
       'Suspend studio',
       `Suspend ${studio.name}? Owner will lose access.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Suspend',
-          style: 'destructive',
-          onPress: () =>
-            void patchStudio(studio.id, { subscriptionStatus: 'suspended' }),
-        },
-      ]
+      'Suspend'
     );
+    if (!ok) return;
+    await patchStudio(studio.id, { subscriptionStatus: 'suspended' });
   }
 
   function openStripeCustomer(studio: Studio) {
@@ -172,8 +154,10 @@ export default function AdminStudiosScreen() {
         </View>
       ) : (
         <FlatList
+          style={styles.list}
           data={list}
           keyExtractor={(s) => s.id}
+          keyboardShouldPersistTaps="handled"
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           renderItem={({ item: s }) => (
             <View style={styles.card}>
@@ -238,6 +222,7 @@ export default function AdminStudiosScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
+  list: { flex: 1 },
   searchBar: {
     padding: spacing[3],
     backgroundColor: colors.surface,

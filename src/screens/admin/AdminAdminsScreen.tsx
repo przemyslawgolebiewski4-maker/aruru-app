@@ -6,13 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   TextInput,
   Switch,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type AdminUser = {
@@ -83,7 +83,7 @@ export default function AdminAdminsScreen() {
       );
       await load();
     } catch (e: unknown) {
-      Alert.alert(
+      alertMessage(
         'Error',
         e instanceof Error ? e.message : 'Could not update.'
       );
@@ -91,32 +91,21 @@ export default function AdminAdminsScreen() {
   }
 
   async function removeAdmin(admin: AdminUser) {
-    Alert.alert(
+    const ok = await confirmDestructive(
       'Remove admin',
       `Remove admin access for ${admin.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiFetch(
-                `/admin/admins/${admin.id}`,
-                { method: 'DELETE' },
-                tenantId
-              );
-              await load();
-            } catch (e: unknown) {
-              Alert.alert(
-                'Error',
-                e instanceof Error ? e.message : 'Could not remove.'
-              );
-            }
-          },
-        },
-      ]
+      'Remove'
     );
+    if (!ok) return;
+    try {
+      await apiFetch(`/admin/admins/${admin.id}`, { method: 'DELETE' }, tenantId);
+      await load();
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not remove.'
+      );
+    }
   }
 
   async function addAdmin() {
@@ -145,7 +134,7 @@ export default function AdminAdminsScreen() {
       });
       await load();
     } catch (e: unknown) {
-      Alert.alert(
+      alertMessage(
         'Error',
         e instanceof Error ? e.message : 'Could not add admin.'
       );
@@ -168,7 +157,11 @@ export default function AdminAdminsScreen() {
     );
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabel}>
@@ -239,7 +232,12 @@ export default function AdminAdminsScreen() {
                   <Text style={styles.adminEmail}>{a.email}</Text>
                 </View>
                 {!isMe ? (
-                  <TouchableOpacity onPress={() => void removeAdmin(a)}>
+                  <TouchableOpacity
+                    onPress={() => void removeAdmin(a)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove admin ${a.email}`}
+                  >
                     <Text style={styles.removeText}>Remove</Text>
                   </TouchableOpacity>
                 ) : null}

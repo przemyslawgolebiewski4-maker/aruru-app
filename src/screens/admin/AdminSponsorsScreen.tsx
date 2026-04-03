@@ -6,11 +6,15 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import {
+  alertMessage,
+  confirmDestructive,
+  confirmNeutral,
+} from '../../utils/confirmAction';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
 type Sponsor = {
@@ -54,55 +58,56 @@ export default function AdminSponsorsScreen() {
   );
 
   async function approve(id: string, name: string) {
-    Alert.alert('Approve sponsor', `Approve ${name}? An email will be sent.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Approve & send email',
-        onPress: async () => {
-          try {
-            await apiFetch(
-              `/admin/sponsors/${id}/approve`,
-              { method: 'POST' },
-              tenantId
-            );
-            await load();
-          } catch (e: unknown) {
-            Alert.alert(
-              'Error',
-              e instanceof Error ? e.message : 'Could not approve.'
-            );
-          }
-        },
-      },
-    ]);
+    const ok = await confirmNeutral(
+      'Approve sponsor',
+      `Approve ${name}? An email will be sent.`,
+      'Approve & send email'
+    );
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/admin/sponsors/${id}/approve`,
+        { method: 'POST' },
+        tenantId
+      );
+      await load();
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not approve.'
+      );
+    }
   }
 
   async function reject(id: string, name: string) {
-    Alert.alert('Reject sponsor', `Reject ${name}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reject',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await apiFetch(
-              `/admin/sponsors/${id}/reject`,
-              { method: 'POST' },
-              tenantId
-            );
-            await load();
-          } catch (e: unknown) {
-            Alert.alert(
-              'Error',
-              e instanceof Error ? e.message : 'Could not reject.'
-            );
-          }
-        },
-      },
-    ]);
+    const ok = await confirmDestructive(
+      'Reject sponsor',
+      `Reject ${name}?`,
+      'Reject'
+    );
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/admin/sponsors/${id}/reject`,
+        { method: 'POST' },
+        tenantId
+      );
+      await load();
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not reject.'
+      );
+    }
   }
 
-  async function suspend(id: string) {
+  async function suspend(id: string, name: string) {
+    const ok = await confirmDestructive(
+      'Suspend sponsor',
+      `Suspend ${name}? They will be removed from active sponsors.`,
+      'Suspend'
+    );
+    if (!ok) return;
     try {
       await apiFetch(
         `/admin/sponsors/${id}/suspend`,
@@ -111,7 +116,7 @@ export default function AdminSponsorsScreen() {
       );
       await load();
     } catch (e: unknown) {
-      Alert.alert(
+      alertMessage(
         'Error',
         e instanceof Error ? e.message : 'Could not suspend.'
       );
@@ -132,7 +137,11 @@ export default function AdminSponsorsScreen() {
     );
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {data.pending.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>

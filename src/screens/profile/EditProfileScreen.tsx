@@ -4,14 +4,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import { apiFetch } from '../../services/api';
+import { apiFetch, type AuthUser } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
 export default function EditProfileScreen({ navigation }: Props) {
-  const { user, refresh } = useAuth();
+  const { user, refresh, mergeServerUser } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
@@ -44,7 +44,7 @@ export default function EditProfileScreen({ navigation }: Props) {
     }
     setSaving(true);
     try {
-      await apiFetch('/auth/me', {
+      const res = await apiFetch<AuthUser | { user: AuthUser }>('/auth/me', {
         method: 'PATCH',
         body: JSON.stringify({
           name: name.trim(),
@@ -56,6 +56,19 @@ export default function EditProfileScreen({ navigation }: Props) {
           community_visibility: visibility,
         }),
       });
+      const patchUser =
+        res &&
+        typeof res === 'object' &&
+        'user' in res &&
+        res.user &&
+        typeof res.user.id === 'string'
+          ? res.user
+          : res && typeof res === 'object' && 'id' in res && typeof (res as AuthUser).id === 'string'
+            ? (res as AuthUser)
+            : null;
+      if (patchUser) {
+        mergeServerUser(patchUser);
+      }
       await refresh();
       navigation.goBack();
     } catch (e: unknown) {
