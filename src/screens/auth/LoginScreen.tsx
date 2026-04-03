@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useRoute } from '@react-navigation/native';
@@ -23,6 +25,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focused, setFocused] = useState<'email' | 'password' | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin() {
     if (!email || !password) {
@@ -83,21 +86,42 @@ export default function LoginScreen({ navigation }: Props) {
                 : undefined
             }
           />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            placeholder="••••••••"
-            autoComplete="password"
-            onFocus={() => setFocused('password')}
-            onBlur={() => setFocused(null)}
-            style={
-              focused === 'password'
-                ? { borderColor: colors.clay, borderWidth: 0.5 }
-                : undefined
-            }
-          />
+          <View style={styles.passwordBlock}>
+            <Text style={styles.passwordLabel}>Password</Text>
+            <View
+              style={[
+                styles.passwordField,
+                focused === 'password' && styles.passwordFieldFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholder="••••••••"
+                placeholderTextColor={colors.inkLight}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="password"
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword(!showPassword)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showPassword ? 'Hide password' : 'Show password'
+                }
+              >
+                <Text style={styles.eyeIcon}>
+                  {showPassword ? '●' : '○'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {error ? (
             <View style={styles.errorBox}>
@@ -164,6 +188,38 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: spacing[8],
   },
+  passwordBlock: {
+    marginBottom: spacing[4],
+  },
+  passwordLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  passwordFieldFocused: {
+    borderColor: colors.clay,
+    borderWidth: 0.5,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: spacing[3],
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  eyeBtn: { padding: spacing[3] },
+  eyeIcon: { fontSize: 16, color: colors.inkLight },
   resetBanner: {
     backgroundColor: colors.mossLight,
     borderRadius: radius.sm,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
@@ -16,7 +17,7 @@ import type { AuthStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
-type FieldKey = 'name' | 'email' | 'password';
+type FieldKey = 'name' | 'email';
 
 function validateName(v: string): string | undefined {
   const t = v.trim();
@@ -32,37 +33,46 @@ function validateEmail(v: string): string | undefined {
   return undefined;
 }
 
-function validatePassword(v: string): string | undefined {
-  if (!v) return 'Password is required.';
-  if (v.length < 8) return 'Password must be at least 8 characters.';
-  return undefined;
-}
-
 export default function RegisterScreen({ navigation }: Props) {
   const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>(
     {}
   );
-  const [focused, setFocused] = useState<FieldKey | null>(null);
+  const [focused, setFocused] = useState<
+    FieldKey | 'password' | 'confirmPassword' | null
+  >(null);
   const [isSponsor, setIsSponsor] = useState(false);
 
   function runValidation(): boolean {
     const next: Partial<Record<FieldKey, string>> = {
       name: validateName(name),
       email: validateEmail(email),
-      password: validatePassword(password),
     };
     setFieldErrors(next);
-    return !next.name && !next.email && !next.password;
+    return !next.name && !next.email;
   }
 
   async function handleRegister() {
     setError('');
+    setPasswordError('');
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    setPasswordError('');
     if (!runValidation()) return;
 
     setLoading(true);
@@ -137,26 +147,89 @@ export default function RegisterScreen({ navigation }: Props) {
                 : undefined
             }
           />
-          <Input
-            label="Password"
-            value={password}
-            onChangeText={(t) => {
-              setPassword(t);
-              if (fieldErrors.password)
-                setFieldErrors((f) => ({ ...f, password: undefined }));
-            }}
-            secureTextEntry
-            placeholder="Min. 8 characters"
-            autoComplete="new-password"
-            error={fieldErrors.password}
-            onFocus={() => setFocused('password')}
-            onBlur={() => setFocused(null)}
-            style={
-              focused === 'password'
-                ? { borderColor: colors.clay, borderWidth: 0.5 }
-                : undefined
-            }
-          />
+          <View style={styles.passwordBlock}>
+            <Text style={styles.passwordLabel}>Password</Text>
+            <View
+              style={[
+                styles.passwordField,
+                focused === 'password' && styles.passwordFieldFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={(t) => {
+                  setPassword(t);
+                  setPasswordError('');
+                }}
+                secureTextEntry={!showPassword}
+                placeholder="Min. 8 characters"
+                placeholderTextColor={colors.inkLight}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowPassword(!showPassword)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showPassword ? 'Hide password' : 'Show password'
+                }
+              >
+                <Text style={styles.eyeIcon}>
+                  {showPassword ? '●' : '○'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.passwordBlock}>
+            <Text style={styles.passwordLabel}>Confirm password</Text>
+            <View
+              style={[
+                styles.passwordField,
+                focused === 'confirmPassword' && styles.passwordFieldFocused,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                value={confirmPassword}
+                onChangeText={(t) => {
+                  setConfirmPassword(t);
+                  setPasswordError('');
+                }}
+                secureTextEntry={!showConfirm}
+                placeholder="Repeat password"
+                placeholderTextColor={colors.inkLight}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
+                onFocus={() => setFocused('confirmPassword')}
+                onBlur={() => setFocused(null)}
+              />
+              <TouchableOpacity
+                style={styles.eyeBtn}
+                onPress={() => setShowConfirm(!showConfirm)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showConfirm ? 'Hide confirm password' : 'Show confirm password'
+                }
+              >
+                <Text style={styles.eyeIcon}>
+                  {showConfirm ? '●' : '○'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {passwordError ? (
+            <Text style={styles.passwordErrorText}>{passwordError}</Text>
+          ) : null}
 
           <TouchableOpacity
             style={styles.sponsorToggle}
@@ -244,6 +317,44 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   form: { marginBottom: spacing[8] },
+  passwordBlock: {
+    marginBottom: spacing[3],
+  },
+  passwordLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+  },
+  passwordFieldFocused: {
+    borderColor: colors.clay,
+    borderWidth: 0.5,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: spacing[3],
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  eyeBtn: { padding: spacing[3] },
+  eyeIcon: { fontSize: 16, color: colors.inkLight },
+  passwordErrorText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    marginBottom: spacing[2],
+  },
   sponsorToggle: {
     flexDirection: 'row',
     alignItems: 'center',
