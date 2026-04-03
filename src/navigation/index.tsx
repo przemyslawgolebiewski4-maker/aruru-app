@@ -266,7 +266,7 @@ function AppNavigator() {
         options={{
           ...appModalHeaderOptions,
           headerShown: true,
-          title: 'Sponsor plan',
+          title: 'Choose your plan',
         }}
       />
       <AppStack.Screen
