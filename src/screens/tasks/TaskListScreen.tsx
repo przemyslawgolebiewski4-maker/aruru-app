@@ -58,7 +58,8 @@ function parseTasks(data: unknown): Task[] {
 }
 
 function taskId(t: Task): string {
-  return String(t.id ?? '').trim();
+  const o = t as Task & { _id?: string };
+  return String(t.id ?? o._id ?? '').trim();
 }
 
 function assigneeUserIdOf(t: Task): string {
@@ -104,7 +105,11 @@ function hoursOnTask(t: Task): number {
 }
 
 function normStatus(t: Task): TaskStatus {
-  const raw = (t.status ?? 'todo').toString().toLowerCase().replace(/\s+/g, '_');
+  const raw = (t.status ?? 'todo')
+    .toString()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/-/g, '_');
   if (raw === 'cancelled' || raw === 'canceled') return 'cancelled';
   if (raw === 'done' || raw === 'complete' || raw === 'completed') return 'done';
   if (raw === 'in_progress' || raw === 'inprogress') return 'in_progress';
