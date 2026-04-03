@@ -77,6 +77,7 @@ export default function ImageUpload({
   onSuccess,
   shape = 'circle',
 }: Props) {
+  console.log('ImageUpload currentUrl:', currentUrl);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -101,7 +102,10 @@ export default function ImageUpload({
         tenantId
       );
       const url = res.avatarUrl ?? res.logoUrl ?? '';
-      if (url) onSuccess(url);
+      if (url) {
+        onSuccess(url);
+        console.log('onSuccess called with url:', url);
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Upload failed.');
     } finally {
