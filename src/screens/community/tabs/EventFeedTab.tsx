@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
+import { AvatarImage } from '../../../components/AvatarImage';
 import { Badge } from '../../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../../navigation/types';
@@ -21,6 +22,7 @@ type FeedEvent = {
   tenantId?: string;
   studioName: string;
   studioSlug?: string;
+  studioLogoUrl?: string;
   title: string;
   description?: string;
   kind: string;
@@ -104,7 +106,15 @@ export default function EventFeedTab() {
         {},
         tenantId
       );
-      setEvents(res.events ?? []);
+      const raw = res.events ?? [];
+      setEvents(
+        raw.map((ev) => ({
+          ...ev,
+          studioLogoUrl:
+            ev.studioLogoUrl ??
+            (ev as { studio_logo_url?: string }).studio_logo_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load feed.');
     } finally {
@@ -163,7 +173,14 @@ export default function EventFeedTab() {
             activeOpacity={0.7}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials(e.studioName)}</Text>
+              <AvatarImage
+                url={e.studioLogoUrl}
+                initials={initials(e.studioName)}
+                size={28}
+                borderRadius={14}
+                bgColor={colors.clayLight}
+                textColor={colors.clay}
+              />
             </View>
             <Text style={styles.studioName}>{e.studioName}</Text>
             <Text style={styles.dateLabel}>{formatDate(e.startsAt)}</Text>
@@ -232,8 +249,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.clayLight,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
-  avatarText: { fontFamily: typography.mono, fontSize: 10, color: colors.clay },
   studioName: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,

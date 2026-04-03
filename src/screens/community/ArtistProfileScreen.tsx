@@ -27,6 +27,7 @@ type Studio = {
   studioName: string;
   role: string;
   tenantSlug?: string;
+  studioLogoUrl?: string;
 };
 
 type Artist = {
@@ -75,6 +76,12 @@ export default function ArtistProfileScreen({ route }: Props) {
       setArtist({
         ...res,
         avatarUrl: res.avatarUrl ?? res.avatar_url,
+        studios: (res.studios ?? []).map((s) => ({
+          ...s,
+          studioLogoUrl:
+            s.studioLogoUrl ??
+            (s as { studio_logo_url?: string }).studio_logo_url,
+        })),
       });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load profile.');
@@ -144,14 +151,14 @@ export default function ArtistProfileScreen({ route }: Props) {
                 activeOpacity={0.75}
               >
                 <View style={styles.studioAvatar}>
-                  <Text style={styles.studioAvatarText}>
-                    {s.studioName
-                      .split(' ')
-                      .map((w) => w[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </Text>
+                  <AvatarImage
+                    url={s.studioLogoUrl}
+                    initials={initials(s.studioName)}
+                    size={40}
+                    borderRadius={10}
+                    bgColor={colors.mossLight}
+                    textColor={colors.moss}
+                  />
                 </View>
                 <View style={styles.studioInfo}>
                   <Text style={styles.studioName}>{s.studioName}</Text>
@@ -230,11 +237,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mossLight,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  studioAvatarText: {
-    fontFamily: typography.mono,
-    fontSize: 13,
-    color: colors.moss,
+    overflow: 'hidden',
   },
   studioInfo: { flex: 1 },
   studioName: {
