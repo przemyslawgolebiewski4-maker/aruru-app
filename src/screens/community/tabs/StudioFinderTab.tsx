@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,20 @@ type Studio = {
 
 const COUNTRIES = ['All', 'Poland', 'Germany', 'UK', 'Netherlands', 'France', 'Italy'];
 
+const STUDIO_TAGS = [
+  'wheel',
+  'hand_building',
+  'raku',
+  'sculpture',
+  'glazing',
+  'kids',
+  'workshops',
+  'open_studio',
+  'kiln_share',
+  'beginners',
+  'advanced',
+];
+
 function initials(name: string): string {
   return name
     .split(' ')
@@ -49,18 +63,26 @@ export default function StudioFinderTab() {
     (studios.find((s) => s.status === 'active') ?? studios[0])?.tenantId ?? '';
 
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [country, setCountry] = useState('All');
+  const [selectedTag, setSelectedTag] = useState('');
   const [studioList, setStudioList] = useState<Studio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 500);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
-      if (search.trim()) params.set('city', search.trim());
+      if (debouncedSearch.trim()) params.set('city', debouncedSearch.trim());
       if (country !== 'All') params.set('country', country);
+      if (selectedTag) params.set('tags', selectedTag);
       const qs = params.toString() ? `?${params.toString()}` : '';
       const res = await apiFetch<{ studios: Studio[] }>(
         `/community/studios${qs}`,
@@ -80,7 +102,7 @@ export default function StudioFinderTab() {
     } finally {
       setLoading(false);
     }
-  }, [search, country, tenantId]);
+  }, [debouncedSearch, country, selectedTag, tenantId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -104,7 +126,6 @@ export default function StudioFinderTab() {
           style={styles.searchInput}
           value={search}
           onChangeText={(v) => setSearch(v)}
-          onSubmitEditing={() => void load()}
           placeholder="Search by city..."
           placeholderTextColor={colors.inkLight}
           returnKeyType="search"
@@ -125,6 +146,26 @@ export default function StudioFinderTab() {
               ]}
             >
               {c}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <View style={[styles.filterRow, styles.tagFilterRow]}>
+        {STUDIO_TAGS.map((tag) => (
+          <TouchableOpacity
+            key={tag}
+            style={[styles.chip, selectedTag === tag && styles.chipActive]}
+            onPress={() => setSelectedTag(selectedTag === tag ? '' : tag)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.chipLabel,
+                selectedTag === tag && styles.chipLabelActive,
+              ]}
+            >
+              {tag.replace(/_/g, ' ')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -215,6 +256,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     flexWrap: 'wrap',
+  },
+  tagFilterRow: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
   chip: {
     paddingHorizontal: spacing[3],

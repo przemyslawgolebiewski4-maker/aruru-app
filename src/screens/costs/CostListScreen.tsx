@@ -156,7 +156,7 @@ function formatEuro(n: number): string {
 
 function periodLabel(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
 
 function isAfterCurrentMonth(y: number, m: number): boolean {
