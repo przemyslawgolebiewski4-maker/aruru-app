@@ -168,17 +168,31 @@ export async function apiFetch<T>(
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: 'Unknown error' }));
+    const raw = await res.text().catch(() => '');
+    const trimmed = raw.trim();
+    let message = `HTTP ${res.status}`;
 
-    let message = 'Unknown error';
-    if (typeof err.detail === 'string') {
-      message = err.detail;
-    } else if (Array.isArray(err.detail)) {
-      message = err.detail.map((e: any) => e.msg || JSON.stringify(e)).join(', ');
-    } else if (err.message) {
-      message = err.message;
-    } else {
-      message = `HTTP ${res.status}`;
+    if (trimmed) {
+      try {
+        const err = JSON.parse(trimmed) as Record<string, unknown>;
+        if (typeof err.detail === 'string') {
+          message = err.detail;
+        } else if (Array.isArray(err.detail)) {
+          message = err.detail
+            .map((e: { msg?: string } | string) =>
+              typeof e === 'object' && e && 'msg' in e && e.msg
+                ? String(e.msg)
+                : JSON.stringify(e)
+            )
+            .join(', ');
+        } else if (typeof err.message === 'string') {
+          message = err.message;
+        } else {
+          message = trimmed;
+        }
+      } catch {
+        message = trimmed;
+      }
     }
 
     throw new ApiError(message, res.status);
