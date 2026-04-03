@@ -185,9 +185,9 @@ export default function RegisterScreen({ navigation }: Props) {
           {isSponsor ? (
             <View style={styles.sponsorInfo}>
               <Text style={styles.sponsorInfoText}>
-                {
-                  "Your account will be reviewed before appearing in the Sponsors section. You'll receive an email once approved."
-                }
+                Your account will be reviewed before appearing
+                in the Sponsors section. You'll receive an email
+                once approved.
               </Text>
             </View>
           ) : null}
