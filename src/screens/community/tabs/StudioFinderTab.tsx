@@ -11,6 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
+import { AvatarImage } from '../../../components/AvatarImage';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
 import { colors, typography, fontSize, spacing, radius } from '../../../theme/tokens';
@@ -27,6 +28,7 @@ type Studio = {
   description?: string;
   tags: string[];
   memberCount: number;
+  logoUrl?: string;
 };
 
 const COUNTRIES = ['All', 'Poland', 'Germany', 'UK', 'Netherlands', 'France', 'Italy'];
@@ -65,7 +67,14 @@ export default function StudioFinderTab() {
         {},
         tenantId
       );
-      setStudioList(res.studios ?? []);
+      const raw = res.studios ?? [];
+      setStudioList(
+        raw.map((item) => ({
+          ...item,
+          logoUrl:
+            item.logoUrl ?? (item as { logo_url?: string }).logo_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studios.');
     } finally {
@@ -146,7 +155,14 @@ export default function StudioFinderTab() {
             >
               <View style={styles.cardRow}>
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials(s.name)}</Text>
+                  <AvatarImage
+                    url={s.logoUrl}
+                    initials={initials(s.name)}
+                    size={40}
+                    borderRadius={10}
+                    bgColor={colors.mossLight}
+                    textColor={colors.moss}
+                  />
                 </View>
                 <View style={styles.cardInfo}>
                   <Text style={styles.studioName}>{s.name}</Text>
@@ -247,11 +263,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-  },
-  avatarText: {
-    fontFamily: typography.mono,
-    fontSize: 13,
-    color: colors.moss,
+    overflow: 'hidden',
   },
   cardInfo: { flex: 1, gap: 2 },
   studioName: {

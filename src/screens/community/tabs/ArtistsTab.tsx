@@ -10,6 +10,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
+import { AvatarImage } from '../../../components/AvatarImage';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
 import { colors, typography, fontSize, spacing } from '../../../theme/tokens';
@@ -22,6 +23,7 @@ type Artist = {
   name: string;
   bio?: string;
   city?: string;
+  avatarUrl?: string;
   studios: { tenantId: string; studioName: string; role: string }[];
 };
 
@@ -53,7 +55,14 @@ export default function ArtistsTab() {
         {},
         tenantId
       );
-      setArtists(res.artists ?? []);
+      const raw = res.artists ?? [];
+      setArtists(
+        raw.map((item) => ({
+          ...item,
+          avatarUrl:
+            item.avatarUrl ?? (item as { avatar_url?: string }).avatar_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load artists.');
     } finally {
@@ -109,7 +118,14 @@ export default function ArtistsTab() {
         >
           <View style={styles.cardRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initials(a.name || '?')}</Text>
+              <AvatarImage
+                url={a.avatarUrl}
+                initials={initials(a.name || '?')}
+                size={44}
+                borderRadius={22}
+                bgColor={colors.clayLight}
+                textColor={colors.clay}
+              />
             </View>
             <View style={styles.cardInfo}>
               <Text style={styles.artistName}>{a.name}</Text>
@@ -178,11 +194,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-  },
-  avatarText: {
-    fontFamily: typography.mono,
-    fontSize: 14,
-    color: colors.clay,
+    overflow: 'hidden',
   },
   cardInfo: { flex: 1, gap: 3 },
   artistName: {

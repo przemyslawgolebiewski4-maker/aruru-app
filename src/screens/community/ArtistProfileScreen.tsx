@@ -15,6 +15,7 @@ import type {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { AvatarImage } from '../../components/AvatarImage';
 import { Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -33,6 +34,7 @@ type Artist = {
   name: string;
   bio?: string;
   city?: string;
+  avatarUrl?: string;
   instagramUrl?: string;
   websiteUrl?: string;
   shopUrl?: string;
@@ -65,12 +67,15 @@ export default function ArtistProfileScreen({ route }: Props) {
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch<Artist>(
+      const res = await apiFetch<Artist & { avatar_url?: string }>(
         `/community/artists/${userId}`,
         {},
         tenantId
       );
-      setArtist(res);
+      setArtist({
+        ...res,
+        avatarUrl: res.avatarUrl ?? res.avatar_url,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load profile.');
     } finally {
@@ -107,7 +112,14 @@ export default function ArtistProfileScreen({ route }: Props) {
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.avatarLg}>
-          <Text style={styles.avatarText}>{initials(artist.name)}</Text>
+          <AvatarImage
+            url={artist.avatarUrl}
+            initials={initials(artist.name)}
+            size={72}
+            borderRadius={36}
+            bgColor={colors.clayLight}
+            textColor={colors.clay}
+          />
         </View>
         <Text style={styles.name}>{artist.name}</Text>
         {artist.bio ? <Text style={styles.bio}>{artist.bio}</Text> : null}
@@ -179,11 +191,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[2],
-  },
-  avatarText: {
-    fontFamily: typography.mono,
-    fontSize: 24,
-    color: colors.clay,
+    overflow: 'hidden',
   },
   name: {
     fontFamily: typography.body,

@@ -12,6 +12,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
+import { AvatarImage } from '../../components/AvatarImage';
 import { Divider, Badge } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -37,6 +38,7 @@ type StudioProfile = {
   publicDescription?: string;
   tags: string[];
   memberCount: number;
+  logoUrl?: string;
   instagramUrl?: string;
   websiteUrl?: string;
   shopUrl?: string;
@@ -91,12 +93,15 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     }
     try {
       const encoded = encodeURIComponent(slug);
-      const res = await apiFetch<StudioProfile>(
+      const res = await apiFetch<StudioProfile & { logo_url?: string }>(
         `/community/studios/${encoded}`,
         {},
         tenantId
       );
-      setStudio(res);
+      setStudio({
+        ...res,
+        logoUrl: res.logoUrl ?? res.logo_url,
+      });
       setEvents(res.upcomingEvents ?? []);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studio.');
@@ -133,6 +138,12 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     );
 
   const tags = studio.tags ?? [];
+  const headerInitials = (studio.name || studioName || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
   const ig = studio.instagramUrl?.trim();
   const web = studio.websiteUrl?.trim();
   const shop = studio.shopUrl?.trim();
@@ -142,14 +153,14 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.avatarLg}>
-          <Text style={styles.avatarText}>
-            {(studio.name || studioName)
-              .split(' ')
-              .map((w) => w[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase()}
-          </Text>
+          <AvatarImage
+            url={studio.logoUrl}
+            initials={headerInitials}
+            size={72}
+            borderRadius={14}
+            bgColor={colors.mossLight}
+            textColor={colors.moss}
+          />
         </View>
         <Text style={styles.name}>{studio.name || studioName}</Text>
         {studio.city || studio.country ? (
@@ -245,11 +256,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing[2],
-  },
-  avatarText: {
-    fontFamily: typography.mono,
-    fontSize: 24,
-    color: colors.moss,
+    overflow: 'hidden',
   },
   name: {
     fontFamily: typography.body,
