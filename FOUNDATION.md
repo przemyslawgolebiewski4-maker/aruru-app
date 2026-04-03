@@ -54,7 +54,23 @@ src/
     api.ts         # apiFetch, typy AuthUser, endpointy auth/studio/admin, normalizacja /auth/me
   theme/
     tokens.ts      # colors, typography, fontSize, spacing, radius, controlRadius
+  utils/
+    confirmAction.ts  # confirmDestructive, confirmNeutral, pickTrialExtensionDays, alertMessage
 ```
+
+## Admin — potwierdzenia (`confirmAction`)
+Na web `Alert.alert` z wieloma przyciskami bywa zawodny (callbacki nie odpalają). Ekrany **`src/screens/admin/*`** używają **`src/utils/confirmAction.ts`** zamiast bezpośredniego `Alert.alert`:
+- **`confirmDestructive(title, message, confirmLabel)`** → `Promise<boolean>` — usuwanie, suspend, reject itd.
+- **`confirmNeutral(title, message, confirmLabel)`** → `Promise<boolean>` — akcje nie-destrukcyjne (np. approve sponsora z wysyłką maila).
+- **`pickTrialExtensionDays(studioName)`** → `Promise<number | null>` — wybór 7 / 14 / 30 dni (native: alert z trzema opcjami; web: `prompt`).
+- **`alertMessage(title, message)`** — jeden przycisk / błąd po `apiFetch` (web: `window.alert`).
+
+Mapowanie:
+- **AdminStudiosScreen** — extend trial: `pickTrialExtensionDays`; suspend: `confirmDestructive`; reactivate: `confirmNeutral`; błąd PATCH: `alertMessage`.
+- **AdminForumScreen** — delete post: `confirmDestructive`; błąd: `alertMessage`.
+- **AdminUsersScreen** — GDPR delete: `confirmDestructive`; błąd: `alertMessage`.
+- **AdminAdminsScreen** — remove admin: `confirmDestructive`; błędy: `alertMessage`.
+- **AdminSponsorsScreen** — approve: `confirmNeutral`; reject / suspend: `confirmDestructive`; błędy: `alertMessage`.
 
 ## Auth, profil i 2FA (frontend ↔ backend)
 - **Bearer:** `Authorization: Bearer <access_token>` dla chronionych żądań (domyślnie w `apiFetch`).
