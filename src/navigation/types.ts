@@ -33,6 +33,7 @@ export type AppStackParamList = {
     memberEmail: string;
     role: 'owner' | 'assistant' | 'member';
     status: 'active' | 'invited' | 'suspended';
+    memberAvatarUrl?: string;
   };
   KilnList: { tenantId: string };
   KilnNewSession: { tenantId: string };
@@ -53,6 +54,7 @@ export type AppStackParamList = {
     year: number;
     month: number;
     memberEmail?: string;
+    memberAvatarUrl?: string;
   };
   EventList: { tenantId: string };
   EventDetail: { tenantId: string; eventId: string; eventTitle: string };

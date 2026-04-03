@@ -18,6 +18,7 @@ interface MemberEntry {
   userId: string;
   name: string;
   weightKg: string;
+  avatarUrl?: string;
 }
 
 interface Props {
@@ -133,7 +134,7 @@ export default function KilnFiringScreen({ navigation, route }: Props) {
 
           {members.map((m) => (
             <View key={m.userId} style={styles.memberRow}>
-              <Avatar name={m.name} size="sm" />
+              <Avatar name={m.name} size="sm" imageUrl={m.avatarUrl} />
               <Text style={styles.memberName}>{m.name}</Text>
               <TextInput
                 style={styles.weightInput}
@@ -207,7 +208,7 @@ export default function KilnFiringScreen({ navigation, route }: Props) {
 
           {members.filter(m => parseFloat(m.weightKg) > 0).map(m => (
             <View key={m.userId} style={styles.memberSummaryRow}>
-              <Avatar name={m.name} size="sm" />
+              <Avatar name={m.name} size="sm" imageUrl={m.avatarUrl} />
               <Text style={styles.memberName}>{m.name}</Text>
               <Text style={styles.memberCost}>
                 {m.weightKg} kg · €{(parseFloat(m.weightKg) * rateMap[kilnType]).toFixed(2)}

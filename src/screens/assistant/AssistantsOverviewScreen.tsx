@@ -19,6 +19,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'AssistantsOverview'>;
 type AssistantSummary = {
   userId: string;
   name: string;
+  avatarUrl?: string;
   totalHours: number;
   sessions: {
     id: string;
@@ -90,7 +91,14 @@ export default function AssistantsOverviewScreen({ route }: Props) {
         {},
         tenantId
       );
-      setAssistants(res.assistants ?? []);
+      const raw = res.assistants ?? [];
+      setAssistants(
+        raw.map((a) => ({
+          ...a,
+          avatarUrl:
+            a.avatarUrl ?? (a as { avatar_url?: string }).avatar_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load attendance.');
     } finally {
@@ -169,7 +177,7 @@ export default function AssistantsOverviewScreen({ route }: Props) {
               }
               activeOpacity={0.7}
             >
-              <Avatar name={a.name} size="sm" />
+              <Avatar name={a.name} size="sm" imageUrl={a.avatarUrl} />
               <View style={styles.assistantInfo}>
                 <Text style={styles.assistantName}>{a.name}</Text>
                 <Text style={styles.assistantHours}>

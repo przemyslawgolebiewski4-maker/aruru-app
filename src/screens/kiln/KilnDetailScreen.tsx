@@ -27,6 +27,8 @@ type KilnItemRow = Partial<{
   name: string;
   weightKg: number;
   cost: number;
+  avatarUrl: string;
+  avatar_url: string;
 }>;
 
 /** API may use camelCase or snake_case; most fields optional. */
@@ -93,6 +95,12 @@ function itemMemberLabel(item: KilnItemRow | undefined): string {
     item?.name?.trim() ||
     '';
   return nm || 'Unknown member';
+}
+
+function itemMemberAvatarUrl(item: KilnItemRow | undefined): string | undefined {
+  const u = item?.avatarUrl ?? item?.avatar_url;
+  const t = u != null ? String(u).trim() : '';
+  return t || undefined;
 }
 
 function parseFiring(data: unknown): KilnFiringDetail | null {
@@ -340,6 +348,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
       ) : (
         items.map((it, idx) => {
           const nm = itemMemberLabel(it);
+          const avatarUrl = itemMemberAvatarUrl(it);
           return (
             <View
               key={`${it.userId ?? idx}`}
@@ -348,7 +357,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
                 idx < items.length - 1 && styles.itemRowBorder,
               ]}
             >
-              <Avatar name={nm} size="sm" />
+              <Avatar name={nm} size="sm" imageUrl={avatarUrl} />
               <Text style={styles.itemName} numberOfLines={1}>
                 {nm}
               </Text>

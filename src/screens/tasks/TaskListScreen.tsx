@@ -43,6 +43,7 @@ type StaffMember = {
   email?: string;
   role: 'owner' | 'assistant' | 'member';
   status?: string;
+  avatarUrl?: string;
 };
 
 type TabKey = 'all' | 'mine' | 'done';
@@ -159,7 +160,14 @@ export default function TaskListScreen({ route }: { route: Route }) {
         ),
       ]);
       setTasks(parseTasks(taskRes));
-      setMembers(memRes.members ?? []);
+      const rawMem = memRes.members ?? [];
+      setMembers(
+        rawMem.map((m) => ({
+          ...m,
+          avatarUrl:
+            m.avatarUrl ?? (m as { avatar_url?: string }).avatar_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load tasks.');
       setTasks([]);
@@ -349,7 +357,11 @@ export default function TaskListScreen({ route }: { route: Route }) {
                     sel ? styles.assigneePillSel : styles.assigneePillUnsel,
                   ]}
                 >
-                  <Avatar name={m.name || m.email || '?'} size="sm" />
+                  <Avatar
+                    name={m.name || m.email || '?'}
+                    size="sm"
+                    imageUrl={m.avatarUrl}
+                  />
                   <Text
                     style={[
                       styles.assigneeName,

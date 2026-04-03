@@ -77,9 +77,13 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
     memberEmail,
     role: initialRole,
     status: initialStatus,
+    memberAvatarUrl: routeMemberAvatarUrl,
   } = route.params;
   const navigation = useNavigation<Nav>();
 
+  const [memberAvatarUrl, setMemberAvatarUrl] = useState<string | undefined>(
+    routeMemberAvatarUrl
+  );
   const [role, setRole] = useState<Role>(initialRole);
   const [status, setStatus] = useState<Status>(initialStatus);
   const [roleSaving, setRoleSaving] = useState(false);
@@ -114,6 +118,10 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
             ? String(pid)
             : null
         );
+        const au = m.avatarUrl ?? m.avatar_url;
+        if (au != null && String(au).trim() !== '') {
+          setMemberAvatarUrl(String(au).trim());
+        }
       } else {
         setAssignedPlanId(null);
       }
@@ -275,7 +283,7 @@ export default function MemberProfileScreen({ route }: { route: Route }) {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <Avatar name={memberName} size="lg" />
+        <Avatar name={memberName} size="lg" imageUrl={memberAvatarUrl} />
         <Text style={styles.name}>{memberName}</Text>
         <Text style={styles.email}>{memberEmail}</Text>
         <View style={styles.badgeRow}>

@@ -24,6 +24,7 @@ type MemberRow = {
   email: string;
   name: string;
   status: string;
+  avatarUrl?: string;
 };
 
 type LiveCostRow = {
@@ -49,6 +50,12 @@ function parseMembersList(data: unknown): MemberRow[] {
         email: String(o.email ?? ''),
         name: String(o.name ?? '').trim(),
         status: String(o.status ?? '').toLowerCase(),
+        avatarUrl:
+          o.avatarUrl != null
+            ? String(o.avatarUrl).trim() || undefined
+            : o.avatar_url != null
+              ? String(o.avatar_url).trim() || undefined
+              : undefined,
       };
     })
     .filter((x): x is MemberRow => x != null);
@@ -338,7 +345,11 @@ export default function CostListScreen({ route }: { route: Route }) {
             >
               <View style={styles.cardRow}>
                 <View style={styles.avatarWrap}>
-                  <Avatar name={avatarName} size="sm" />
+                  <Avatar
+                    name={avatarName}
+                    size="sm"
+                    imageUrl={m.avatarUrl}
+                  />
                 </View>
                 <View style={styles.cardMid}>
                   <Text style={styles.cardName}>{displayName}</Text>

@@ -317,6 +317,7 @@ export default function CostDetailScreen({ route }: { route: Route }) {
     memberEmail,
     year: routeYear,
     month: routeMonth,
+    memberAvatarUrl,
   } = route.params;
   const navigation = useNavigation<Nav>();
   const { user, studios } = useAuth();
@@ -649,7 +650,11 @@ export default function CostDetailScreen({ route }: { route: Route }) {
         <>
           <View style={styles.headerCard}>
             <View style={styles.headerRow}>
-              <Avatar name={displayName} size="md" />
+              <Avatar
+                name={displayName}
+                size="md"
+                imageUrl={memberAvatarUrl}
+              />
               <Text style={styles.headerName}>{displayName}</Text>
             </View>
             <Text style={styles.headerPeriod}>

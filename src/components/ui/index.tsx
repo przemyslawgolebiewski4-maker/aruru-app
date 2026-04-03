@@ -9,6 +9,7 @@ import {
   TextInputProps,
   ViewStyle,
   TextStyle,
+  Platform,
 } from 'react-native';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 
@@ -122,6 +123,7 @@ interface AvatarProps {
   name: string;
   size?: 'sm' | 'md' | 'lg';
   variant?: 'clay' | 'moss' | 'neutral';
+  imageUrl?: string | null;
 }
 
 function getInitials(name: string) {
@@ -133,7 +135,12 @@ function getInitials(name: string) {
     .slice(0, 2);
 }
 
-export function Avatar({ name, size = 'md', variant = 'clay' }: AvatarProps) {
+export function Avatar({
+  name,
+  size = 'md',
+  variant = 'clay',
+  imageUrl,
+}: AvatarProps) {
   const dim = size === 'sm' ? 28 : size === 'md' ? 36 : 48;
   const fz = size === 'sm' ? 10 : size === 'md' ? 13 : 16;
 
@@ -148,6 +155,8 @@ export function Avatar({ name, size = 'md', variant = 'clay' }: AvatarProps) {
     neutral: colors.inkMid,
   };
 
+  const img = imageUrl?.trim();
+
   return (
     <View
       style={[
@@ -157,12 +166,44 @@ export function Avatar({ name, size = 'md', variant = 'clay' }: AvatarProps) {
           height: dim,
           borderRadius: dim / 2,
           backgroundColor: bgMap[variant],
+          ...(img ? { overflow: 'hidden' as const } : {}),
         },
       ]}
     >
-      <Text style={{ fontFamily: typography.monoMedium, fontSize: fz, color: colorMap[variant] }}>
-        {getInitials(name)}
-      </Text>
+      {img ? (
+        Platform.OS === 'web' ? (
+          React.createElement('img', {
+            src: img,
+            style: {
+              width: dim,
+              height: dim,
+              borderRadius: dim / 2,
+              objectFit: 'cover',
+            },
+            alt: name,
+          })
+        ) : (
+          (() => {
+            const { Image } = require('react-native');
+            return (
+              <Image
+                source={{ uri: img }}
+                style={{ width: dim, height: dim, borderRadius: dim / 2 }}
+              />
+            );
+          })()
+        )
+      ) : (
+        <Text
+          style={{
+            fontFamily: typography.monoMedium,
+            fontSize: fz,
+            color: colorMap[variant],
+          }}
+        >
+          {getInitials(name)}
+        </Text>
+      )}
     </View>
   );
 }

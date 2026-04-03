@@ -24,6 +24,7 @@ export type StudioMember = {
   email?: string;
   name?: string;
   status?: string;
+  avatarUrl?: string;
 };
 
 type FiringItem = {
@@ -89,9 +90,13 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
           tenantId
         ),
       ]);
-      const active = (memRes.members ?? []).filter(
-        (m) => (m.status || '').toLowerCase() === 'active'
-      );
+      const active = (memRes.members ?? [])
+        .filter((m) => (m.status || '').toLowerCase() === 'active')
+        .map((m) => ({
+          ...m,
+          avatarUrl:
+            m.avatarUrl ?? (m as { avatar_url?: string }).avatar_url,
+        }));
       setMembers(active);
       const nextItems = extractItems(fireData);
       setItems(nextItems);
@@ -291,7 +296,11 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
                 !isLastMember && styles.memberRowBorder,
               ]}
             >
-              <Avatar name={label || '?'} size="sm" />
+              <Avatar
+                name={label || '?'}
+                size="sm"
+                imageUrl={m.avatarUrl}
+              />
               <Text style={styles.memberName} numberOfLines={1}>
                 {label || 'Member'}
               </Text>

@@ -134,7 +134,11 @@ export default function ProfileScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.avatarBlock}>
-        <Avatar name={user?.name ?? 'User'} size="lg" />
+        <Avatar
+          name={user?.name ?? 'User'}
+          size="lg"
+          imageUrl={user?.avatarUrl}
+        />
         <Text style={styles.name}>{user?.name ?? '—'}</Text>
         <Text style={styles.email}>{user?.email ?? ''}</Text>
       </View>

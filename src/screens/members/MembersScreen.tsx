@@ -25,6 +25,7 @@ export type StudioMemberRow = {
   name: string;
   role: 'owner' | 'assistant' | 'member';
   status: 'active' | 'invited' | 'suspended';
+  avatarUrl?: string;
 };
 
 function roleBadgeVariant(
@@ -56,7 +57,14 @@ export default function MembersScreen({ route }: { route: Route }) {
         {},
         tenantId
       );
-      setList(res.members ?? []);
+      const raw = res.members ?? [];
+      setList(
+        raw.map((row) => ({
+          ...row,
+          avatarUrl:
+            row.avatarUrl ?? (row as { avatar_url?: string }).avatar_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(formatErr(e));
       setList([]);
@@ -172,11 +180,16 @@ export default function MembersScreen({ route }: { route: Route }) {
                 memberEmail: m.email,
                 role: m.role,
                 status: m.status,
+                memberAvatarUrl: m.avatarUrl,
               })
             }
             activeOpacity={0.7}
           >
-            <Avatar name={m.name?.trim() || m.email} size="sm" />
+            <Avatar
+              name={m.name?.trim() || m.email}
+              size="sm"
+              imageUrl={m.avatarUrl}
+            />
             <View style={styles.memberMid}>
               <Text style={styles.memberName}>
                 {m.name?.trim() ? m.name : m.email}
