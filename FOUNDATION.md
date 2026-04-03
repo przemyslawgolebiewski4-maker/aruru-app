@@ -109,6 +109,43 @@ Przykładowe klucze: `typography.display`, `typography.body`, `typography.bodyMe
 ## Zależności UI warte uwagi
 - **react-native-qrcode-svg** — QR dla konfiguracji TOTP; przeciąga **text-encoding@0.7.0** (deprecated w npm — ostrzeżenie przy `npm install`, nie blokuje builda).
 
+## Sponsor system
+
+### Role
+- `user_role: "sponsor"` ustawiane przy rejestracji gdy `is_sponsor: true`
+- Status: pending → (Przemek zatwierdza) → active
+- Po zatwierdzeniu: wybór planu Basic €29 / Standard €59 przez Stripe Checkout
+
+### Plany sponsora
+| Plan | Cena | Posty/mies | Footer logo |
+|------|------|-------------|-------------|
+| Basic | €29 | 1 | Nie |
+| Standard | €59 | 2 | Tak |
+
+### Nawigacja sponsora
+- MainTabs: Community + Sponsors + Profile (bez Studio)
+- CommunityScreen: tylko Feed + Sponsors (bez Studios/Artists/Forum)
+- `initialRouteName`: Community
+
+### Endpointy (backend)
+- `GET`/`PATCH` `/sponsor/profile` — profil sponsora
+- `POST`/`GET` `/sponsor/posts` — posty (limit per plan)
+- `GET` `/sponsor/stats` — statystyki kliknięć i wyświetleń
+- `POST` `/sponsor/click/{id}` — tracker kliknięć (public)
+- `POST` `/sponsor/view/{id}` — tracker wyświetleń (public)
+- `POST` `/stripe/sponsor/checkout` — Stripe Checkout
+
+### Ekrany
+- RegisterScreen: toggle `is_sponsor`
+- SponsorsTab: widok warunkowy per rola/status
+- SponsorPlanScreen: wybór planu po approval
+- SponsorEditProfileScreen: edycja profilu
+
+### Tracking
+- Kliknięcia w link: fire-and-forget `POST` `/sponsor/click/{id}`
+- Wyświetlenia profilu: raz per session przez `useRef<Set<string>>`
+- Dane per miesiąc w `clicks_by_month` / `views_by_month` (MongoDB)
+
 ## Gdzie szukać błędów przy „login nie działa”
 - W DevTools **Network** sprawdź **kod HTTP** odpowiedzi z `…/auth/login` (np. **500** = wyjątek po stronie **Railway / backend**, nie frontu).
 - Logi aplikacji FastAPI na Railway — traceback przy żądaniu logowania.
