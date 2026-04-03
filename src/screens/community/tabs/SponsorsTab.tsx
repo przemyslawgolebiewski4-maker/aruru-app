@@ -9,6 +9,7 @@ import {
   Linking,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../../../hooks/useAuth';
 import { AvatarImage } from '../../../components/AvatarImage';
 import { Button, Input } from '../../../components/ui';
 import { apiFetch } from '../../../services/api';
@@ -28,7 +29,7 @@ type StatsData = {
   artistCount: number;
 };
 
-const STATS_BASE =
+const BASE =
   process.env.EXPO_PUBLIC_API_URL ??
   'https://aruru-backend-production.up.railway.app';
 
@@ -60,64 +61,28 @@ function normalizeWebsiteHref(raw: string): string {
   return `https://${t}`;
 }
 
-function normalizeSponsor(row: Record<string, unknown>): Sponsor {
-  const website =
-    row.websiteUrl ?? row.website_url ?? row.url ?? row.website;
-  const logo = row.logoUrl ?? row.logo_url ?? row.logo;
-  return {
-    name: String(row.name ?? row.companyName ?? row.company_name ?? ''),
-    category:
-      row.category != null && String(row.category).trim()
-        ? String(row.category)
-        : undefined,
-    websiteUrl: website != null ? String(website) : undefined,
-    logoUrl: logo != null ? String(logo) : undefined,
-  };
-}
-
-function normalizeStats(raw: Record<string, unknown>): StatsData {
-  const sponsorsRaw = raw.sponsors;
-  const sponsors = Array.isArray(sponsorsRaw)
-    ? sponsorsRaw.map((s) =>
-        normalizeSponsor(typeof s === 'object' && s ? (s as Record<string, unknown>) : {})
-      )
-    : [];
-
-  return {
-    sponsors,
-    sponsorCount: Number(raw.sponsorCount ?? raw.sponsor_count ?? sponsors.length),
-    studioCount: Number(raw.studioCount ?? raw.studio_count ?? 0),
-    artistCount: Number(raw.artistCount ?? raw.artist_count ?? 0),
-  };
-}
-
 export default function SponsorsTab() {
-  const [data, setData] = useState<StatsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const { studios } = useAuth();
 
+  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formSuccess, setFormSuccess] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [companyName, setCompanyName] = useState('');
-  const [category, setCategory] = useState<string>('');
+  const [category, setCategory] = useState('other');
   const [description, setDescription] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const loadStats = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    setLoadError('');
     try {
-      const res = await fetch(`${STATS_BASE}/public/stats`);
-      if (!res.ok) {
-        throw new Error(`Could not load sponsors (HTTP ${res.status}).`);
-      }
-      const json = (await res.json()) as Record<string, unknown>;
-      setData(normalizeStats(json));
-    } catch (e: unknown) {
-      setLoadError(e instanceof Error ? e.message : 'Could not load sponsors.');
-      setData(null);
+      const res = await fetch(`${BASE}/public/stats`);
+      const data: StatsData = await res.json();
+      setSponsors(data.sponsors ?? []);
+    } catch {
+      setSponsors([]);
     } finally {
       setLoading(false);
     }
@@ -125,161 +90,176 @@ export default function SponsorsTab() {
 
   useFocusEffect(
     useCallback(() => {
-      void loadStats();
-    }, [loadStats])
+      void load();
+    }, [load])
   );
 
-  function resetForm() {
+  function resetFormFields() {
     setCompanyName('');
-    setCategory('');
+    setCategory('other');
     setDescription('');
     setWebsiteUrl('');
     setFormError('');
-    setFormSuccess(false);
   }
 
   function closeForm() {
     setShowForm(false);
-    resetForm();
+    setSubmitted(false);
+    resetFormFields();
   }
 
   async function handleSubmit() {
     setFormError('');
-    if (!companyName.trim()) {
-      setFormError('Company name is required.');
-      return;
-    }
-    if (!category) {
-      setFormError('Please choose a category.');
+    if (companyName.trim().length < 2) {
+      setFormError('Company name required');
       return;
     }
     if (description.trim().length < 10) {
-      setFormError('Description must be at least 10 characters.');
+      setFormError('Description too short');
       return;
     }
     if (!websiteUrl.trim()) {
-      setFormError('Website URL is required.');
+      setFormError('Website URL required');
       return;
     }
 
+    const tenantId = studios[0]?.tenantId ?? '';
+
     setSubmitting(true);
     try {
-      await apiFetch('/community/sponsors/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          company_name: companyName.trim(),
-          category,
-          description: description.trim(),
-          website_url: websiteUrl.trim(),
-        }),
-      });
-      setFormSuccess(true);
+      await apiFetch(
+        '/community/sponsors/register',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            company_name: companyName.trim(),
+            category,
+            description: description.trim(),
+            website_url: websiteUrl.trim(),
+          }),
+        },
+        tenantId
+      );
+      setSubmitted(true);
     } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Could not submit application.');
+      setFormError(e instanceof Error ? e.message : 'Could not submit.');
     } finally {
       setSubmitting(false);
     }
   }
 
-  function openPartnerForm() {
-    resetForm();
-    setShowForm(true);
-  }
-
-  const sponsors = data?.sponsors ?? [];
-
   if (showForm) {
+    if (submitted) {
+      return (
+        <ScrollView
+          style={styles.root}
+          contentContainerStyle={styles.formScroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.successEmoji} accessibilityLabel="Success">
+            ✓
+          </Text>
+          <Text style={styles.successTitle}>Application submitted!</Text>
+          <Text style={styles.successBody}>
+            We&apos;ll review it and get back to you soon.
+          </Text>
+          <Button
+            label="Back to sponsors"
+            onPress={() => {
+              setSubmitted(false);
+              setShowForm(false);
+              resetFormFields();
+              void load();
+            }}
+            fullWidth
+          />
+        </ScrollView>
+      );
+    }
+
     return (
       <ScrollView
         style={styles.root}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.formScroll}
         keyboardShouldPersistTaps="handled"
       >
-        {formSuccess ? (
-          <View style={styles.formBlock}>
-            <Text style={styles.formTitle}>Thank you</Text>
-            <Text style={styles.successBody}>
-              Application submitted! We&apos;ll review it and get back to you.
-            </Text>
-            <Button
-              label="Back to sponsors"
-              onPress={closeForm}
-              fullWidth
-            />
-          </View>
-        ) : (
-          <View style={styles.formBlock}>
-            <Text style={styles.formTitle}>Apply as a partner</Text>
+        <View style={styles.formHeaderRow}>
+          <Text style={styles.formHeaderTitle}>Apply as a partner</Text>
+          <TouchableOpacity
+            onPress={closeForm}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+          >
+            <Text style={styles.formClose}>✕</Text>
+          </TouchableOpacity>
+        </View>
 
-            <Input
-              label="Company name"
-              value={companyName}
-              onChangeText={setCompanyName}
-              placeholder="Your company or brand"
-              autoCapitalize="words"
-            />
+        <Input
+          label="Company name"
+          value={companyName}
+          onChangeText={setCompanyName}
+          placeholder="Your company or brand"
+          autoCapitalize="words"
+        />
 
-            <View>
-              <Text style={styles.fieldLabel}>Category</Text>
-              <View style={styles.chipRow}>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[
-                      styles.chip,
-                      category === opt.key && styles.chipActive,
-                    ]}
-                    onPress={() => setCategory(opt.key)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.chipLabel,
-                        category === opt.key && styles.chipLabelActive,
-                      ]}
-                    >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+        <View>
+          <Text style={styles.chipsLabel}>Category</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsScroll}
+          >
+            {CATEGORY_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.key}
+                style={[
+                  styles.chip,
+                  category === opt.key && styles.chipActive,
+                ]}
+                onPress={() => setCategory(opt.key)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    category === opt.key && styles.chipLabelActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-            <Input
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Tell us how you support ceramic artists (min. 10 characters)"
-              multiline
-              numberOfLines={4}
-              style={styles.textArea}
-            />
+        <Input
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Min. 10 characters — how you support the community"
+          multiline
+          numberOfLines={4}
+          style={styles.textArea}
+        />
 
-            <Input
-              label="Website URL"
-              value={websiteUrl}
-              onChangeText={setWebsiteUrl}
-              placeholder="https://example.com"
-              autoCapitalize="none"
-              keyboardType="url"
-            />
+        <Input
+          label="Website URL"
+          value={websiteUrl}
+          onChangeText={setWebsiteUrl}
+          placeholder="https://example.com"
+          autoCapitalize="none"
+          keyboardType="url"
+        />
 
-            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
 
-            <Button
-              label="Submit application"
-              onPress={() => void handleSubmit()}
-              loading={submitting}
-              fullWidth
-            />
-            <Button
-              label="Cancel"
-              onPress={closeForm}
-              variant="ghost"
-              fullWidth
-            />
-          </View>
-        )}
+        <Button
+          label="Submit"
+          onPress={() => void handleSubmit()}
+          loading={submitting}
+          fullWidth
+        />
       </ScrollView>
     );
   }
@@ -287,55 +267,32 @@ export default function SponsorsTab() {
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={styles.listScroll}
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.header}>
-        <Text style={styles.sectionTitle}>Partners & suppliers</Text>
-        <Text style={styles.sectionBody}>
+        <Text style={styles.headerTitle}>Partners & Suppliers</Text>
+        <Text style={styles.headerBody}>
           Clay suppliers and partners who support the Aruru community.
         </Text>
-        <Text style={styles.transparencyNote}>
+        <Text style={styles.headerNote}>
           No ads · No tracking · Transparent sponsorship
         </Text>
-        {data != null &&
-        (data.sponsorCount > 0 || data.studioCount > 0 || data.artistCount > 0) ? (
-          <Text style={styles.statsHint}>
-            {data.sponsorCount} partner{data.sponsorCount === 1 ? '' : 's'} ·{' '}
-            {data.studioCount} studio{data.studioCount === 1 ? '' : 's'} ·{' '}
-            {data.artistCount} artist{data.artistCount === 1 ? '' : 's'}
-          </Text>
-        ) : null}
       </View>
 
       {loading ? (
-        <View style={styles.center}>
+        <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.clay} />
-        </View>
-      ) : loadError ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{loadError}</Text>
-          <Button label="Retry" onPress={() => void loadStats()} variant="secondary" />
         </View>
       ) : sponsors.length === 0 ? (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>
-            No partners yet. Want to support the community?
-          </Text>
-          <Button
-            label="Become a partner"
-            onPress={openPartnerForm}
-            fullWidth
-            style={styles.emptyCta}
-          />
+          <Text style={styles.emptyLine}>No partners yet.</Text>
+          <Text style={styles.emptySub}>Want to support the community?</Text>
         </View>
       ) : (
-        <View style={styles.list}>
+        <View style={styles.cards}>
           {sponsors.map((s, i) => (
-            <View
-              key={`${s.name}-${i}`}
-              style={[styles.card, i === sponsors.length - 1 && styles.cardLast]}
-            >
+            <View key={`${s.name}-${i}`} style={styles.card}>
               <View style={styles.logoWrap}>
                 <AvatarImage
                   url={s.logoUrl}
@@ -347,11 +304,11 @@ export default function SponsorsTab() {
                 />
               </View>
               <View style={styles.cardBody}>
-                <Text style={styles.companyName} numberOfLines={2}>
+                <Text style={styles.cardName} numberOfLines={2}>
                   {s.name || 'Partner'}
                 </Text>
                 {s.category ? (
-                  <Text style={styles.category}>{s.category}</Text>
+                  <Text style={styles.cardCategory}>{s.category}</Text>
                 ) : null}
                 {s.websiteUrl?.trim() ? (
                   <TouchableOpacity
@@ -361,7 +318,7 @@ export default function SponsorsTab() {
                     }}
                     accessibilityRole="link"
                   >
-                    <Text style={styles.link}>{s.websiteUrl.trim()}</Text>
+                    <Text style={styles.cardLink}>{s.websiteUrl.trim()}</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -370,15 +327,18 @@ export default function SponsorsTab() {
         </View>
       )}
 
-      {!loading && !loadError ? (
-        <Button
-          label="Become a partner"
-          onPress={openPartnerForm}
-          variant="secondary"
-          fullWidth
-          style={styles.footerCta}
-        />
-      ) : null}
+      <TouchableOpacity
+        style={styles.partnerLink}
+        onPress={() => {
+          resetFormFields();
+          setSubmitted(false);
+          setShowForm(true);
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Become a partner"
+      >
+        <Text style={styles.partnerLinkText}>Become a partner →</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -388,64 +348,58 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.cream,
   },
-  scrollContent: {
+  listScroll: {
     padding: spacing[4],
     paddingBottom: spacing[10],
+  },
+  formScroll: {
+    padding: spacing[4],
+    paddingBottom: spacing[10],
+    gap: spacing[4],
   },
   header: {
     marginBottom: spacing[4],
     gap: spacing[2],
   },
-  sectionTitle: {
+  headerTitle: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.lg,
     color: colors.ink,
   },
-  sectionBody: {
+  headerBody: {
     fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-    lineHeight: 20,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    lineHeight: 22,
   },
-  transparencyNote: {
+  headerNote: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
     lineHeight: 18,
   },
-  statsHint: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkMid,
-    marginTop: spacing[1],
-  },
-  center: {
+  loadingWrap: {
     paddingVertical: spacing[8],
     alignItems: 'center',
-    gap: spacing[3],
-  },
-  errorText: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.error,
-    textAlign: 'center',
   },
   emptyWrap: {
     paddingVertical: spacing[6],
-    gap: spacing[4],
-    alignItems: 'stretch',
+    gap: spacing[2],
+    alignItems: 'center',
   },
-  emptyText: {
+  emptyLine: {
     fontFamily: typography.body,
     fontSize: fontSize.md,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  emptySub: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
     color: colors.inkLight,
     textAlign: 'center',
-    lineHeight: 22,
   },
-  emptyCta: {
-    alignSelf: 'stretch',
-  },
-  list: {
+  cards: {
     gap: 0,
   },
   card: {
@@ -455,12 +409,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 0.5,
     borderColor: colors.border,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     padding: spacing[4],
     marginBottom: spacing[3],
-  },
-  cardLast: {
-    marginBottom: spacing[2],
   },
   logoWrap: {
     width: 48,
@@ -476,37 +427,52 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: spacing[1],
   },
-  companyName: {
+  cardName: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.md,
     color: colors.ink,
   },
-  category: {
+  cardCategory: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
     textTransform: 'capitalize',
   },
-  link: {
+  cardLink: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.clay,
     textDecorationLine: 'underline',
   },
-  footerCta: {
-    marginTop: spacing[4],
+  partnerLink: {
+    marginTop: spacing[6],
+    paddingVertical: spacing[2],
+    alignSelf: 'flex-start',
   },
-  formBlock: {
-    gap: spacing[4],
-    paddingBottom: spacing[4],
+  partnerLinkText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.clay,
   },
-  formTitle: {
+  formHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing[1],
+  },
+  formHeaderTitle: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.lg,
     color: colors.ink,
-    marginBottom: spacing[1],
+    flex: 1,
   },
-  fieldLabel: {
+  formClose: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.lg,
+    color: colors.inkLight,
+    paddingHorizontal: spacing[2],
+  },
+  chipsLabel: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
@@ -514,14 +480,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing[2],
   },
-  chipRow: {
+  chipsScroll: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing[2],
+    paddingBottom: spacing[1],
   },
   chip: {
     paddingHorizontal: spacing[3],
-    paddingVertical: spacing[1],
+    paddingVertical: spacing[2],
     borderRadius: radius.sm,
     borderWidth: 0.5,
     borderColor: colors.border,
@@ -533,7 +499,7 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontFamily: typography.mono,
-    fontSize: 10,
+    fontSize: fontSize.xs,
     color: colors.inkLight,
   },
   chipLabelActive: {
@@ -548,10 +514,26 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
   },
+  successEmoji: {
+    fontFamily: typography.body,
+    fontSize: 48,
+    color: colors.moss,
+    textAlign: 'center',
+    marginBottom: spacing[3],
+  },
+  successTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.lg,
+    color: colors.ink,
+    textAlign: 'center',
+    marginBottom: spacing[2],
+  },
   successBody: {
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.inkLight,
+    textAlign: 'center',
     lineHeight: 22,
+    marginBottom: spacing[6],
   },
 });
