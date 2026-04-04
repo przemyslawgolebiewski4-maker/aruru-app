@@ -17,6 +17,13 @@ import { apiFetch } from '../../../services/api';
 import { colors, typography, fontSize, spacing, radius } from '../../../theme/tokens';
 import type { AppStackParamList } from '../../../navigation/types';
 
+type SponsorPost_Public = {
+  title: string;
+  content: string;
+  category?: string;
+  createdAt?: string;
+};
+
 type PublicSponsor = {
   id: string;
   name: string;
@@ -24,6 +31,7 @@ type PublicSponsor = {
   websiteUrl?: string;
   logoUrl?: string;
   deliveryCountries?: string[];
+  latestPost?: SponsorPost_Public;
 };
 
 type StatsData = {
@@ -110,6 +118,30 @@ function normalizePublicSponsor(row: unknown, index: number): PublicSponsor {
     : undefined;
   const web = r.websiteUrl ?? r.website_url ?? r.url;
   const logo = r.logoUrl ?? r.logo_url ?? r.logo;
+
+  let latestPost: SponsorPost_Public | undefined;
+  const lpRaw = r.latestPost ?? r.latest_post;
+  const lp =
+    lpRaw && typeof lpRaw === 'object'
+      ? (lpRaw as Record<string, unknown>)
+      : undefined;
+  if (lp && typeof lp.title === 'string') {
+    latestPost = {
+      title: lp.title,
+      content: String(lp.content ?? ''),
+      category:
+        lp.category != null && String(lp.category).trim()
+          ? String(lp.category)
+          : undefined,
+      createdAt:
+        lp.createdAt != null
+          ? String(lp.createdAt)
+          : lp.created_at != null
+            ? String(lp.created_at)
+            : undefined,
+    };
+  }
+
   return {
     id,
     name: String(r.name ?? r.companyName ?? r.company_name ?? ''),
@@ -120,6 +152,7 @@ function normalizePublicSponsor(row: unknown, index: number): PublicSponsor {
     websiteUrl: web != null ? String(web) : undefined,
     logoUrl: logo != null ? String(logo) : undefined,
     deliveryCountries,
+    latestPost,
   };
 }
 
@@ -822,6 +855,21 @@ export default function SponsorsTab() {
                     <Text style={styles.cardLink}>{s.websiteUrl.trim()}</Text>
                   </TouchableOpacity>
                 ) : null}
+                {s.latestPost ? (
+                  <View style={styles.publicPostBlock}>
+                    <Text style={styles.publicPostTitle} numberOfLines={1}>
+                      {s.latestPost.title}
+                    </Text>
+                    <Text style={styles.publicPostContent} numberOfLines={2}>
+                      {s.latestPost.content}
+                    </Text>
+                    {s.latestPost.category ? (
+                      <Text style={styles.publicPostCategory}>
+                        {s.latestPost.category}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             </View>
           ))}
@@ -1158,6 +1206,30 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.clay,
     textDecorationLine: 'underline',
+  },
+  publicPostBlock: {
+    marginTop: spacing[3],
+    paddingTop: spacing[3],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+    gap: spacing[1],
+  },
+  publicPostTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  publicPostContent: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+  },
+  publicPostCategory: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    textTransform: 'capitalize',
   },
   partnerLink: {
     marginTop: spacing[6],
