@@ -182,6 +182,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   const [statusBusy, setStatusBusy] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueAtDate, setDueAtDate] = useState<Date | null>(null);
+  const [logSectionOpen, setLogSectionOpen] = useState(false);
 
   const nameByUserId = useMemo(() => {
     const m = new Map<string, string>();
@@ -322,12 +323,16 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     }
   }
 
+  const parsedLogHours = hoursInput.trim()
+    ? parseFloat(hoursInput.replace(',', '.'))
+    : NaN;
+  const logHoursValid =
+    Number.isFinite(parsedLogHours) && parsedLogHours > 0;
+
   async function submitLog() {
-    const n = hoursInput.trim()
-      ? parseFloat(hoursInput.replace(',', '.'))
-      : NaN;
-    if (isNaN(n) || n <= 0) {
-      setLogError('Enter a number of hours greater than zero.');
+    const n = parsedLogHours;
+    if (!logHoursValid) {
+      setLogError('Add a positive number of hours to save this entry.');
       return;
     }
     const d = logDateInput.trim();
@@ -571,59 +576,76 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
 
       <View style={styles.sectionGap} />
       <SectionLabel>LOG TIME</SectionLabel>
-      <Text style={styles.logHint}>
-        Log work on this task. Hours must be greater than zero. Date defaults
-        to today if left empty (server time).
-      </Text>
-      <View style={styles.logCard}>
-        <View style={styles.logFieldsCol}>
-          <View style={styles.logHoursRow}>
-            <TextInput
-              value={hoursInput}
-              onChangeText={(t) => {
-                setHoursInput(t);
-                setLogError('');
-              }}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={colors.inkFaint}
-              style={styles.hoursField}
-              accessibilityLabel="Hours worked"
+      <TouchableOpacity
+        style={styles.logAccordionHeader}
+        onPress={() => setLogSectionOpen((o) => !o)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: logSectionOpen }}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.logAccordionTitle}>Optional — record time</Text>
+        <Text style={styles.logAccordionChev}>
+          {logSectionOpen ? '▼' : '▶'}
+        </Text>
+      </TouchableOpacity>
+      {logSectionOpen ? (
+        <>
+          <Text style={styles.logHint}>
+            You do not need to log hours to use this task. When you want a time
+            entry, enter hours greater than zero. Date defaults to today if
+            left empty (server).
+          </Text>
+          <View style={styles.logCard}>
+            <View style={styles.logFieldsCol}>
+              <View style={styles.logHoursRow}>
+                <TextInput
+                  value={hoursInput}
+                  onChangeText={(t) => {
+                    setHoursInput(t);
+                    setLogError('');
+                  }}
+                  keyboardType="decimal-pad"
+                  placeholder="Hours"
+                  placeholderTextColor={colors.inkFaint}
+                  style={styles.hoursField}
+                  accessibilityLabel="Hours worked"
+                />
+                <Text style={styles.hoursWord}>hours</Text>
+              </View>
+              <Input
+                placeholder="Date YYYY-MM-DD (optional)"
+                value={logDateInput}
+                onChangeText={(t) => {
+                  setLogDateInput(t);
+                  setLogError('');
+                }}
+                containerStyle={styles.logDateWrap}
+              />
+              <TextInput
+                value={logNoteInput}
+                onChangeText={(t) => {
+                  setLogNoteInput(t.slice(0, 500));
+                  setLogError('');
+                }}
+                placeholder="Note (optional)"
+                placeholderTextColor={colors.inkFaint}
+                multiline
+                style={styles.logNoteInput}
+                textAlignVertical="top"
+              />
+            </View>
+            <Button
+              label="Add entry"
+              variant="primary"
+              onPress={() => void submitLog()}
+              loading={logging}
+              disabled={logging || !logHoursValid}
+              style={styles.logBtn}
             />
-            <Text style={styles.hoursWord}>hours</Text>
           </View>
-          <Input
-            placeholder="Date YYYY-MM-DD (optional)"
-            value={logDateInput}
-            onChangeText={(t) => {
-              setLogDateInput(t);
-              setLogError('');
-            }}
-            containerStyle={styles.logDateWrap}
-          />
-          <TextInput
-            value={logNoteInput}
-            onChangeText={(t) => {
-              setLogNoteInput(t.slice(0, 500));
-              setLogError('');
-            }}
-            placeholder="Note (optional)"
-            placeholderTextColor={colors.inkFaint}
-            multiline
-            style={styles.logNoteInput}
-            textAlignVertical="top"
-          />
-        </View>
-        <Button
-          label="Add entry"
-          variant="primary"
-          onPress={() => void submitLog()}
-          loading={logging}
-          disabled={logging}
-          style={styles.logBtn}
-        />
-      </View>
-      {logError ? <Text style={styles.logErr}>{logError}</Text> : null}
+          {logError ? <Text style={styles.logErr}>{logError}</Text> : null}
+        </>
+      ) : null}
 
       <View style={styles.sectionGap} />
       <SectionLabel>HOURS LOGGED</SectionLabel>
@@ -779,6 +801,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   sectionGap: { height: spacing[5] },
+  logAccordionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[2],
+    marginBottom: spacing[2],
+    backgroundColor: colors.cream,
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  logAccordionTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  logAccordionChev: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+  },
   logHint: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,

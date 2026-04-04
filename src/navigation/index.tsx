@@ -6,7 +6,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  type LinkingOptions,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import { colors, typography, fontSize, spacing } from '../theme/tokens';
@@ -56,7 +59,12 @@ import AdminPricingScreen from '../screens/admin/AdminPricingScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import SponsorPlanScreen from '../screens/sponsor/SponsorPlanScreen';
 import SponsorEditProfileScreen from '../screens/sponsor/SponsorEditProfileScreen';
-import type { AuthStackParamList, AppStackParamList } from './types';
+import type {
+  AuthStackParamList,
+  AppStackParamList,
+  RootStackParamList,
+} from './types';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 const appModalHeaderOptions = {
   headerStyle: { backgroundColor: colors.surface },
@@ -74,6 +82,7 @@ export type { AuthStackParamList, AppStackParamList, MainTabParamList } from './
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 type AuthRoute = {
   [K in keyof AuthStackParamList]: {
@@ -194,6 +203,19 @@ function AuthNavigator({
       <AuthStack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
       <AuthStack.Screen name="PaymentCancelled" component={PaymentCancelledScreen} />
     </AuthStack.Navigator>
+  );
+}
+
+function AuthHost({
+  route,
+}: NativeStackScreenProps<RootStackParamList, 'Auth'>) {
+  const onboardingDone = Boolean(route.params?.onboardingDone);
+  const [authDeepLinkState] = useState(() => getWebAuthDeepLinkInitialState());
+  return (
+    <AuthNavigator
+      initialRouteName={onboardingDone ? 'Login' : 'Onboarding'}
+      deepLinkState={authDeepLinkState}
+    />
   );
 }
 
@@ -391,7 +413,7 @@ function AppNavigator() {
         component={TaskDetailScreen}
         options={({ route }) => ({
           headerShown: true,
-          title: route.params.taskTitle,
+          title: route.params.taskTitle?.trim() || 'Task',
           ...appModalHeaderOptions,
         })}
       />
@@ -538,7 +560,6 @@ export function RootNavigator() {
   const { user, loading: authLoading } = useAuth();
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [onboardingDone, setOnboardingDone] = useState(false);
-  const [authDeepLinkState] = useState(() => getWebAuthDeepLinkInitialState());
 
   useEffect(() => {
     AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
@@ -560,31 +581,59 @@ export function RootNavigator() {
     );
   }
 
-  if (user) {
-    return <AppNavigator />;
-  }
-
   return (
-    <AuthNavigator
-      initialRouteName={onboardingDone ? 'Login' : 'Onboarding'}
-      deepLinkState={authDeepLinkState}
-    />
+    <RootStack.Navigator
+      key={user ? 'authed' : 'guest'}
+      initialRouteName={user ? 'App' : 'Auth'}
+      screenOptions={{ headerShown: false }}
+    >
+      <RootStack.Screen name="App" component={AppNavigator} />
+      <RootStack.Screen
+        name="Auth"
+        component={AuthHost}
+        initialParams={{ onboardingDone }}
+      />
+    </RootStack.Navigator>
   );
 }
 
-export function AppNavigationContainer() {
-  return (
-    <NavigationContainer linking={{
-      prefixes: ['https://aruru.xyz', 'https://aruru-app.vercel.app', 'aruru://'],
-      config: {
+const rootLinking: LinkingOptions<RootStackParamList> = {
+  prefixes: [
+    'https://aruru.xyz',
+    'https://aruru-app.vercel.app',
+    'aruru://',
+  ],
+  config: {
+    screens: {
+      App: {
         screens: {
+          TaskList: {
+            path: 'TaskList/:tenantId?',
+            parse: {
+              tenantId: (v?: string) => v,
+            },
+          },
+          TaskDetail: {
+            path: 'TaskDetail/:tenantId/:taskId',
+            parse: {
+              tenantId: (v: string) => v,
+              taskId: (v: string) => v,
+            },
+          },
+        },
+      } as never,
+      Auth: {
+        screens: {
+          Onboarding: 'onboarding',
+          Login: 'login',
+          Register: 'register',
           VerifyEmail: {
             path: 'verify-email',
             parse: {
-              success: (v) => v,
-              token: (v) => v,
-              error: (v) => v,
-              email: (v) => v,
+              success: (v?: string) => v,
+              token: (v?: string) => v,
+              error: (v?: string) => v,
+              email: (v?: string) => v,
             },
           },
           ForgotPassword: 'forgot-password',
@@ -603,14 +652,21 @@ export function AppNavigationContainer() {
           PaymentSuccess: {
             path: 'payment-success',
             parse: {
-              type: (v?: string) => (v === 'sponsor' ? 'sponsor' : 'studio'),
+              type: (v?: string) =>
+                v === 'sponsor' ? 'sponsor' : 'studio',
               tenantId: (v?: string) => v,
             },
           },
           PaymentCancelled: 'payment-cancelled',
         },
-      },
-    }}>
+      } as never,
+    },
+  },
+};
+
+export function AppNavigationContainer() {
+  return (
+    <NavigationContainer linking={rootLinking}>
       <RootNavigator />
     </NavigationContainer>
   );

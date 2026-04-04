@@ -1,3 +1,9 @@
+/** Root stack: authenticated app vs auth flows (deep linking). */
+export type RootStackParamList = {
+  App: undefined;
+  Auth: { onboardingDone?: boolean };
+};
+
 export type AuthStackParamList = {
   Onboarding: undefined;
   Login: { passwordResetBanner?: boolean } | undefined;
@@ -59,8 +65,8 @@ export type AppStackParamList = {
     scheduledAt: string;
   };
   KilnDetail: { tenantId: string; firingId: string };
-  TaskList: { tenantId: string };
-  TaskDetail: { tenantId: string; taskId: string; taskTitle: string };
+  TaskList: { tenantId?: string };
+  TaskDetail: { tenantId: string; taskId: string; taskTitle?: string };
   CostList: { tenantId: string };
   CostDetail: {
     tenantId: string;
