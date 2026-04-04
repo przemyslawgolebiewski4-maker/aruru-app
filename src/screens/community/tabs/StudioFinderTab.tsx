@@ -16,6 +16,7 @@ import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
 import { colors, typography, fontSize, spacing, radius } from '../../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../../navigation/types';
+import { COUNTRY_NAMES } from '../../../utils/locationData';
 
 type Nav = MaterialTopTabNavigationProp<MainTabParamList>;
 
@@ -31,7 +32,7 @@ type Studio = {
   logoUrl?: string;
 };
 
-const COUNTRIES = ['All', 'Poland', 'Germany', 'UK', 'Netherlands', 'France', 'Italy'];
+const COUNTRIES = ['All', ...COUNTRY_NAMES];
 
 const STUDIO_TAGS = [
   'wheel',

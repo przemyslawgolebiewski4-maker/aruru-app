@@ -40,6 +40,7 @@ import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { alertMessage } from '../../utils/confirmAction';
+import { COUNTRY_NAMES } from '../../utils/locationData';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'StudioSettings'>;
 type Route = RouteProp<AppStackParamList, 'StudioSettings'>;
@@ -117,6 +118,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [error, setError] = useState('');
   const [portalLoading, setPortalLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -451,14 +453,60 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           autoCapitalize="words"
           containerStyle={styles.fieldGap}
         />
-        <Input
-          label="Country"
-          value={country}
-          onChangeText={setCountry}
-          placeholder="e.g. Germany"
-          autoCapitalize="words"
-          containerStyle={styles.fieldGap}
-        />
+        <View style={styles.fieldGap}>
+          <Text style={styles.pickerLabel}>Country</Text>
+          <TouchableOpacity
+            style={styles.pickerToggle}
+            onPress={() => setShowCountryPicker((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Text style={country ? styles.pickerValue : styles.pickerPlaceholder}>
+              {country || 'Select country…'}
+            </Text>
+            <Text style={styles.pickerCaret}>
+              {showCountryPicker ? '▲' : '▼'}
+            </Text>
+          </TouchableOpacity>
+          {showCountryPicker ? (
+            <ScrollView
+              style={styles.pickerDropdown}
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity
+                style={styles.pickerOption}
+                onPress={() => {
+                  setCountry('');
+                  setShowCountryPicker(false);
+                }}
+              >
+                <Text style={styles.pickerOptionText}>— None —</Text>
+              </TouchableOpacity>
+              {COUNTRY_NAMES.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={[
+                    styles.pickerOption,
+                    country === name && styles.pickerOptionActive,
+                  ]}
+                  onPress={() => {
+                    setCountry(name);
+                    setShowCountryPicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.pickerOptionText,
+                      country === name && styles.pickerOptionTextActive,
+                    ]}
+                  >
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : null}
+        </View>
         <Input
           label="Description (internal)"
           value={description}
@@ -613,6 +661,67 @@ const styles = StyleSheet.create({
   saveBtn: { marginTop: spacing[4] },
   subscriptionBtn: { marginTop: spacing[2] },
   subscriptionSection: { marginTop: spacing[6] },
+  pickerLabel: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  pickerToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.surface,
+  },
+  pickerValue: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    flex: 1,
+  },
+  pickerPlaceholder: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkLight,
+    flex: 1,
+  },
+  pickerCaret: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginLeft: spacing[2],
+  },
+  pickerDropdown: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    marginTop: spacing[1],
+  },
+  pickerOption: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  pickerOptionActive: {
+    backgroundColor: colors.clayLight,
+  },
+  pickerOptionText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  pickerOptionTextActive: {
+    color: colors.clay,
+    fontFamily: typography.bodyMedium,
+  },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',

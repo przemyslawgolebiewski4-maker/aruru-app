@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
@@ -7,6 +13,7 @@ import { colors, typography, fontSize, spacing, radius } from '../../theme/token
 import { patchMe, type PatchMeBody } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
+import { COUNTRY_NAMES } from '../../utils/locationData';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
@@ -16,6 +23,8 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
   const [city, setCity] = useState(user?.city ?? '');
+  const [country, setCountry] = useState(user?.country ?? '');
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [instagramUrl, setInstagramUrl] = useState(user?.instagramUrl ?? '');
   const [websiteUrl, setWebsiteUrl] = useState(user?.websiteUrl ?? '');
   const [shopUrl, setShopUrl] = useState(user?.shopUrl ?? '');
@@ -34,6 +43,10 @@ export default function EditProfileScreen({ navigation }: Props) {
   useEffect(() => {
     setAvatarUrl(user?.avatarUrl ?? '');
   }, [user?.avatarUrl]);
+
+  useEffect(() => {
+    setCountry(String(user?.country ?? ''));
+  }, [user?.country]);
 
   useEffect(() => {
     if (user?.communityVisibility) {
@@ -57,6 +70,7 @@ export default function EditProfileScreen({ navigation }: Props) {
         name: name.trim(),
         bio: bio.trim() || null,
         city: city.trim() || null,
+        country: country.trim() || null,
         instagram_url: instagramUrl.trim() || null,
         website_url: websiteUrl.trim() || null,
         shop_url: shopUrl.trim() || null,
@@ -123,6 +137,61 @@ export default function EditProfileScreen({ navigation }: Props) {
         }}
         placeholder="e.g. Warsaw"
       />
+
+      <View>
+        <Text style={styles.pickerLabel}>Country (optional)</Text>
+        <TouchableOpacity
+          style={styles.pickerToggle}
+          onPress={() => setShowCountryPicker((v) => !v)}
+          activeOpacity={0.7}
+        >
+          <Text style={country ? styles.pickerValue : styles.pickerPlaceholder}>
+            {country || 'Select country…'}
+          </Text>
+          <Text style={styles.pickerCaret}>
+            {showCountryPicker ? '▲' : '▼'}
+          </Text>
+        </TouchableOpacity>
+        {showCountryPicker ? (
+          <ScrollView
+            style={styles.pickerDropdown}
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+          >
+            <TouchableOpacity
+              style={styles.pickerOption}
+              onPress={() => {
+                setCountry('');
+                setShowCountryPicker(false);
+              }}
+            >
+              <Text style={styles.pickerOptionText}>— None —</Text>
+            </TouchableOpacity>
+            {COUNTRY_NAMES.map((name) => (
+              <TouchableOpacity
+                key={name}
+                style={[
+                  styles.pickerOption,
+                  country === name && styles.pickerOptionActive,
+                ]}
+                onPress={() => {
+                  setCountry(name);
+                  setShowCountryPicker(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.pickerOptionText,
+                    country === name && styles.pickerOptionTextActive,
+                  ]}
+                >
+                  {name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : null}
+      </View>
 
       <Input
         label="Instagram"
@@ -228,6 +297,67 @@ export default function EditProfileScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
   content: { padding: spacing[4], gap: spacing[4] },
+  pickerLabel: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  pickerToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    backgroundColor: colors.surface,
+  },
+  pickerValue: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    flex: 1,
+  },
+  pickerPlaceholder: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkLight,
+    flex: 1,
+  },
+  pickerCaret: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginLeft: spacing[2],
+  },
+  pickerDropdown: {
+    maxHeight: 200,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    marginTop: spacing[1],
+  },
+  pickerOption: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  pickerOptionActive: {
+    backgroundColor: colors.clayLight,
+  },
+  pickerOptionText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  pickerOptionTextActive: {
+    color: colors.clay,
+    fontFamily: typography.bodyMedium,
+  },
   emailRow: { gap: spacing[1] },
   fieldLabel: {
     fontFamily: typography.mono,

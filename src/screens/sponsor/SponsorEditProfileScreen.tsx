@@ -1,11 +1,19 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Linking,
+  TouchableOpacity,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import ImageUpload from '../../components/ImageUpload';
 import { apiFetch } from '../../services/api';
 import { Button, Input } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
+import { EUROPEAN_COUNTRIES_CODES } from '../../utils/locationData';
 import { alertMessage } from '../../utils/confirmAction';
 import type { AppStackParamList } from '../../navigation/types';
 
@@ -32,6 +40,7 @@ export default function SponsorEditProfileScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +60,10 @@ export default function SponsorEditProfileScreen({ navigation }: Props) {
       );
       setLogoUrl(
         String(raw.logoUrl ?? raw.logo_url ?? '').trim()
+      );
+      const dc = raw.deliveryCountries ?? raw.delivery_countries;
+      setSelectedCountries(
+        Array.isArray(dc) ? dc.map((x) => String(x).toUpperCase()) : []
       );
     } catch {
       alertMessage('Error', 'Could not load sponsor profile.');
@@ -122,6 +135,7 @@ export default function SponsorEditProfileScreen({ navigation }: Props) {
             description: description.trim() || null,
             category: category.trim() || null,
             website_url: websiteUrl.trim() || null,
+            delivery_countries: selectedCountries,
           }),
         },
         ''
@@ -193,6 +207,40 @@ export default function SponsorEditProfileScreen({ navigation }: Props) {
         numberOfLines={4}
         style={styles.textArea}
       />
+
+      <View>
+        <Text style={styles.fieldLabel}>Delivery countries</Text>
+        <Text style={styles.fieldHint}>
+          Where you ship to — used to filter you in the community.
+        </Text>
+        <View style={styles.countryGrid}>
+          {EUROPEAN_COUNTRIES_CODES.map((c) => {
+            const active = selectedCountries.includes(c.code);
+            return (
+              <TouchableOpacity
+                key={c.code}
+                style={[styles.countryChip, active && styles.countryChipActive]}
+                onPress={() =>
+                  setSelectedCountries((prev) =>
+                    active ? prev.filter((x) => x !== c.code) : [...prev, c.code]
+                  )
+                }
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.countryChipText,
+                    active && styles.countryChipTextActive,
+                  ]}
+                >
+                  {c.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+
       <Button
         label="Save"
         onPress={() => void onSave()}
@@ -226,4 +274,42 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
+  fieldLabel: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  fieldHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginBottom: spacing[3],
+    lineHeight: 16,
+  },
+  countryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  countryChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  countryChipActive: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  countryChipText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  countryChipTextActive: {
+    color: colors.surface,
+  },
 });

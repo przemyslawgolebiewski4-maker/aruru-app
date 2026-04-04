@@ -12,6 +12,7 @@ export interface AuthUser {
   emailVerified: boolean;
   bio?: string | null;
   city?: string | null;
+  country?: string | null;
   instagramUrl?: string | null;
   websiteUrl?: string | null;
   shopUrl?: string | null;
@@ -56,6 +57,7 @@ export function normalizeAuthUser(raw: Record<string, unknown>): AuthUser {
     emailVerified: Boolean(raw.emailVerified ?? raw.email_verified),
     bio: (raw.bio ?? null) as string | null,
     city: (raw.city ?? null) as string | null,
+    country: (raw.country ?? null) as string | null,
     instagramUrl: (raw.instagramUrl ?? raw.instagram_url ?? null) as string | null,
     websiteUrl: (raw.websiteUrl ?? raw.website_url ?? null) as string | null,
     shopUrl: (raw.shopUrl ?? raw.shop_url ?? null) as string | null,
@@ -91,6 +93,7 @@ export type PatchMeBody = {
   avatar_url?: string | null;
   bio?: string | null;
   city?: string | null;
+  country?: string | null;
   instagram_url?: string | null;
   website_url?: string | null;
   shop_url?: string | null;
