@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/DateTimeField';
-import { Button, SectionLabel } from '../../components/ui';
+import { Button, Input, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -24,7 +24,11 @@ type Route = RouteProp<AppStackParamList, 'TaskDetail'>;
 
 type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
 
-type EditableTaskStatus = 'todo' | 'in_progress' | 'done';
+type EditableTaskStatus =
+  | 'todo'
+  | 'in_progress'
+  | 'done'
+  | 'cancelled';
 
 type MemberRow = {
   userId: string;
@@ -126,6 +130,7 @@ const STATUS_OPTS: { key: EditableTaskStatus; label: string; dot: string }[] = [
   { key: 'todo', label: 'To do', dot: colors.inkLight },
   { key: 'in_progress', label: 'In progress', dot: colors.clay },
   { key: 'done', label: 'Done', dot: colors.moss },
+  { key: 'cancelled', label: 'Cancelled', dot: colors.inkMid },
 ];
 
 function statusBtnContainerSel(k: EditableTaskStatus) {
@@ -138,19 +143,26 @@ function statusBtnContainerSel(k: EditableTaskStatus) {
   if (k === 'in_progress') {
     return { backgroundColor: colors.clayLight, borderColor: colors.clay };
   }
-  return { backgroundColor: colors.mossLight, borderColor: colors.moss };
+  if (k === 'done') {
+    return { backgroundColor: colors.mossLight, borderColor: colors.moss };
+  }
+  return {
+    backgroundColor: colors.cream,
+    borderColor: colors.inkLight,
+  };
 }
 
 function statusBtnLabelSelColor(k: EditableTaskStatus): string {
   if (k === 'todo') return colors.ink;
   if (k === 'in_progress') return colors.clayDark;
-  return colors.mossDark;
+  if (k === 'done') return colors.mossDark;
+  return colors.inkMid;
 }
 
 export default function TaskDetailScreen({ route }: { route: Route }) {
   const { tenantId, taskId, taskTitle: paramTitle } = route.params;
   const navigation = useNavigation<Nav>();
-  const { studios } = useAuth();
+  const { user, studios } = useAuth();
 
   const role = studios.find((s) => s.tenantId === tenantId)?.role;
   const isStaff = role === 'owner' || role === 'assistant';
@@ -161,8 +173,12 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [hoursInput, setHoursInput] = useState('');
+  const [logDateInput, setLogDateInput] = useState('');
+  const [logNoteInput, setLogNoteInput] = useState('');
   const [logging, setLogging] = useState(false);
   const [logError, setLogError] = useState('');
+  const [descDraft, setDescDraft] = useState('');
+  const [descSaving, setDescSaving] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [editingDueDate, setEditingDueDate] = useState(false);
   const [dueAtDate, setDueAtDate] = useState<Date | null>(null);
@@ -239,6 +255,11 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     );
   }, [task, editingDueDate]);
 
+  useEffect(() => {
+    if (!task) return;
+    setDescDraft((task.description ?? '').toString());
+  }, [task?.id, task?.description]);
+
   const displayTitle = (task?.title ?? paramTitle ?? 'Task').trim();
 
   useLayoutEffect(() => {
@@ -274,8 +295,13 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     return s;
   }, [logs]);
 
+  const canEditTask =
+    !!task &&
+    (isStaff ||
+      (!!user?.id && createdById(task) === user.id));
+
   async function handleStatusChange(newStatus: string) {
-    if (!task || !isStaff || statusBusy) return;
+    if (!task || !canEditTask || statusBusy) return;
     setStatusBusy(true);
     try {
       await apiFetch(
@@ -297,32 +323,40 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   }
 
   async function submitLog() {
-    if (!isStaff) return;
     const n = hoursInput.trim()
       ? parseFloat(hoursInput.replace(',', '.'))
-      : 0;
-    if (isNaN(n) || n < 0) {
-      setLogError('Hours must be 0 or more.');
+      : NaN;
+    if (isNaN(n) || n <= 0) {
+      setLogError('Enter a number of hours greater than zero.');
       return;
     }
-    const ok =
-      typeof window !== 'undefined'
-        ? window.confirm('Log these hours on this task?')
-        : true;
-    if (!ok) return;
+    const d = logDateInput.trim();
+    if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      setLogError('Use date format YYYY-MM-DD, or leave empty for today.');
+      return;
+    }
 
     setLogging(true);
     setLogError('');
     try {
+      const body: { hours: number; date?: string; note?: string } = {
+        hours: n,
+      };
+      if (d) body.date = d;
+      const note = logNoteInput.trim();
+      if (note) body.note = note.slice(0, 500);
+
       await apiFetch(
         `/studios/${tenantId}/tasks/${taskId}/logs`,
         {
           method: 'POST',
-          body: JSON.stringify({ hours: n }),
+          body: JSON.stringify(body),
         },
         tenantId
       );
       setHoursInput('');
+      setLogDateInput('');
+      setLogNoteInput('');
       const logsRes = await apiFetch<unknown>(
         `/studios/${tenantId}/tasks/${taskId}/logs`,
         {},
@@ -333,6 +367,31 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
       setLogError(e instanceof Error ? e.message : 'Could not log hours.');
     } finally {
       setLogging(false);
+    }
+  }
+
+  async function saveDescription() {
+    if (!task || !canEditTask) return;
+    setDescSaving(true);
+    setError('');
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/tasks/${taskId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ description: descDraft.trim() }),
+        },
+        tenantId
+      );
+      setTask((prev) =>
+        prev ? { ...prev, description: descDraft.trim() || null } : prev
+      );
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : 'Could not save description.'
+      );
+    } finally {
+      setDescSaving(false);
     }
   }
 
@@ -373,7 +432,7 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
           </View>
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Due date</Text>
-            {isStaff ? (
+            {canEditTask ? (
               editingDueDate ? (
                 <View style={{ gap: spacing[2], flex: 1, alignItems: 'flex-end' }}>
                   <DateTimeField
@@ -447,8 +506,36 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
         </View>
       </View>
 
+      <SectionLabel>DESCRIPTION</SectionLabel>
+      {canEditTask ? (
+        <View style={styles.descCard}>
+          <TextInput
+            value={descDraft}
+            onChangeText={setDescDraft}
+            placeholder="Add details for your studio…"
+            placeholderTextColor={colors.inkFaint}
+            multiline
+            style={styles.descInput}
+            textAlignVertical="top"
+          />
+          <Button
+            label="Save description"
+            variant="secondary"
+            onPress={() => void saveDescription()}
+            loading={descSaving}
+            disabled={descSaving}
+            style={styles.descSaveBtn}
+          />
+        </View>
+      ) : (
+        <Text style={styles.descReadOnly}>
+          {(task.description ?? '').trim() || 'No description.'}
+        </Text>
+      )}
+
+      <View style={styles.sectionGap} />
       <SectionLabel>STATUS</SectionLabel>
-      {isStaff ? (
+      {canEditTask ? (
         <View style={styles.statusRow}>
           {STATUS_OPTS.map((opt) => {
             const sel = currentStatus === opt.key;
@@ -477,15 +564,20 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
         </View>
       ) : (
         <Text style={styles.memberStatus}>
-          {STATUS_OPTS.find((o) => o.key === currentStatus)?.label ?? currentStatus}
+          {STATUS_OPTS.find((o) => o.key === currentStatus)?.label ??
+            currentStatus}
         </Text>
       )}
 
-      {isStaff ? (
-        <>
-          <View style={styles.sectionGap} />
-          <SectionLabel>LOG HOURS</SectionLabel>
-          <View style={styles.logCard}>
+      <View style={styles.sectionGap} />
+      <SectionLabel>LOG TIME</SectionLabel>
+      <Text style={styles.logHint}>
+        Log work on this task. Hours must be greater than zero. Date defaults
+        to today if left empty (server time).
+      </Text>
+      <View style={styles.logCard}>
+        <View style={styles.logFieldsCol}>
+          <View style={styles.logHoursRow}>
             <TextInput
               value={hoursInput}
               onChangeText={(t) => {
@@ -493,23 +585,45 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
                 setLogError('');
               }}
               keyboardType="decimal-pad"
-              placeholder="Hours (optional)"
+              placeholder="0"
               placeholderTextColor={colors.inkFaint}
               style={styles.hoursField}
+              accessibilityLabel="Hours worked"
             />
             <Text style={styles.hoursWord}>hours</Text>
-            <Button
-              label="Log"
-              variant="primary"
-              onPress={() => void submitLog()}
-              loading={logging}
-              disabled={logging}
-              style={styles.logBtn}
-            />
           </View>
-          {logError ? <Text style={styles.logErr}>{logError}</Text> : null}
-        </>
-      ) : null}
+          <Input
+            placeholder="Date YYYY-MM-DD (optional)"
+            value={logDateInput}
+            onChangeText={(t) => {
+              setLogDateInput(t);
+              setLogError('');
+            }}
+            containerStyle={styles.logDateWrap}
+          />
+          <TextInput
+            value={logNoteInput}
+            onChangeText={(t) => {
+              setLogNoteInput(t.slice(0, 500));
+              setLogError('');
+            }}
+            placeholder="Note (optional)"
+            placeholderTextColor={colors.inkFaint}
+            multiline
+            style={styles.logNoteInput}
+            textAlignVertical="top"
+          />
+        </View>
+        <Button
+          label="Add entry"
+          variant="primary"
+          onPress={() => void submitLog()}
+          loading={logging}
+          disabled={logging}
+          style={styles.logBtn}
+        />
+      </View>
+      {logError ? <Text style={styles.logErr}>{logError}</Text> : null}
 
       <View style={styles.sectionGap} />
       <SectionLabel>HOURS LOGGED</SectionLabel>
@@ -611,9 +725,16 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     flex: 1,
   },
-  statusRow: { flexDirection: 'row', gap: 8, marginBottom: spacing[2] },
+  statusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
   statusBtn: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: '44%',
+    maxWidth: '48%',
     paddingVertical: 10,
     borderWidth: 0.5,
     borderColor: colors.border,
@@ -634,17 +755,54 @@ const styles = StyleSheet.create({
     color: colors.inkMid,
     marginBottom: spacing[2],
   },
-  sectionGap: { height: spacing[5] },
-  logCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  descCard: {
     backgroundColor: colors.cream,
     borderRadius: radius.md,
-    padding: 14,
-    gap: 8,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    padding: spacing[3],
+    marginBottom: spacing[2],
+  },
+  descInput: {
+    minHeight: 88,
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: spacing[3],
+  },
+  descSaveBtn: { alignSelf: 'flex-start' },
+  descReadOnly: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkMid,
+    lineHeight: 22,
+    marginBottom: spacing[2],
+  },
+  sectionGap: { height: spacing[5] },
+  logHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    marginBottom: spacing[3],
+    lineHeight: 20,
+  },
+  logCard: {
+    flexDirection: 'column',
+    backgroundColor: colors.cream,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    gap: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  logFieldsCol: { gap: spacing[2] },
+  logHoursRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
   },
   hoursField: {
-    width: 80,
+    width: 88,
     fontSize: 20,
     fontFamily: typography.mono,
     color: colors.clayDark,
@@ -657,14 +815,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceRaised,
   },
   hoursWord: {
-    flex: 1,
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.inkMid,
   },
+  logDateWrap: { marginBottom: 0 },
+  logNoteInput: {
+    minHeight: 64,
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing[2],
+    backgroundColor: colors.surfaceRaised,
+  },
   logBtn: {
-    minWidth: 72,
-    flexShrink: 0,
+    alignSelf: 'flex-start',
+    minWidth: 120,
   },
   logErr: {
     marginTop: 8,

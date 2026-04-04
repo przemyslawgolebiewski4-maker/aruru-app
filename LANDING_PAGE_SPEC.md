@@ -30,34 +30,90 @@ Dokument do wdrożenia na `aruru.xyz` (obok aplikacji Expo Web). Cel: jasna prop
 
 ## 3. Architektura strony (sekcje, kolejność)
 
+**Język interfejsu strony docelowej:** angielski (copy w §3.1). Poniżej: struktura + kotwice nawigacji po angielsku.
+
 1. **Nagłówek (sticky, lekki)**  
-   Logo tekstowe „Aruru” + linki: Funkcje, Dla kogo, Bezpieczeństwo (kotwice) + **Zaloguj** + **Rozpocznij** (primary).
+   Wordmark „Aruru” + linki kotwicowe: **Features**, **Who it’s for**, **Security** + **Log in** + **Get started** (primary).
 
 2. **Hero**  
-   - Krótki headline (np. *Software for ceramic studios — calm, organised, together.*)  
-   - Jedno zdanie pod spodem (wartość: członkowie, rezerwacje, community, wielopracownia).  
-   - Dwa przyciski: **Utwórz konto** → `/register` lub nawigacja do ekranu Register w SPA; **Zaloguj** → `/login` lub odpowiednik.  
-   - Opcjonalnie: ilustracja lub zdjęcie pracowni (stock lub własne), bez carouselu w MVP.
+   - Headline (np. *Software for ceramic studios — calm, organised, together.*)  
+   - Jedno zdanie wartości (członkowie, community, operacje pracowni).  
+   - **Get started** → `/register` (lub ekran Register w SPA); **Log in** → `/login`.  
+   - Opcjonalnie: jedna ilustracja / zdjęcie — bez karuzeli w MVP.
 
 3. **Social proof (opcjonalnie w MVP)**  
-   Jeśli brak liczb z API — cytat od beta usera lub „Built with studios in Europe” (bez fałszywych metryk).
+   Cytat beta lub neutralna linia typu *Built with studios in Europe* — bez liczb z API, jeśli ich nie ma.
 
-4. **Funkcje (3–5 kart)**  
-   Krótkie, konkretne: wielopracownia i role, community / feed, powiadomienia, piece (kiln) / zadania / materiały — zgodnie z tym, co aplikacja realnie oferuje (nie obiecywać modułów, których nie ma).
+4. **Features**  
+   Sekcja kart — **gotowe copy po angielsku w §3.1** (Tasks dopięte pod kontrakt backendu; pozostałe karty krótkie i zgodne z modułami w aplikacji).
 
-5. **Dla kogo**  
-   Owner / assistant / member — jedna kolumna lub trzy krótkie bloki; język prosty.
+5. **Who it’s for**  
+   Trzy krótkie bloki: **Studio owners**, **Assistants**, **Members** — prosty język, bez żargonu API.
 
-6. **Bezpieczeństwo i prywatność**  
-   Dane per tenant (`tenant_id`), hosting EU (Frankfurt), link do polityki prywatności / regulaminu (URL statyczny lub zewnętrzny, do uzupełnienia).
+6. **Security & privacy**  
+   Dane izolowane per studio, hosting EU (Frankfurt), linki do Privacy / Terms (URL do uzupełnienia).
 
-7. **Sponsorzy (jeśli produktowy)**  
-   Krótki blok: „Dla marek” + CTA do rejestracji ścieżki sponsora (jeśli front to obsługuje przez Register). Bez obietnic cenowych na landing, jeśli ceny są tylko w aplikacji po zatwierdzeniu.
+7. **Partners (sponsors)**  
+   Krótki blok dla marek + CTA do ścieżki sponsora w rejestracji — bez cen na landing, jeśli ceny są tylko w aplikacji.
 
-8. **Stopka**  
-   ©, linki prawne, e-mail kontaktowy (opcjonalnie `mailto:`), opcjonalnie link do status page.
+8. **Footer**  
+   ©, legal links, opcjonalnie `mailto:`, opcjonalnie link do status page.
 
 **Nie w MVP:** blog, pełna dokumentacja API, chatbot.
+
+---
+
+## 3.1 Feature copy — English (implementation text)
+
+Wszystkie nagłówki i akapity poniżej są **gotowe do wklejenia** na landing (dostosuj tylko długość linii pod layout). Karty mają ten sam rytm: **tytuł → jedno zdanie lead → 3–5 punktów** (Tasks ma pełniejszy zakres, bo domknięty pod backend).
+
+### Tasks
+
+**Card title:** Tasks & studio time
+
+**Lead:** Keep studio work visible in one place: assign jobs, set deadlines, move tasks through clear stages, and log hours against each task so everyone sees the same history.
+
+**Bullets (visitor-facing):**
+
+- **Clear workflow** — Every task moves through **To do**, **In progress**, **Done**, or **Cancelled**, so the studio shares one simple picture of what’s happening.
+- **Priorities & ownership** — Set **low**, **normal**, or **high** priority; optionally assign a member and a **due date** so nothing important slips through the cracks.
+- **Fair editing rules** — **Owners** and **assistants** can update or remove any task. **Members** can edit or delete tasks **they created**, keeping day-to-day control with leads where it belongs.
+- **Time on the record** — Add **time logs** with hours, a **date** (defaults to today if omitted), and an optional **note**. The whole studio can read the log history for a task—useful for commissions, open studios, or shared workloads.
+- **Subscription-aware** — Creating new tasks is available when the studio’s plan is active; if the subscription lapses, the app can prompt people to **renew** instead of failing silently.
+
+**Do not promise on the landing:** clearing a due date or wiping fields via API quirks (backend treats many `null` PATCH fields as “no change”; unassign uses empty assignee, not `null`) — implementers: see internal alignment below.
+
+**Micro-line (optional, under card):** *Tasks and logs are scoped to your studio—only members of that studio can see them.*
+
+---
+
+### Other feature cards (short — align with shipped app)
+
+| Card title | One-line lead |
+|------------|----------------|
+| **Your studio, your space** | One account, many studios; roles (**owner**, **assistant**, **member**) are per studio, so the same person can work differently in each place. |
+| **Community** | Feed, discover studios and artists, forum-style discussions—stay connected beyond the kiln room. |
+| **Kiln & firings** | Plan and track firings so members know what’s in the kiln and what’s next. |
+| **Materials** | Shop and catalog flows for studio materials—keep ordering and stock in the same ecosystem. |
+| **Stay informed** | Notifications so members and staff see what matters without digging through threads. |
+
+*(Skróć lub ukryj karty modułów, których jeszcze nie publikujecie publicznie.)*
+
+---
+
+### 3.2 Tasks ↔ backend (internal verification, not landing copy)
+
+| Marketing claim | Backend / product note |
+|-----------------|-------------------------|
+| Statuses To do / In progress / Done / Cancelled | `TaskStatus`: `todo`, `in_progress`, `done`, `cancelled`. |
+| Priorities | `low` \| `normal` (default) \| `high`. |
+| Assignee & due date | Optional; `assigneeUserId` must be valid member id when set; remove assignee with **empty string** on PATCH, not `null`. |
+| List & filter | `GET /studios/{tenant_id}/tasks` optional `?status=…`; sorted by `due_at` ascending (nulls: verify on prod). |
+| Create task | `POST /studios/{tenant_id}/tasks`; **402** if subscription blocked; **403** if email unverified or not a member. |
+| Edit / delete | `PATCH` / `DELETE` …`/tasks/{task_id}`; owner & assistant always; member only if `createdBy` matches current user. |
+| Time logs | `GET` / `POST` …`/tasks/{task_id}/logs`; `hours` > 0; `date` `YYYY-MM-DD` or omit (server UTC today); `note` optional. |
+| After task delete | Logs may remain in DB with orphaned `taskId`—UI should not assume logs disappear. |
+| Tenant context | Prefer `tenant_id` in URL for tasks; auth: `Authorization: Bearer`; membership enforced. |
 
 ---
 
@@ -148,7 +204,7 @@ Każdy punkt poniżej to **osobna decyzja produktowa**; implementować tylko po 
 
 ## 8. Checklist przed wdrożeniem
 
-- [ ] Zatwierdzone copy (PL/EN) i finalne CTA URL  
+- [ ] Zatwierdzone copy (landing EN wg §3.1) i finalne CTA URL  
 - [ ] `og:image` wygenerowany i hostowany (Vercel / CDN)  
 - [ ] Polityka prywatności i ewentualnie cookies (jeśli analytics)  
 - [ ] `/login` i `/register` działają w SPA na produkcji  
@@ -156,4 +212,4 @@ Każdy punkt poniżej to **osobna decyzja produktowa**; implementować tylko po 
 
 ---
 
-*Dokument roboczy — dopasuj sekcję „Funkcje” do aktualnego stanu modułów w aplikacji przed publikacją.*
+*Dokument roboczy — sekcja Tasks + Features (§3.1) jest zsynchronizowana z API studia; przed publikacją skróć tabelę „Other feature cards” do modułów faktycznie promowanych.*
