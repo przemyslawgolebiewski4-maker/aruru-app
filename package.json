@@ -8,6 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "export:web": "expo export --platform web && node ./scripts/copy-landing-to-dist.cjs",
+    "build": "npm run export:web",
     "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {
