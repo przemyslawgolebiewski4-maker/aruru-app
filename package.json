@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "export:web": "expo export --platform web && node ./scripts/copy-landing-to-dist.cjs",
     "build": "npm run export:web",
+    "verify:dist": "npm run build && git diff --exit-code HEAD -- dist",
     "lint": "eslint . --ext .ts,.tsx"
   },
   "dependencies": {

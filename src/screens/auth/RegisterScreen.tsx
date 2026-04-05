@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
@@ -51,6 +52,8 @@ export default function RegisterScreen({ navigation }: Props) {
     FieldKey | 'password' | 'confirmPassword' | null
   >(null);
   const [isSponsor, setIsSponsor] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsError, setTermsError] = useState('');
 
   function runValidation(): boolean {
     const next: Partial<Record<FieldKey, string>> = {
@@ -64,6 +67,11 @@ export default function RegisterScreen({ navigation }: Props) {
   async function handleRegister() {
     setError('');
     setPasswordError('');
+    if (!agreedToTerms) {
+      setTermsError('You must accept the Privacy Policy and Terms of Service.');
+      return;
+    }
+    setTermsError('');
     if (password.length < 8) {
       setPasswordError('Password must be at least 8 characters');
       return;
@@ -265,6 +273,45 @@ export default function RegisterScreen({ navigation }: Props) {
             </View>
           ) : null}
 
+          <TouchableOpacity
+            style={styles.consentRow}
+            onPress={() => {
+              setAgreedToTerms((v) => !v);
+              setTermsError('');
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreedToTerms }}
+          >
+            <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+              {agreedToTerms ? (
+                <Text style={styles.checkmark}>✓</Text>
+              ) : null}
+            </View>
+            <Text style={styles.consentText}>
+              I agree to the{' '}
+              <Text
+                style={styles.consentLink}
+                onPress={() => void Linking.openURL('https://aruru.xyz/privacy')}
+                accessibilityRole="link"
+              >
+                Privacy Policy
+              </Text>
+              {' '}and{' '}
+              <Text
+                style={styles.consentLink}
+                onPress={() => void Linking.openURL('https://aruru.xyz/terms')}
+                accessibilityRole="link"
+              >
+                Terms of Service
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
+          {termsError ? (
+            <Text style={styles.termsErrorText}>{termsError}</Text>
+          ) : null}
+
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
@@ -406,6 +453,54 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     lineHeight: 18,
+  },
+  consentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[3],
+    marginBottom: spacing[3],
+    marginTop: spacing[2],
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 1,
+    backgroundColor: colors.surface,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  checkmark: {
+    fontSize: 12,
+    color: colors.surface,
+    fontFamily: typography.bodyMedium,
+    lineHeight: 14,
+  },
+  consentText: {
+    flex: 1,
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+  },
+  consentLink: {
+    fontFamily: typography.bodyMedium,
+    color: colors.clay,
+    textDecorationLine: 'underline',
+  },
+  termsErrorText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    marginBottom: spacing[2],
+    marginTop: -spacing[2],
   },
   errorBox: {
     backgroundColor: colors.errorLight,

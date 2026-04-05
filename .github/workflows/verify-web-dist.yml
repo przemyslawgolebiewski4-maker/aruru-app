@@ -1,0 +1,53 @@
+# Fails if committed dist/ does not match a fresh `npm run build`.
+# Prevents merging app or landing changes without updating the static web bundle.
+
+name: Verify web dist
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'app.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'index.js'
+      - 'babel.config.js'
+      - 'metro.config.js'
+      - 'dist/**'
+      - '.github/workflows/verify-web-dist.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'app.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'index.js'
+      - 'babel.config.js'
+      - 'metro.config.js'
+      - 'dist/**'
+      - '.github/workflows/verify-web-dist.yml'
+
+jobs:
+  dist-in-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate dist
+        run: npm run build
+
+      - name: Assert dist matches commit
+        run: git diff --exit-code HEAD -- dist
