@@ -1,14 +1,541 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aruru</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aruru — Studio management and community for ceramicists</title>
+  <meta name="description" content="Aruru is studio management software and a global community for ceramic studios and ceramicists. Run your studio, stay in the loop, connect with artists and studios across Europe." />
+  <meta property="og:title" content="Aruru — Studio management and community for ceramicists" />
+  <meta property="og:description" content="Run your studio, stay connected, discover workshops. One platform for ceramic studios and the people who love clay." />
+  <meta property="og:url" content="https://aruru.xyz/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://aruru.xyz/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Aruru — Studio management and community for ceramicists" />
+  <meta name="twitter:description" content="Run your studio, stay connected, discover workshops. One platform for ceramic studios and the people who love clay." />
+  <link rel="canonical" href="https://aruru.xyz/" />
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Aruru","url":"https://aruru.xyz","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android","description":"Studio management and global community platform for ceramic artists and studios."}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --clay:#C4714A; --clay-light:#F0DDD3; --clay-dim:#9E5A37;
+      --moss:#4A5E3A; --moss-light:#D4DEC9;
+      --cream:#F7F3ED; --surface:#FDFAF6;
+      --ink:#1E1A16; --ink-mid:#6B5E52; --ink-light:#9C8E82;
+      --border:rgba(30,26,22,0.10); --border-mid:rgba(30,26,22,0.16);
+      --serif:'DM Serif Display',Georgia,serif;
+      --sans:'Instrument Sans',system-ui,sans-serif;
+      --mono:'DM Mono',monospace;
+      --r-sm:6px; --r-md:12px; --r-lg:20px; --nav-h:64px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+    img{display:block;max-width:100%;}
+    a{color:inherit;text-decoration:none;}
+    ul{list-style:none;}
+    .container{max-width:1100px;margin:0 auto;padding:0 24px;}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes grain{0%,100%{transform:translate(0,0)}10%{transform:translate(-2%,-3%)}30%{transform:translate(3%,2%)}50%{transform:translate(-1%,4%)}70%{transform:translate(4%,-1%)}90%{transform:translate(-3%,3%)}}
+    .fu{animation:fadeUp 0.7s ease both;} .fi{animation:fadeIn 0.55s ease both;}
+    .d1{animation-delay:.10s} .d2{animation-delay:.20s} .d3{animation-delay:.32s} .d4{animation-delay:.44s} .d5{animation-delay:.56s}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 20px;border-radius:var(--r-sm);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;border:none;text-decoration:none;}
+    .btn-ghost{background:transparent;color:var(--ink-mid);} .btn-ghost:hover{color:var(--ink);background:rgba(30,26,22,.06);}
+    .btn-primary{background:var(--clay);color:#fff;} .btn-primary:hover{background:var(--clay-dim);}
+    .btn-outline{background:transparent;color:var(--clay);border:1.5px solid var(--clay);} .btn-outline:hover{background:var(--clay-light);}
+    .btn-moss{background:var(--moss);color:#fff;} .btn-moss:hover{background:#3a4d2d;}
+    .btn-lg{height:52px;padding:0 32px;font-size:16px;}
+
+    /* NAV */
+    .nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:rgba(247,243,237,.90);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
+    .nav__inner{display:flex;align-items:center;justify-content:space-between;height:100%;}
+    .nav__wordmark{font-family:var(--serif);font-size:22px;color:var(--clay);letter-spacing:-.3px;}
+    .nav__links{display:flex;align-items:center;gap:28px;}
+    .nav__links a{font-size:14px;font-weight:500;color:var(--ink-mid);transition:color .15s;} .nav__links a:hover{color:var(--ink);}
+    .nav__cta{display:flex;align-items:center;gap:10px;}
+    .nav__tog{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:4px;}
+    .nav__tog span{display:block;width:22px;height:2px;background:var(--ink);border-radius:2px;}
+
+    /* HERO */
+    .hero{position:relative;overflow:hidden;padding:96px 0 80px;}
+    .hero::before{content:'';position:absolute;inset:-50%;width:200%;height:200%;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");background-size:200px;opacity:.5;pointer-events:none;animation:grain 8s steps(1) infinite;}
+    .hero::after{content:'';position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(196,113,74,.10) 0%,transparent 68%);top:-200px;right:-140px;pointer-events:none;}
+    .hero__inner{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;}
+    .hero__eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--clay-light);color:var(--clay-dim);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:100px;margin-bottom:20px;}
+    .hero__eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--clay);}
+    .hero__title{font-family:var(--serif);font-size:clamp(36px,5vw,56px);line-height:1.08;letter-spacing:-.03em;color:var(--ink);margin-bottom:20px;}
+    .hero__title em{font-style:italic;color:var(--clay);}
+    .hero__sub{font-size:18px;color:var(--ink-mid);line-height:1.65;margin-bottom:32px;max-width:460px;}
+    .hero__actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+    .hero__note{font-family:var(--mono);font-size:12px;color:var(--ink-light);}
+
+    /* STATS */
+    .stats{border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--surface);padding:44px 0;}
+    .stats__inner{display:flex;justify-content:center;flex-wrap:wrap;}
+    .stat{display:flex;flex-direction:column;align-items:center;padding:0 52px;border-right:1px solid var(--border);}
+    .stat:last-child{border-right:none;}
+    .stat__num{font-family:var(--serif);font-size:46px;color:var(--clay);line-height:1;margin-bottom:5px;}
+    .stat__label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-light);}
+
+    /* SHARED */
+    section{padding:96px 0;}
+    .sec-label{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--clay);margin-bottom:12px;}
+    .sec-title{font-family:var(--serif);font-size:clamp(28px,3.5vw,42px);line-height:1.12;letter-spacing:-.02em;color:var(--ink);margin-bottom:16px;}
+    .sec-sub{font-size:17px;color:var(--ink-mid);line-height:1.65;max-width:520px;}
+
+    /* VALUE PANELS */
+    #value{padding:0;}
+    .value-header{text-align:center;padding:80px 24px 56px;background:var(--surface);}
+    .value-header .sec-sub{margin:0 auto;}
+    .value-panels{display:grid;grid-template-columns:repeat(3,1fr);}
+    .vp{padding:60px 36px;border-right:1px solid var(--border);position:relative;overflow:hidden;transition:background .2s;}
+    .vp:last-child{border-right:none;} .vp:hover{background:#fff;}
+    .vp__stripe{position:absolute;top:0;left:0;right:0;height:4px;}
+    .vp__stripe.clay{background:var(--clay);} .vp__stripe.moss{background:var(--moss);} .vp__stripe.gold{background:#B8924A;}
+    .vp__who{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-light);margin-bottom:10px;margin-top:20px;}
+    .vp__title{font-family:var(--serif);font-size:24px;color:var(--ink);margin-bottom:12px;line-height:1.2;}
+    .vp__lead{font-size:15px;color:var(--ink-mid);line-height:1.65;margin-bottom:22px;}
+    .vp__points{display:flex;flex-direction:column;gap:12px;}
+    .vpoint{font-size:14px;color:var(--ink-mid);display:flex;align-items:flex-start;gap:10px;line-height:1.5;}
+    .vpoint__ic{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px;}
+    .vpoint__ic.clay{background:var(--clay-light);color:var(--clay-dim);}
+    .vpoint__ic.moss{background:var(--moss-light);color:var(--moss);}
+    .vpoint__ic.gold{background:#F0E6D0;color:#8A6A2A;}
+    .vp__cta{margin-top:28px;}
+
+    /* COMMUNITY */
+    #community{background:var(--cream);}
+    .comm-inner{display:grid;grid-template-columns:5fr 4fr;gap:80px;align-items:center;}
+    .comm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:36px;}
+    .comm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:22px;transition:border-color .2s,box-shadow .2s;}
+    .comm-card:hover{border-color:var(--border-mid);box-shadow:0 4px 18px rgba(30,26,22,.06);}
+    .comm-card__icon{font-size:22px;margin-bottom:10px;}
+    .comm-card__title{font-family:var(--serif);font-size:17px;color:var(--ink);margin-bottom:5px;}
+    .comm-card__body{font-size:13px;color:var(--ink-mid);line-height:1.6;}
+    .comm-quote{background:var(--ink);border-radius:var(--r-lg);padding:40px 36px;position:relative;overflow:hidden;}
+    .comm-quote::before{content:'"';position:absolute;top:-20px;left:20px;font-family:var(--serif);font-size:140px;color:rgba(196,113,74,.18);line-height:1;}
+    .comm-quote p{font-family:var(--serif);font-size:20px;line-height:1.55;color:rgba(247,243,237,.9);position:relative;z-index:1;margin-bottom:24px;font-style:italic;}
+    .no-algo{display:flex;flex-direction:column;gap:9px;position:relative;z-index:1;}
+    .no-algo-item{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;color:rgba(247,243,237,.6);}
+    .no-algo-item::before{content:'✓';color:#8AB06A;font-weight:700;}
+
+    /* FEATURES */
+    #features{background:var(--surface);}
+    .feat-header{text-align:center;margin-bottom:56px;}
+    .feat-header .sec-sub{margin:0 auto;}
+    .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
+    .fc{background:var(--surface);padding:32px 28px;transition:background .2s;} .fc:hover{background:#fff;}
+    .fc__icon{width:42px;height:42px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:18px;}
+    .fc__icon.c{background:var(--clay-light);} .fc__icon.m{background:var(--moss-light);}
+    .fc__title{font-family:var(--serif);font-size:19px;color:var(--ink);margin-bottom:7px;}
+    .fc__body{font-size:14px;color:var(--ink-mid);line-height:1.65;}
+    .fc__list{margin-top:12px;display:flex;flex-direction:column;gap:5px;}
+    .fc__list li{font-size:13px;color:var(--ink-mid);display:flex;align-items:flex-start;gap:7px;}
+    .fc__list li::before{content:'—';color:var(--clay);font-family:var(--mono);font-size:12px;flex-shrink:0;margin-top:2px;}
+
+    /* SPONSORS */
+    #sponsors{background:var(--ink);color:var(--cream);}
+    .sp-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+    #sponsors .sec-label{color:var(--clay-light);}
+    #sponsors .sec-title{color:var(--cream);}
+    #sponsors .sec-sub{color:rgba(247,243,237,.65);}
+    .sp-flow{display:flex;flex-direction:column;border:1px solid rgba(247,243,237,.10);border-radius:var(--r-lg);overflow:hidden;}
+    .sp-step{padding:22px 26px;border-bottom:1px solid rgba(247,243,237,.08);display:flex;gap:18px;align-items:flex-start;}
+    .sp-step:last-child{border-bottom:none;}
+    .sp-num{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:rgba(196,113,74,.20);border:1px solid rgba(196,113,74,.30);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--clay-light);}
+    .sp-step-title{font-size:15px;font-weight:600;color:rgba(247,243,237,.9);margin-bottom:3px;}
+    .sp-step-body{font-size:13px;color:rgba(247,243,237,.55);line-height:1.55;}
+    .sp-cta-box{margin-top:28px;padding:22px;border-radius:var(--r-md);background:rgba(196,113,74,.12);border:1px solid rgba(196,113,74,.20);}
+    .sp-cta-box p{font-size:14px;color:rgba(247,243,237,.7);line-height:1.6;margin-bottom:14px;}
+
+    /* SECURITY */
+    #security{background:var(--cream);}
+    .sec-inner-2{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+    .pills{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px;}
+    .pill{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:100px;background:var(--surface);border:1px solid var(--border);font-family:var(--mono);font-size:12px;color:var(--ink-mid);}
+    .pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--clay);flex-shrink:0;}
+    .pill.m::before{background:var(--moss);}
+    .sec-cards{display:flex;flex-direction:column;gap:14px;}
+    .sec-card{padding:20px 22px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface);}
+    .sec-card__label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-light);margin-bottom:4px;}
+    .sec-card__val{font-size:14px;color:var(--ink);font-weight:500;}
+
+    /* CTA */
+    .cta-sec{background:var(--cream);text-align:center;padding:112px 0;position:relative;overflow:hidden;}
+    .cta-sec::before{content:'';position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(196,113,74,.08) 0%,transparent 65%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;}
+    .cta-sec .sec-title{font-size:clamp(30px,4vw,50px);max-width:600px;margin:0 auto 14px;}
+    .cta-sec .sec-sub{margin:0 auto 40px;max-width:440px;}
+    .cta-actions{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;}
+    .cta-note{margin-top:16px;font-family:var(--mono);font-size:12px;color:var(--ink-light);}
+
+    footer{background:var(--ink);color:rgba(247,243,237,.55);padding:48px 0;}
+    .foot-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;}
+    .foot-wm{font-family:var(--serif);font-size:20px;color:var(--clay);}
+    .foot-links{display:flex;gap:24px;flex-wrap:wrap;}
+    .foot-links a{font-size:13px;color:rgba(247,243,237,.45);transition:color .15s;} .foot-links a:hover{color:rgba(247,243,237,.85);}
+    .foot-copy{font-family:var(--mono);font-size:11px;color:rgba(247,243,237,.30);}
+
+    .mob-nav{display:none;position:fixed;inset:0;background:var(--cream);z-index:99;padding:80px 24px 40px;flex-direction:column;gap:4px;}
+    .mob-nav.open{display:flex;}
+    .mob-nav a{font-size:20px;font-family:var(--serif);color:var(--ink);padding:12px 0;border-bottom:1px solid var(--border);}
+    .mob-nav__x{position:absolute;top:20px;right:24px;background:none;border:none;font-size:28px;cursor:pointer;color:var(--ink);}
+
+    @media(max-width:900px){
+      .nav__links{display:none;} .nav__tog{display:flex;}
+      .hero__inner{grid-template-columns:1fr;gap:48px;} .hero__vis{order:-1;}
+      .value-panels{grid-template-columns:1fr;}
+      .vp{border-right:none;border-bottom:1px solid var(--border);} .vp:last-child{border-bottom:none;}
+      .comm-inner{grid-template-columns:1fr;gap:48px;}
+      .feat-grid{grid-template-columns:1fr;}
+      .sp-inner{grid-template-columns:1fr;gap:48px;}
+      .sec-inner-2{grid-template-columns:1fr;gap:48px;}
+      .stat{padding:0 28px;} .stat__num{font-size:38px;}
+      .foot-inner{flex-direction:column;align-items:flex-start;}
+    }
+    @media(max-width:600px){
+      section{padding:72px 0;} .hero{padding:72px 0 56px;}
+      .comm-grid{grid-template-columns:1fr;}
+      .stats__inner{flex-direction:column;}
+      .stat{padding:16px 0;border-right:none;border-bottom:1px solid var(--border);flex-direction:row;justify-content:space-between;align-items:center;}
+      .stat:last-child{border-bottom:none;}
+    }
+  </style>
 </head>
 <body>
-  <main>
-    <h1>Aruru</h1>
-    <p>Replace this file with your full landing page markup.</p>
-  </main>
+
+<!-- NAV -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="container nav__inner">
+    <a href="/" class="nav__wordmark">Aruru</a>
+    <ul class="nav__links" role="list">
+      <li><a href="#value">For you</a></li>
+      <li><a href="#community">Community</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#sponsors">Partners</a></li>
+      <li><a href="#security">Security</a></li>
+    </ul>
+    <div class="nav__cta">
+      <a href="/login" class="btn btn-ghost">Log in</a>
+      <a href="/register" class="btn btn-primary">Get started</a>
+    </div>
+    <button class="nav__tog" aria-label="Open menu" onclick="openNav()"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<nav class="mob-nav" id="mobNav" aria-label="Mobile navigation">
+  <button class="mob-nav__x" onclick="closeNav()" aria-label="Close">✕</button>
+  <a href="#value" onclick="closeNav()">For you</a>
+  <a href="#community" onclick="closeNav()">Community</a>
+  <a href="#features" onclick="closeNav()">Features</a>
+  <a href="#sponsors" onclick="closeNav()">Partners</a>
+  <a href="#security" onclick="closeNav()">Security</a>
+  <a href="/login" style="margin-top:16px" onclick="closeNav()">Log in</a>
+  <a href="/register" style="color:var(--clay);font-weight:600" onclick="closeNav()">Get started →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" aria-labelledby="hero-title">
+  <div class="container">
+    <div class="hero__inner">
+      <div>
+        <div class="hero__eyebrow fi">Studio management · Global ceramics community</div>
+        <h1 id="hero-title" class="hero__title fu d1">
+          One platform for<br />ceramic studios<br />and the people<br /><em>who love clay.</em>
+        </h1>
+        <p class="hero__sub fu d2">Run your studio without the chaos. Stay connected with members, other studios, and ceramicists across Europe — all in one calm place.</p>
+        <div class="hero__actions fu d3">
+          <a href="/register" class="btn btn-primary btn-lg">Get started free</a>
+          <a href="#value" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+        <p class="hero__note fu d4">14-day free trial · No credit card required</p>
+      </div>
+      <div class="hero__vis fi d2" aria-hidden="true">
+        <svg viewBox="0 0 420 460" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:420px;">
+          <circle cx="210" cy="230" r="200" fill="rgba(196,113,74,.07)"/>
+          <path d="M148 168 Q116 252 124 334 Q138 398 210 402 Q282 398 296 334 Q304 252 272 168 Z" fill="rgba(196,113,74,.13)" stroke="#C4714A" stroke-width="1.5"/>
+          <path d="M168 168 Q184 136 210 130 Q236 136 252 168" stroke="#C4714A" stroke-width="1.5" fill="none"/>
+          <ellipse cx="210" cy="130" rx="42" ry="11" fill="rgba(196,113,74,.18)" stroke="#C4714A" stroke-width="1.5"/>
+          <path d="M173 212 Q171 246 173 278" stroke="rgba(196,113,74,.38)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M210 206 Q208 228 210 248" stroke="rgba(196,113,74,.28)" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M247 218 Q249 254 247 282" stroke="rgba(196,113,74,.33)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M156 212 Q210 206 264 212" stroke="rgba(196,113,74,.18)" stroke-width="1" fill="none"/>
+          <path d="M148 254 Q210 247 272 254" stroke="rgba(196,113,74,.16)" stroke-width="1" fill="none"/>
+          <path d="M150 296 Q210 289 270 296" stroke="rgba(196,113,74,.12)" stroke-width="1" fill="none"/>
+          <ellipse cx="90" cy="336" rx="30" ry="11" fill="rgba(74,94,58,.12)" stroke="#4A5E3A" stroke-width="1"/>
+          <path d="M62 336 Q60 314 90 310 Q120 314 118 336" fill="rgba(74,94,58,.08)" stroke="#4A5E3A" stroke-width="1"/>
+          <ellipse cx="328" cy="344" rx="23" ry="9" fill="rgba(196,113,74,.10)" stroke="#C4714A" stroke-width="1" opacity=".7"/>
+          <path d="M306 344 Q304 327 328 323 Q352 327 350 344" fill="rgba(196,113,74,.07)" stroke="#C4714A" stroke-width="1" opacity=".7"/>
+          <rect x="82" y="408" width="256" height="6" rx="3" fill="rgba(30,26,22,.08)"/>
+          <circle cx="338" cy="148" r="5" fill="rgba(196,113,74,.28)"/>
+          <circle cx="78" cy="196" r="4" fill="rgba(74,94,58,.22)"/>
+          <circle cx="356" cy="272" r="3.5" fill="rgba(196,113,74,.22)"/>
+          <circle cx="62" cy="290" r="3" fill="rgba(74,94,58,.18)"/>
+          <line x1="338" y1="148" x2="272" y2="168" stroke="rgba(196,113,74,.15)" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="78" y1="196" x2="148" y2="212" stroke="rgba(74,94,58,.15)" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="356" y1="272" x2="296" y2="280" stroke="rgba(196,113,74,.12)" stroke-width="1" stroke-dasharray="4 3"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats" role="region" aria-label="Community statistics">
+  <div class="container">
+    <div class="stats__inner">
+      <div class="stat fu"><span class="stat__num" id="ss">—</span><span class="stat__label">Studios</span></div>
+      <div class="stat fu d1"><span class="stat__num" id="sa">—</span><span class="stat__label">Ceramicists</span></div>
+      <div class="stat fu d2"><span class="stat__num" id="sc">—</span><span class="stat__label">Countries</span></div>
+      <div class="stat fu d3"><span class="stat__num" id="sp">—</span><span class="stat__label">Partners</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- VALUE PROPS -->
+<section id="value" aria-labelledby="value-title" style="padding:0;">
+  <div class="value-header">
+    <p class="sec-label">Who is Aruru for?</p>
+    <h2 id="value-title" class="sec-title" style="max-width:520px;margin:0 auto 14px;">Built for everyone<br />who works with clay.</h2>
+    <p class="sec-sub">Whether you run a studio, work in one, or simply love ceramics — Aruru has a place for you.</p>
+  </div>
+
+  <div class="value-panels">
+
+    <!-- OWNER -->
+    <div class="vp fu">
+      <div class="vp__stripe clay"></div>
+      <p class="vp__who">Studio owner</p>
+      <h3 class="vp__title">Run your studio with full visibility</h3>
+      <p class="vp__lead">Everything to manage a ceramic studio in one calm place — no scattered spreadsheets, no chasing members for information. You always know what's happening.</p>
+      <div class="vp__points">
+        <div class="vpoint"><div class="vpoint__ic clay">🔥</div><span><strong>Kiln management</strong> — open sessions, log pieces by weight, close and split costs automatically per member</span></div>
+        <div class="vpoint"><div class="vpoint__ic clay">✓</div><span><strong>Tasks and team</strong> — assign work, set priorities, track hours. Owner, assistant and member roles keep control where it belongs</span></div>
+        <div class="vpoint"><div class="vpoint__ic clay">💶</div><span><strong>Costs and billing</strong> — per-member cost summaries with HTML export. Ready for manual billing without extra tools</span></div>
+        <div class="vpoint"><div class="vpoint__ic clay">🌍</div><span><strong>Connect with other studios</strong> — your studio appears in the community directory. Exchange experiences with owners across Europe</span></div>
+      </div>
+      <div class="vp__cta"><a href="/register" class="btn btn-primary">Start your studio →</a></div>
+    </div>
+
+    <!-- MEMBER -->
+    <div class="vp fu d1">
+      <div class="vp__stripe moss"></div>
+      <p class="vp__who">Ceramicist · Member</p>
+      <h3 class="vp__title">Everything in one place — no more hunting</h3>
+      <p class="vp__lead">Your studio costs, kiln schedule, upcoming events, and tasks — all in one app. No more digging through emails, WhatsApp groups, or separate spreadsheets.</p>
+      <div class="vp__points">
+        <div class="vpoint"><div class="vpoint__ic moss">📋</div><span><strong>Your costs and history</strong> — see exactly what you owe and what's in the kiln this week, without asking anyone</span></div>
+        <div class="vpoint"><div class="vpoint__ic moss">📅</div><span><strong>Events and workshops</strong> — discover open studios, courses, and exhibitions from studios near you and across Europe</span></div>
+        <div class="vpoint"><div class="vpoint__ic moss">💬</div><span><strong>Community forum</strong> — share techniques, ask questions, exchange experiences with ceramicists from other studios</span></div>
+        <div class="vpoint"><div class="vpoint__ic moss">🏺</div><span><strong>Global artist profile</strong> — one account works across multiple studios. Your profile and community connections travel with you</span></div>
+      </div>
+      <div class="vp__cta"><a href="/register" class="btn btn-moss">Join as a ceramicist →</a></div>
+    </div>
+
+    <!-- SPONSOR -->
+    <div class="vp fu d2">
+      <div class="vp__stripe gold"></div>
+      <p class="vp__who">Clay supplier · Brand · Partner</p>
+      <h3 class="vp__title">Reach ceramicists where purchasing decisions are made</h3>
+      <p class="vp__lead">Aruru is growing a focused community of studios and serious ceramicists. Your brand is where they look for materials, tools, and suppliers — not in a generic marketplace.</p>
+      <div class="vp__points">
+        <div class="vpoint"><div class="vpoint__ic gold">🛒</div><span><strong>Direct shop link</strong> — ceramicists discover your products and go straight to your store in one tap, without leaving the app</span></div>
+        <div class="vpoint"><div class="vpoint__ic gold">📰</div><span><strong>Monthly posts</strong> — share new products, launches, and seasonal offers. Clearly marked as sponsored — honest, not hidden</span></div>
+        <div class="vpoint"><div class="vpoint__ic gold">📊</div><span><strong>Real reach stats</strong> — see clicks and profile views each month. Know exactly who's discovering your brand</span></div>
+        <div class="vpoint"><div class="vpoint__ic gold">🌍</div><span><strong>Country filter</strong> — ceramicists filter partners by delivery country. You reach the studios and artists you actually ship to</span></div>
+      </div>
+      <div class="vp__cta"><a href="/register?sponsor=true" class="btn btn-outline">Apply as a partner →</a></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- COMMUNITY -->
+<section id="community" aria-labelledby="comm-title">
+  <div class="container">
+    <div class="comm-inner">
+      <div>
+        <p class="sec-label">Community</p>
+        <h2 id="comm-title" class="sec-title fu">The ceramics world is bigger than your kiln room.</h2>
+        <p class="sec-sub fu d1">Aruru connects ceramic studios and artists across Europe — not just within a single studio, but between them. Discover studios in other cities, find workshops worth travelling for, share what you've learned, and connect with people who understand why you spend weekends covered in clay.</p>
+        <div class="comm-grid">
+          <div class="comm-card fu d1">
+            <div class="comm-card__icon">🗺️</div>
+            <h3 class="comm-card__title">Find studios</h3>
+            <p class="comm-card__body">Search by city and country. Discover open studios, residencies, and collaborative spaces near you or anywhere in Europe.</p>
+          </div>
+          <div class="comm-card fu d2">
+            <div class="comm-card__icon">📅</div>
+            <h3 class="comm-card__title">Discover workshops</h3>
+            <p class="comm-card__body">Public events from studios across the network — chronological and unfiltered. No algorithm decides what you see.</p>
+          </div>
+          <div class="comm-card fu d3">
+            <div class="comm-card__icon">💬</div>
+            <h3 class="comm-card__title">Share experiences</h3>
+            <p class="comm-card__body">Forum for techniques, materials, and studio life. Ask questions from people who've fired the same clay.</p>
+          </div>
+          <div class="comm-card fu d4">
+            <div class="comm-card__icon">👤</div>
+            <h3 class="comm-card__title">Artist profiles</h3>
+            <p class="comm-card__body">A global profile that follows you across studios. Your city, your work, your connections — always with you.</p>
+          </div>
+        </div>
+      </div>
+      <div class="comm-quote fu d2">
+        <p>"No algorithms. No engagement bait. Just ceramicists finding each other — because good work deserves a real community."</p>
+        <div class="no-algo">
+          <div class="no-algo-item">Chronological feeds only</div>
+          <div class="no-algo-item">No targeted advertising</div>
+          <div class="no-algo-item">Transparent sponsorship</div>
+          <div class="no-algo-item">No selling your data</div>
+          <div class="no-algo-item">Open studio directory</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" aria-labelledby="feat-title">
+  <div class="container">
+    <div class="feat-header">
+      <p class="sec-label">Studio tools</p>
+      <h2 id="feat-title" class="sec-title">Everything a studio needs,<br />nothing it doesn't.</h2>
+      <p class="sec-sub">One place for the operational layer of your studio — so you can spend more time at the wheel.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="fc fu"><div class="fc__icon c">🔥</div><h3 class="fc__title">Kiln & firings</h3><p class="fc__body">Open sessions, load pieces by weight, close and calculate costs per member automatically.</p><ul class="fc__list"><li>Cost split across members</li><li>Firing history and records</li><li>Reopen closed sessions</li></ul></div>
+      <div class="fc fu d1"><div class="fc__icon c">✓</div><h3 class="fc__title">Tasks & time logs</h3><p class="fc__body">Assign work, set priorities and due dates, log hours. Studio-wide visibility on what's happening.</p><ul class="fc__list"><li>To do · In progress · Done · Cancelled</li><li>Hour logs with notes</li><li>Role-aware edit permissions</li></ul></div>
+      <div class="fc fu d2"><div class="fc__icon c">📅</div><h3 class="fc__title">Events</h3><p class="fc__body">Schedule workshops and open studios. Public events appear in the community feed automatically.</p><ul class="fc__list"><li>Calendar and list view</li><li>Public or studio-private</li><li>Community discovery</li></ul></div>
+      <div class="fc fu"><div class="fc__icon c">💶</div><h3 class="fc__title">Costs & billing</h3><p class="fc__body">Track kiln costs, material purchases, and charges per member. Export summaries for billing.</p><ul class="fc__list"><li>Live cost view per member</li><li>Cost summaries and HTML export</li><li>Material purchase history</li></ul></div>
+      <div class="fc fu d1"><div class="fc__icon m">🌿</div><h3 class="fc__title">Members & roles</h3><p class="fc__body">Owner, assistant, member — scoped per studio. One account works across multiple studios.</p><ul class="fc__list"><li>Email invitations</li><li>Membership plans</li><li>Attendance tracking</li></ul></div>
+      <div class="fc fu d2"><div class="fc__icon m">🔔</div><h3 class="fc__title">Notifications</h3><p class="fc__body">Members see what matters without digging through threads — forum replies, events, studio updates.</p><ul class="fc__list"><li>In-app notifications</li><li>Forum reply alerts</li><li>New member notifications</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- SPONSORS -->
+<section id="sponsors" aria-labelledby="sp-title">
+  <div class="container">
+    <div class="sp-inner">
+      <div>
+        <p class="sec-label">For brands & suppliers</p>
+        <h2 id="sp-title" class="sec-title">Where ceramicists<br />discover what to buy.</h2>
+        <p class="sec-sub">Aruru is building a focused community of studio operators and practicing ceramicists. The partner directory is where they look for trusted suppliers — from clay and glazes to tools and books.</p>
+        <div class="sp-cta-box" style="margin-top:32px;">
+          <p>As the community grows, so does your reach. Ceramicists visit the sponsor section to find materials, check out new products, and go directly to your store — all without leaving Aruru.</p>
+          <a href="/register?sponsor=true" class="btn btn-primary">Apply as a partner</a>
+        </div>
+      </div>
+      <div class="sp-flow fu d1">
+        <div class="sp-step"><div class="sp-num">1</div><div><p class="sp-step-title">Register and get approved</p><p class="sp-step-body">Apply with your company details. We review and approve suppliers relevant to the ceramics community.</p></div></div>
+        <div class="sp-step"><div class="sp-num">2</div><div><p class="sp-step-title">Set up your profile and shop link</p><p class="sp-step-body">Add your logo, description, product categories, and a direct link to your online store. Ceramicists tap once to shop.</p></div></div>
+        <div class="sp-step"><div class="sp-num">3</div><div><p class="sp-step-title">Post monthly updates</p><p class="sp-step-body">Share new products, seasonal offers, or news from your brand. Always clearly marked — honest, not hidden.</p></div></div>
+        <div class="sp-step"><div class="sp-num">4</div><div><p class="sp-step-title">Track your reach</p><p class="sp-step-body">See how many ceramicists visited your profile and clicked through to your store each month. Real numbers, no guessing.</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section id="security" aria-labelledby="sec-title">
+  <div class="container">
+    <div class="sec-inner-2">
+      <div>
+        <p class="sec-label">Security & privacy</p>
+        <h2 id="sec-title" class="sec-title fu">Your studio data stays<br />your studio data.</h2>
+        <p class="sec-sub fu d1">Multi-tenant architecture with strict per-studio isolation. Your data never touches another studio's data — by design, not policy.</p>
+        <div class="pills fu d2">
+          <span class="pill">EU hosting · Frankfurt</span>
+          <span class="pill">Bcrypt passwords</span>
+          <span class="pill">HTTPS everywhere</span>
+          <span class="pill m">2FA · TOTP + email</span>
+          <span class="pill m">GDPR compliant</span>
+          <span class="pill">No ads · No tracking</span>
+          <span class="pill">Rate-limited auth</span>
+          <span class="pill m">Data export & deletion</span>
+        </div>
+      </div>
+      <div class="sec-cards fu d1">
+        <div class="sec-card"><p class="sec-card__label">Database location</p><p class="sec-card__val">MongoDB Atlas · Frankfurt, Germany (eu-central-1)</p></div>
+        <div class="sec-card"><p class="sec-card__label">Data isolation</p><p class="sec-card__val">Strict tenant scoping on every query — studio A cannot see studio B</p></div>
+        <div class="sec-card"><p class="sec-card__label">Authentication</p><p class="sec-card__val">JWT · 30-day TTL · Optional 2FA (TOTP or email code)</p></div>
+        <div class="sec-card"><p class="sec-card__label">Your rights</p><p class="sec-card__val">Download your data · Delete your account · GDPR Art. 15–22</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-sec" aria-labelledby="cta-title">
+  <div class="container" style="position:relative;z-index:1;">
+    <p class="sec-label" style="text-align:center;">Ready to start?</p>
+    <h2 id="cta-title" class="sec-title fu">Your studio. Your community.<br />Your clay.</h2>
+    <p class="sec-sub fu d1">Join studios and ceramicists across Europe already using Aruru to stay organised, connected, and inspired.</p>
+    <div class="cta-actions fu d2">
+      <a href="/register" class="btn btn-primary btn-lg">Create your studio</a>
+      <a href="/register" class="btn btn-outline btn-lg">Join as a ceramicist</a>
+    </div>
+    <p class="cta-note fu d3">14-day free trial · No credit card required · Cancel anytime</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer role="contentinfo">
+  <div class="container">
+    <div class="foot-inner">
+      <span class="foot-wm">Aruru</span>
+      <nav class="foot-links" aria-label="Footer navigation">
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Service</a>
+        <a href="mailto:hello@aruru.xyz">Contact</a>
+      </nav>
+      <span class="foot-copy">© 2026 Przemysław Gołębiewski · Built for ceramicists</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  function openNav()  { document.getElementById('mobNav').classList.add('open'); }
+  function closeNav() { document.getElementById('mobNav').classList.remove('open'); }
+
+  async function loadStats() {
+    try {
+      const r = await fetch('https://aruru-backend-production.up.railway.app/public/stats');
+      if (!r.ok) return;
+      const d = await r.json();
+      count('ss', d.studioCount    ?? 0);
+      count('sa', d.artistCount    ?? 0);
+      count('sc', d.countriesCount ?? 0);
+      count('sp', d.sponsorCount   ?? 0);
+    } catch {}
+  }
+
+  function count(id, target) {
+    const el = document.getElementById(id);
+    if (!el || target === 0) { if(el) el.textContent='0'; return; }
+    const dur=1200, t0=performance.now();
+    (function step(now){
+      const p=Math.min((now-t0)/dur,1), e=1-Math.pow(1-p,3);
+      el.textContent=Math.round(e*target).toLocaleString('en');
+      if(p<1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{ if(e.isIntersecting){e.target.style.animationPlayState='running';io.unobserve(e.target);} });
+    },{threshold:0.10});
+    document.querySelectorAll('.fu,.fi').forEach(el=>{
+      if(el.getBoundingClientRect().top>window.innerHeight){el.style.animationPlayState='paused';io.observe(el);}
+    });
+  }
+
+  loadStats();
+</script>
 </body>
 </html>
