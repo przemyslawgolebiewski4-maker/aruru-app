@@ -506,3 +506,21 @@ export async function setPricing(
     tenantId
   );
 }
+
+export async function deleteStudio(tenantId: string): Promise<{ message: string }> {
+  return apiFetch(`/studios/${tenantId}`, { method: 'DELETE' }, tenantId);
+}
+
+export async function patchStudioVisibility(
+  tenantId: string,
+  communityVisible: boolean
+): Promise<void> {
+  await apiFetch(
+    `/studios/${tenantId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ community_visible: communityVisible }),
+    },
+    tenantId
+  );
+}

@@ -37,9 +37,13 @@ function formatTierLabel(tier?: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import {
+  apiFetch,
+  deleteStudio,
+  patchStudioVisibility,
+} from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
-import { alertMessage } from '../../utils/confirmAction';
+import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
 import { COUNTRY_NAMES } from '../../utils/locationData';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'StudioSettings'>;
@@ -119,6 +123,9 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [communityVisible, setCommunityVisible] = useState(true);
+  const [visibilityLoading, setVisibilityLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -155,6 +162,9 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       setInstagramUrl(pickStr(s, 'instagramUrl', 'instagram_url'));
       setWebsiteUrl(pickStr(s, 'websiteUrl', 'website_url'));
       setShopUrl(pickStr(s, 'shopUrl', 'shop_url'));
+      setCommunityVisible(
+        Boolean(s.communityVisible ?? s.community_visible ?? true)
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studio.');
       setName(studioName ?? '');
@@ -405,6 +415,49 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     );
   }
 
+  async function handleToggleVisibility() {
+    if (!tenantId) return;
+    const next = !communityVisible;
+    setVisibilityLoading(true);
+    try {
+      await patchStudioVisibility(tenantId, next);
+      setCommunityVisible(next);
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not update visibility.'
+      );
+    } finally {
+      setVisibilityLoading(false);
+    }
+  }
+
+  async function handleDeleteStudio() {
+    if (!tenantId) return;
+    const confirmed = await confirmDestructive(
+      'Delete studio?',
+      'Your studio and all its data will be permanently removed after 90 days. ' +
+        'Members will lose access immediately. ' +
+        'If you have an active subscription, cancel it separately in the billing portal to avoid charges. ' +
+        'This action cannot be undone.',
+      'Delete studio'
+    );
+    if (!confirmed) return;
+    setDeleteLoading(true);
+    try {
+      await deleteStudio(tenantId);
+      await refresh();
+      navigation.getParent()?.navigate('Main');
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not delete studio.'
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  }
+
   if (!isOwner) return null;
 
   if (loading) {
@@ -602,6 +655,56 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           <SectionLabel>Subscription</SectionLabel>
           {subscriptionStatusUI()}
         </View>
+
+        {/* ── Community visibility ── */}
+        <View style={styles.dangerSection}>
+          <SectionLabel>Community</SectionLabel>
+
+          <View style={styles.dangerRow}>
+            <View style={styles.dangerRowText}>
+              <Text style={styles.dangerRowTitle}>Visible in community</Text>
+              <Text style={styles.dangerRowSub}>
+                Your studio appears in Studio Finder and the public event feed.
+                Hide it to make it private — your members are not affected.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => void handleToggleVisibility()}
+              disabled={visibilityLoading}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: communityVisible }}
+              style={[styles.toggle, communityVisible && styles.toggleOn]}
+              activeOpacity={0.75}
+            >
+              <View
+                style={[
+                  styles.toggleThumb,
+                  communityVisible && styles.toggleThumbOn,
+                ]}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Delete studio ── */}
+          <View style={[styles.dangerRow, { marginTop: spacing[4] }]}>
+            <View style={styles.dangerRowText}>
+              <Text style={styles.dangerRowTitle}>Delete studio</Text>
+              <Text style={styles.dangerRowSub}>
+                Removes all studio data after a 90-day retention period.
+                Members lose access immediately. Subscription must be cancelled
+                separately.
+              </Text>
+            </View>
+          </View>
+          <Button
+            label="Delete this studio"
+            variant="ghost"
+            onPress={() => void handleDeleteStudio()}
+            loading={deleteLoading}
+            fullWidth
+            style={styles.deleteBtn}
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -744,5 +847,54 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 20,
     marginBottom: spacing[2],
+  },
+  dangerSection: {
+    marginTop: spacing[8],
+    paddingTop: spacing[6],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+    gap: spacing[3],
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing[3],
+  },
+  dangerRowText: { flex: 1 },
+  dangerRowTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginBottom: 3,
+  },
+  dangerRowSub: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+  },
+  toggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.border,
+    padding: 3,
+    justifyContent: 'center',
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  toggleOn: { backgroundColor: colors.moss },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+    alignSelf: 'flex-start',
+  },
+  toggleThumbOn: { alignSelf: 'flex-end' },
+  deleteBtn: {
+    borderColor: colors.error,
+    marginTop: spacing[2],
   },
 });
