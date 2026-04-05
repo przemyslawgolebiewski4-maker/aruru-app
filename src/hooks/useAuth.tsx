@@ -106,6 +106,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function refreshOrThrow() {
+    const token = await getToken();
+    if (!token) {
+      setUser(null);
+      setStudios([]);
+      return;
+    }
+    const me = await getMe();
+    setUser(me.user);
+    setStudios(normalizeStudios(me.studios));
+
+    for (const studio of me.studios) {
+      if (studio.status === 'invited') {
+        try {
+          await apiFetch(
+            `/studios/${studio.tenantId}/accept-invite`,
+            { method: 'POST' },
+            studio.tenantId
+          );
+        } catch {
+          // silent
+        }
+      }
+    }
+    if (me.studios.some((s) => s.status === 'invited')) {
+      const updated = await getMe();
+      setUser(updated.user);
+      setStudios(normalizeStudios(updated.studios));
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -129,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Unexpected login response');
       }
       await finalizeLoginSession(data.access_token);
-      await refresh();
+      await refreshOrThrow();
     } catch (e: unknown) {
       if (e instanceof TwoFactorRequiredError) throw e;
       const msg =
@@ -156,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         code,
       });
       await finalizeLoginSession(data.access_token);
-      await refresh();
+      await refreshOrThrow();
     } catch (e: unknown) {
       const msg =
         e instanceof ApiError
