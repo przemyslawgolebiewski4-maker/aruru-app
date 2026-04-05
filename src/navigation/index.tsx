@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,10 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   NavigationContainer,
+  getStateFromPath as getStateFromPathDefault,
   type LinkingOptions,
 } from '@react-navigation/native';
+import type { NavigationState, PartialState } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import { colors, typography, fontSize, spacing } from '../theme/tokens';
@@ -597,6 +599,38 @@ export function RootNavigator() {
   );
 }
 
+/**
+ * Paths handled by Auth stack linking. If the browser URL stays on one of these
+ * after a successful login or 2FA, React Navigation would otherwise rebuild the
+ * Auth stack from the URL and hide the app — common on web (/login).
+ */
+function isAuthOnlyPublicPath(pathWithQuery: string): boolean {
+  const path = pathWithQuery.split('?')[0].replace(/\/+$/, '') || '/';
+  const exact = new Set([
+    '/login',
+    '/register',
+    '/onboarding',
+    '/forgot-password',
+    '/reset-password',
+  ]);
+  if (exact.has(path)) return true;
+  return path === '/verify-email' || path.startsWith('/verify-email/');
+}
+
+/** Root state: App → Main (tabs home). Used when logged-in user hits an auth URL. */
+const LOGGED_IN_ROOT_STATE: PartialState<NavigationState> = {
+  routes: [
+    {
+      name: 'App',
+      state: {
+        routes: [{ name: 'Main' }],
+        index: 0,
+      },
+    },
+  ],
+  index: 0,
+};
+
 const rootLinking: LinkingOptions<RootStackParamList> = {
   prefixes: [
     'https://aruru.xyz',
@@ -665,8 +699,26 @@ const rootLinking: LinkingOptions<RootStackParamList> = {
 };
 
 export function AppNavigationContainer() {
+  const { user } = useAuth();
+  const authed = user != null;
+
+  const linking = useMemo((): LinkingOptions<RootStackParamList> => {
+    return {
+      ...rootLinking,
+      getStateFromPath(path, options) {
+        if (authed && isAuthOnlyPublicPath(path)) {
+          return LOGGED_IN_ROOT_STATE;
+        }
+        return getStateFromPathDefault(path, options);
+      },
+    };
+  }, [authed]);
+
   return (
-    <NavigationContainer linking={rootLinking}>
+    <NavigationContainer
+      linking={linking}
+      key={authed ? 'linking-authed' : 'linking-guest'}
+    >
       <RootNavigator />
     </NavigationContainer>
   );
