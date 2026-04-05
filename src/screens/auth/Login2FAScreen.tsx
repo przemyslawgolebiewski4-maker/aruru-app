@@ -123,6 +123,7 @@ export default function Login2FAScreen({ navigation, route }: Props) {
               label="Send code to e-mail"
               onPress={() => void handleSendEmail()}
               loading={sendLoading}
+              disabled={verifyLoading}
               variant="secondary"
               fullWidth
             />
