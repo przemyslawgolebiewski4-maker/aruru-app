@@ -45,13 +45,14 @@ export default function Login2FAScreen({ navigation, route }: Props) {
 
   async function submitTotp() {
     setError('');
-    if (!totpCode.trim()) {
+    const code = totpCode.trim();
+    if (!code) {
       setError('Enter the code from your authenticator app.');
       return;
     }
     setVerifyLoading(true);
     try {
-      await completeSignInWith2FA(pendingToken, 'totp', totpCode);
+      await completeSignInWith2FA(pendingToken, 'totp', code);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Invalid code.');
     } finally {
@@ -106,11 +107,17 @@ export default function Login2FAScreen({ navigation, route }: Props) {
               maxLength={8}
               placeholder="000000"
               autoComplete="one-time-code"
+              returnKeyType="done"
+              editable={!verifyLoading}
+              onSubmitEditing={() => {
+                if (!verifyLoading) void submitTotp();
+              }}
             />
             <Button
               label="Verify with app"
               onPress={() => void submitTotp()}
               loading={verifyLoading}
+              accessibilityLabel="Verify with authenticator app"
               fullWidth
             />
           </View>

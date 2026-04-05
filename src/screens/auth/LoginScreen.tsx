@@ -40,7 +40,7 @@ export default function LoginScreen({ navigation }: Props) {
       if (e instanceof TwoFactorRequiredError) {
         navigation.navigate('Login2FA', {
           pendingToken: e.pendingToken,
-          methods: e.methods.length ? e.methods : ['totp', 'email'],
+          methods: e.methods?.length ? e.methods : ['totp', 'email'],
           email: email.trim().toLowerCase(),
         });
         return;

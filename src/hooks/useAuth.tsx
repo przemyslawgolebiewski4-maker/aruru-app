@@ -154,7 +154,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await authLoginPassword(email.trim().toLowerCase(), password);
       if ('two_factor_required' in data && data.two_factor_required) {
-        throw new TwoFactorRequiredError(data.pending_token, data.methods);
+        const m = data.methods;
+        const methods: ('totp' | 'email')[] =
+          Array.isArray(m) && m.length > 0 ? m : ['totp', 'email'];
+        throw new TwoFactorRequiredError(data.pending_token, methods);
       }
       if (!('access_token' in data)) {
         throw new Error('Unexpected login response');
