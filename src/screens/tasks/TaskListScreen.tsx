@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  TextInput,
   ActivityIndicator,
   RefreshControl,
   Modal,
@@ -15,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/DateTimeField';
+import TaskCalendar from '../../components/TaskCalendar';
 import { Avatar, Badge, Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -156,36 +158,6 @@ function firstName(label: string) {
   return s.split(/\s+/)[0] ?? s;
 }
 
-function startOfWeekMonday(ref: Date): Date {
-  const d = new Date(ref);
-  d.setHours(0, 0, 0, 0);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d;
-}
-
-function addDays(d: Date, n: number): Date {
-  const x = new Date(d);
-  x.setDate(x.getDate() + n);
-  return x;
-}
-
-function sameCalendarDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function dueAsLocalDate(dueAt: string | null | undefined): Date | null {
-  if (dueAt == null || dueAt === '') return null;
-  const d = new Date(dueAt);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
 function canEditAssignee(
   task: Task,
   userId: string | undefined,
@@ -235,12 +207,6 @@ export default function TaskListScreen({ route }: { route: Route }) {
     [members]
   );
 
-  const weekStart = useMemo(() => startOfWeekMonday(new Date()), []);
-  const weekDays = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart]
-  );
-
   const load = useCallback(
     async (mode: 'full' | 'refresh' = 'full') => {
       if (!tenantId) return;
@@ -284,24 +250,35 @@ export default function TaskListScreen({ route }: { route: Route }) {
     void load('refresh');
   }, [load]);
 
+  function resetTaskForm() {
+    setTitle('');
+    setDescription('');
+    setDueAtDate(null);
+    setPriority('normal');
+    setSelectedAssignee(null);
+    setCreateError('');
+    setShowForm(false);
+  }
+
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => {
-            setShowForm((v) => !v);
-            setCreateError('');
-          }}
-          hitSlop={12}
-          style={styles.headerNewBtn}
-          accessibilityRole="button"
-          accessibilityLabel="New task"
-        >
-          <Text style={styles.headerNewText}>+ New</Text>
-        </TouchableOpacity>
-      ),
+      headerRight: () =>
+        isStaff ? (
+          <TouchableOpacity
+            onPress={() => {
+              setShowForm((v) => !v);
+              setCreateError('');
+            }}
+            hitSlop={12}
+            style={styles.headerNewBtn}
+            accessibilityRole="button"
+            accessibilityLabel="New task"
+          >
+            <Text style={styles.headerNewText}>+ New</Text>
+          </TouchableOpacity>
+        ) : null,
     });
-  }, [navigation]);
+  }, [navigation, isStaff]);
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -335,11 +312,6 @@ export default function TaskListScreen({ route }: { route: Route }) {
     });
     return list;
   }, [filteredTasks]);
-
-  const unscheduledTasks = useMemo(
-    () => tableTasks.filter((t) => !dueAsLocalDate(t.dueAt ?? undefined)),
-    [tableTasks]
-  );
 
   function assigneeLabelForTask(t: Task): string {
     const name = (t.assigneeName ?? '').trim();
@@ -381,12 +353,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
         { method: 'POST', body: JSON.stringify(body) },
         tenantId
       );
-      setTitle('');
-      setDescription('');
-      setDueAtDate(null);
-      setPriority('normal');
-      setSelectedAssignee(null);
-      setShowForm(false);
+      resetTaskForm();
       await load('full');
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 402) {
@@ -468,10 +435,15 @@ export default function TaskListScreen({ route }: { route: Route }) {
     );
   }
 
+  const contentPad = [
+    styles.content,
+    Platform.OS === 'web' ? styles.contentWeb : null,
+  ];
+
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={contentPad}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl
@@ -484,23 +456,11 @@ export default function TaskListScreen({ route }: { route: Route }) {
     >
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <View style={styles.statsRow}>
-        <View style={styles.statPill}>
-          <Text style={styles.statPillText}>{stats.total} total</Text>
-        </View>
-        <View style={styles.statPill}>
-          <Text style={styles.statPillText}>{stats.open} open</Text>
-        </View>
-        <View style={styles.statPill}>
-          <Text style={styles.statPillText}>{stats.done} done</Text>
-        </View>
-        {stats.overdue > 0 ? (
-          <View style={[styles.statPill, styles.statPillOverdue]}>
-            <Text style={styles.statPillTextOverdue}>
-              {stats.overdue} overdue
-            </Text>
-          </View>
-        ) : null}
+      <View style={styles.pillRow}>
+        <Text style={styles.pillRowText}>
+          {stats.total} total · {stats.open} open · {stats.done} done
+          {stats.overdue > 0 ? ` · ${stats.overdue} overdue` : ''}
+        </Text>
       </View>
 
       <Text style={styles.sectionLabel}>Filters</Text>
@@ -520,114 +480,35 @@ export default function TaskListScreen({ route }: { route: Route }) {
         ))}
       </View>
 
-      <Text style={styles.sectionLabel}>This week</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.weekScroll}
-        contentContainerStyle={styles.weekScrollContent}
-      >
-        {weekDays.map((day) => {
-          const label = day.toLocaleDateString(undefined, { weekday: 'short' });
-          const num = day.getDate();
-          const dayTasks = filteredTasks.filter((t) => {
-            const due = dueAsLocalDate(t.dueAt ?? undefined);
-            if (!due) return false;
-            return sameCalendarDay(due, day);
-          });
-          return (
-            <View key={day.getTime()} style={styles.weekCol}>
-              <Text style={styles.weekColTitle}>
-                {label} {num}
-              </Text>
-              <View style={styles.weekColBody}>
-                {dayTasks.length === 0 ? (
-                  <Text style={styles.weekColEmpty}>—</Text>
-                ) : (
-                  dayTasks.map((t) => {
-                    const id = taskId(t);
-                    const st = normStatus(t);
-                    return (
-                      <TouchableOpacity
-                        key={id}
-                        style={styles.weekTaskChip}
-                        onPress={() =>
-                          navigation.navigate('TaskDetail', {
-                            tenantId,
-                            taskId: id,
-                            taskTitle: (t.title ?? 'Task').trim(),
-                          })
-                        }
-                        activeOpacity={0.75}
-                      >
-                        <View
-                          style={[
-                            styles.weekTaskDot,
-                            { backgroundColor: dotColor(st) },
-                          ]}
-                        />
-                        <Text style={styles.weekTaskTitle} numberOfLines={2}>
-                          {(t.title ?? 'Untitled').trim()}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-              </View>
-            </View>
-          );
-        })}
-      </ScrollView>
-
-      {unscheduledTasks.length > 0 ? (
-        <View style={styles.unscheduledBlock}>
-          <Text style={styles.unscheduledLabel}>No due date</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.unscheduledRow}>
-              {unscheduledTasks.map((t) => {
-                const id = taskId(t);
-                return (
-                  <TouchableOpacity
-                    key={id}
-                    style={styles.unscheduledChip}
-                    onPress={() =>
-                      navigation.navigate('TaskDetail', {
-                        tenantId,
-                        taskId: id,
-                        taskTitle: (t.title ?? 'Task').trim(),
-                      })
-                    }
-                  >
-                    <Text style={styles.unscheduledChipText} numberOfLines={1}>
-                      {(t.title ?? 'Untitled').trim()}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-        </View>
+      {!loading && filteredTasks.length > 0 ? (
+        <TaskCalendar
+          tasks={filteredTasks}
+          onTaskPress={(t) => {
+            const id = taskId(t);
+            if (!id) return;
+            navigation.navigate('TaskDetail', {
+              tenantId,
+              taskId: id,
+              taskTitle: (t.title ?? 'Task').trim(),
+            });
+          }}
+        />
+      ) : !loading && tasks.length === 0 ? (
+        <Text style={styles.emptyHint}>
+          No tasks yet. Use + New to add one (owners and assistants).
+        </Text>
       ) : null}
 
-      {showForm ? (
+      {showForm && isStaff ? (
         <View style={styles.formCard}>
           <Input
-            placeholder="Task title…"
+            label="Title *"
             value={title}
             onChangeText={setTitle}
-            containerStyle={styles.formInputWrap}
+            placeholder="Task title"
           />
-          <Input
-            placeholder="Description (optional)"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={3}
-            containerStyle={styles.formDescWrap}
-            style={styles.formDescInput}
-          />
-          <Text style={styles.formHint}>Priority</Text>
-          <View style={styles.priorityRow}>
+          <Text style={styles.kindLegend}>Priority</Text>
+          <View style={styles.kindRow}>
             {(['low', 'normal', 'high'] as TaskPriority[]).map((p) => {
               const sel = priority === p;
               const label =
@@ -635,15 +516,13 @@ export default function TaskListScreen({ route }: { route: Route }) {
               return (
                 <TouchableOpacity
                   key={p}
+                  style={[styles.kindPill, sel && styles.kindPillSelected]}
                   onPress={() => setPriority(p)}
-                  style={[styles.priorityChip, sel && styles.priorityChipSel]}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: sel }}
                 >
                   <Text
                     style={[
-                      styles.priorityChipText,
-                      sel && styles.priorityChipTextSel,
+                      styles.kindPillText,
+                      sel && styles.kindPillTextSel,
                     ]}
                   >
                     {label}
@@ -652,7 +531,7 @@ export default function TaskListScreen({ route }: { route: Route }) {
               );
             })}
           </View>
-          <Text style={styles.formHint}>Assign to (optional)</Text>
+          <Text style={styles.kindLegend}>Assign to (optional)</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -707,47 +586,42 @@ export default function TaskListScreen({ route }: { route: Route }) {
               );
             })}
           </ScrollView>
-          <View style={{ marginTop: spacing[2] }}>
-            {dueAtDate ? (
-              <View style={{ gap: spacing[2] }}>
-                <DateTimeField
-                  label="Due date"
-                  value={dueAtDate}
-                  onChange={(d) => setDueAtDate(d)}
-                  mode="date"
-                />
-                <TouchableOpacity onPress={() => setDueAtDate(null)}>
-                  <Text style={styles.linkMuted}>Remove due date</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity onPress={() => setDueAtDate(new Date())}>
-                <Text style={styles.linkClay}>+ Add due date (optional)</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <DateTimeField
+            label="Due date (optional)"
+            value={dueAtDate ?? new Date()}
+            onChange={(d) => setDueAtDate(d)}
+            mode="date"
+          />
+          <TouchableOpacity
+            onPress={() => setDueAtDate(null)}
+            style={styles.clearDueWrap}
+          >
+            <Text style={styles.linkMuted}>Clear due date</Text>
+          </TouchableOpacity>
+          <Text style={styles.descLabel}>Description (optional)</Text>
+          <TextInput
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Details…"
+            placeholderTextColor={colors.inkFaint}
+            multiline
+            style={styles.descInput}
+          />
           {createError ? (
             <Text style={styles.createErr}>{createError}</Text>
           ) : null}
           <View style={styles.formActions}>
-            <View style={styles.formBtnGhost}>
+            <View style={styles.formBtnHalf}>
               <Button
                 label="Cancel"
                 variant="ghost"
-                onPress={() => {
-                  setShowForm(false);
-                  setCreateError('');
-                  setDueAtDate(null);
-                  setDescription('');
-                  setPriority('normal');
-                  setSelectedAssignee(null);
-                }}
+                onPress={resetTaskForm}
                 fullWidth
               />
             </View>
-            <View style={styles.formBtnPrimary}>
+            <View style={styles.formBtnHalf}>
               <Button
-                label="Create"
+                label="Create task"
                 variant="primary"
                 onPress={() => void createTask()}
                 loading={creating}
@@ -972,32 +846,30 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
     marginTop: spacing[2],
   },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-    marginBottom: spacing[2],
+  contentWeb: {
+    maxWidth: 720,
+    width: '100%',
+    alignSelf: 'center',
   },
-  statPill: {
+  pillRow: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.cream,
     borderRadius: radius.sm,
-    paddingHorizontal: spacing[3],
-    paddingVertical: 6,
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[4],
+    marginBottom: 16,
   },
-  statPillText: {
+  pillRowText: {
     fontFamily: typography.mono,
     fontSize: 11,
     color: colors.inkMid,
   },
-  statPillOverdue: {
-    backgroundColor: colors.errorLight,
-    borderWidth: 0.5,
-    borderColor: colors.error,
-  },
-  statPillTextOverdue: {
-    fontFamily: typography.mono,
-    fontSize: 11,
-    color: colors.error,
+  emptyHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    marginBottom: spacing[3],
+    lineHeight: 20,
   },
   tabsRow: {
     flexDirection: 'row',
@@ -1018,83 +890,6 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   tabTextActive: { color: colors.surfaceRaised },
-  weekScroll: { marginBottom: spacing[3] },
-  weekScrollContent: { gap: spacing[2], paddingRight: spacing[2] },
-  weekCol: {
-    width: Platform.OS === 'web' ? 112 : 100,
-    minHeight: 120,
-    backgroundColor: colors.cream,
-    borderRadius: radius.md,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    padding: spacing[2],
-  },
-  weekColTitle: {
-    fontFamily: typography.monoMedium,
-    fontSize: 10,
-    color: colors.inkMid,
-    marginBottom: spacing[2],
-    textTransform: 'uppercase',
-  },
-  weekColBody: { gap: spacing[1], flex: 1 },
-  weekColEmpty: {
-    fontFamily: typography.mono,
-    fontSize: 12,
-    color: colors.inkFaint,
-  },
-  weekTaskChip: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    padding: 6,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  weekTaskDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginTop: 3,
-  },
-  weekTaskTitle: {
-    flex: 1,
-    fontFamily: typography.body,
-    fontSize: fontSize.xs,
-    color: colors.ink,
-  },
-  unscheduledBlock: {
-    marginBottom: spacing[3],
-    padding: spacing[3],
-    backgroundColor: colors.mossLight,
-    borderRadius: radius.md,
-    borderWidth: 0.5,
-    borderColor: colors.mossBorder,
-  },
-  unscheduledLabel: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.mossDark,
-    marginBottom: spacing[2],
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  unscheduledRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  unscheduledChip: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    maxWidth: 200,
-  },
-  unscheduledChipText: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.ink,
-  },
   formCard: {
     backgroundColor: colors.surfaceRaised,
     borderWidth: 0.5,
@@ -1103,47 +898,63 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
-  formInputWrap: { marginBottom: 0 },
-  formDescWrap: { marginTop: spacing[2], marginBottom: 0 },
-  formDescInput: {
-    minHeight: 72,
-    textAlignVertical: 'top',
-    paddingTop: spacing[2],
-  },
-  priorityRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-    marginTop: spacing[2],
-  },
-  priorityChip: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    backgroundColor: colors.cream,
-  },
-  priorityChipSel: {
-    borderColor: colors.clay,
-    backgroundColor: colors.clayLight,
-  },
-  priorityChipText: {
+  kindLegend: {
     fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkMid,
-  },
-  priorityChipTextSel: {
-    color: colors.clayDark,
-    fontFamily: typography.monoMedium,
-  },
-  formHint: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.inkLight,
     marginTop: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  kindRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginTop: 8,
+  },
+  kindPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: radius.sm,
+    backgroundColor: colors.cream,
+  },
+  kindPillSelected: {
+    backgroundColor: colors.clay,
+  },
+  kindPillText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+  },
+  kindPillTextSel: {
+    color: colors.surfaceRaised,
+  },
+  clearDueWrap: {
+    alignSelf: 'flex-start',
+    marginTop: spacing[2],
+    marginBottom: spacing[1],
+  },
+  descLabel: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.inkLight,
+    marginTop: spacing[2],
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  descInput: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    minHeight: 72,
+    marginTop: spacing[2],
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[2],
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    textAlignVertical: 'top',
   },
   assigneeScroll: { marginTop: 8, maxHeight: 44 },
   assigneeScrollContent: { gap: 8, alignItems: 'center', paddingRight: 8 },
@@ -1193,8 +1004,7 @@ const styles = StyleSheet.create({
     gap: spacing[3],
     marginTop: 12,
   },
-  formBtnGhost: { flex: 1 },
-  formBtnPrimary: { flex: 1 },
+  formBtnHalf: { flex: 1, minWidth: 0 },
   tableScroll: { marginBottom: spacing[4] },
   table: {
     minWidth: Platform.OS === 'web' ? 640 : 520,

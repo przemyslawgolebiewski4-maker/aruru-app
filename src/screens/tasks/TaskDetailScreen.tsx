@@ -7,12 +7,21 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Modal,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/DateTimeField';
-import { Button, Input, SectionLabel } from '../../components/ui';
+import {
+  Avatar,
+  Button,
+  Divider,
+  Input,
+  SectionLabel,
+} from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -36,7 +45,40 @@ type MemberRow = {
   email?: string;
   role?: string;
   status?: string;
+  avatarUrl?: string;
 };
+
+const TASK_NOTES_DELIM = '\n\n— Notes —\n';
+
+function splitTaskDescription(raw: string | null | undefined): {
+  main: string;
+  notes: string;
+} {
+  const s = (raw ?? '').toString();
+  const i = s.indexOf(TASK_NOTES_DELIM);
+  if (i === -1) return { main: s, notes: '' };
+  return {
+    main: s.slice(0, i).replace(/\s+$/, ''),
+    notes: s.slice(i + TASK_NOTES_DELIM.length),
+  };
+}
+
+function composeTaskDescription(main: string, notes: string): string {
+  const m = main.replace(/\s+$/, '');
+  const n = notes.trim();
+  if (n) return m ? m + TASK_NOTES_DELIM + n : n;
+  return m;
+}
+
+function sameLocalCalendarDay(a: Date | null, b: Date | null): boolean {
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
 
 type HourLog = {
   id?: string;
@@ -177,11 +219,16 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   const [logNoteInput, setLogNoteInput] = useState('');
   const [logging, setLogging] = useState(false);
   const [logError, setLogError] = useState('');
-  const [descDraft, setDescDraft] = useState('');
-  const [descSaving, setDescSaving] = useState(false);
-  const [statusBusy, setStatusBusy] = useState(false);
-  const [editingDueDate, setEditingDueDate] = useState(false);
-  const [dueAtDate, setDueAtDate] = useState<Date | null>(null);
+  const [titleDraft, setTitleDraft] = useState('');
+  const [descMainDraft, setDescMainDraft] = useState('');
+  const [notesDraft, setNotesDraft] = useState('');
+  const [assigneeUserIdDraft, setAssigneeUserIdDraft] = useState<string | null>(
+    null
+  );
+  const [dueDraft, setDueDraft] = useState<Date | null>(null);
+  const [statusDraft, setStatusDraft] = useState<EditableTaskStatus>('todo');
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
   const [logSectionOpen, setLogSectionOpen] = useState(false);
 
   const nameByUserId = useMemo(() => {
@@ -192,9 +239,9 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     return m;
   }, [members]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode: 'full' | 'silent' = 'full') => {
     setError('');
-    setLoading(true);
+    if (mode === 'full') setLoading(true);
     try {
       let t: Task | null = null;
       try {
@@ -235,12 +282,19 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
         ).catch(() => ({ members: [] as MemberRow[] })),
       ]);
       setLogs(logsRes != null ? parseLogs(logsRes) : []);
-      setMembers(memRes.members ?? []);
+      const rawMem = memRes.members ?? [];
+      setMembers(
+        rawMem.map((m) => ({
+          ...m,
+          avatarUrl:
+            m.avatarUrl ?? (m as { avatar_url?: string }).avatar_url,
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load task.');
       setTask(null);
     } finally {
-      setLoading(false);
+      if (mode === 'full') setLoading(false);
     }
   }, [tenantId, taskId]);
 
@@ -249,31 +303,36 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
   }, [load]);
 
   useEffect(() => {
-    if (!task || editingDueDate) return;
+    if (!task) return;
+    setTitleDraft((task.title ?? '').trim());
+    const { main, notes } = splitTaskDescription(task.description);
+    setDescMainDraft(main);
+    setNotesDraft(notes);
+    const uid = assigneeUserIdOf(task);
+    setAssigneeUserIdDraft(uid || null);
     const raw = task.dueAt;
-    setDueAtDate(
+    setDueDraft(
       raw != null && String(raw).trim() !== '' ? new Date(String(raw)) : null
     );
-  }, [task, editingDueDate]);
-
-  useEffect(() => {
-    if (!task) return;
-    setDescDraft((task.description ?? '').toString());
-  }, [task?.id, task?.description]);
+    setStatusDraft(normStatusLocal(task));
+  }, [
+    task?.id,
+    task?.title,
+    task?.description,
+    task?.assigneeUserId,
+    task?.dueAt,
+    task?.status,
+  ]);
 
   const displayTitle = (task?.title ?? paramTitle ?? 'Task').trim();
 
-  useLayoutEffect(() => {
-    navigation.setOptions({ title: displayTitle });
-  }, [navigation, displayTitle]);
-
-  const assigneeName = useMemo(() => {
-    if (!task) return '';
-    const n = (task.assigneeName ?? '').trim();
-    if (n) return n;
-    const uid = assigneeUserIdOf(task);
-    return uid ? nameByUserId.get(uid) ?? uid : '—';
-  }, [task, nameByUserId]);
+  const activeMembers = useMemo(
+    () =>
+      members.filter(
+        (m) => (m.status || 'active').toLowerCase() === 'active'
+      ),
+    [members]
+  );
 
   const creatorName = useMemo(() => {
     if (!task) return '';
@@ -283,9 +342,16 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     return uid ? nameByUserId.get(uid) ?? uid : '—';
   }, [task, nameByUserId]);
 
-  const due = task ? formatDueAtDisplay(task.dueAt ?? undefined) : '';
-  const overdue = task ? isOverdueDueAtDate(task.dueAt ?? undefined) : false;
-  const currentStatus = task ? normStatusLocal(task) : 'todo';
+  const dueSaved = task ? formatDueAtDisplay(task.dueAt ?? undefined) : '';
+  const overdueSaved = task
+    ? isOverdueDueAtDate(task.dueAt ?? undefined)
+    : false;
+  const currentStatusSaved = task ? normStatusLocal(task) : 'todo';
+
+  const readOnlyDescParts = useMemo(
+    () => splitTaskDescription(task?.description),
+    [task?.description]
+  );
 
   const totalLogged = useMemo(() => {
     let s = 0;
@@ -301,25 +367,85 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     (isStaff ||
       (!!user?.id && createdById(task) === user.id));
 
-  async function handleStatusChange(newStatus: string) {
-    if (!task || !canEditTask || statusBusy) return;
-    setStatusBusy(true);
+  const assigneeRowLabel = useMemo(() => {
+    if (!task) return '';
+    const uid = canEditTask
+      ? (assigneeUserIdDraft ?? '').trim()
+      : assigneeUserIdOf(task);
+    if (!uid) return 'Unassigned';
+    const fromMap = nameByUserId.get(uid);
+    if (fromMap) return fromMap;
+    if (assigneeUserIdOf(task) === uid) {
+      const n = (task.assigneeName ?? '').trim();
+      if (n) return n;
+    }
+    return uid;
+  }, [task, canEditTask, assigneeUserIdDraft, nameByUserId]);
+
+  useLayoutEffect(() => {
+    const navTitle = canEditTask
+      ? titleDraft.trim() || displayTitle
+      : displayTitle;
+    navigation.setOptions({ title: navTitle });
+  }, [navigation, displayTitle, titleDraft, canEditTask]);
+
+  const isDirty = useMemo(() => {
+    if (!task) return false;
+    const composed = composeTaskDescription(descMainDraft, notesDraft);
+    const serverDesc = (task.description ?? '').toString();
+    const normDesc = (s: string) => s.replace(/\r\n/g, '\n').trim();
+    const dueServer =
+      task.dueAt != null && String(task.dueAt).trim() !== ''
+        ? new Date(String(task.dueAt))
+        : null;
+    return (
+      titleDraft.trim() !== (task.title ?? '').trim() ||
+      normDesc(composed) !== normDesc(serverDesc) ||
+      (assigneeUserIdDraft ?? '') !== assigneeUserIdOf(task) ||
+      !sameLocalCalendarDay(dueDraft, dueServer) ||
+      statusDraft !== normStatusLocal(task)
+    );
+  }, [
+    task,
+    titleDraft,
+    descMainDraft,
+    notesDraft,
+    assigneeUserIdDraft,
+    dueDraft,
+    statusDraft,
+  ]);
+
+  async function saveTask() {
+    if (!task || !canEditTask || saveBusy) return;
+    const t = titleDraft.trim();
+    if (!t) {
+      setError('Title is required.');
+      return;
+    }
+    setSaveBusy(true);
+    setError('');
     try {
+      const description = composeTaskDescription(descMainDraft, notesDraft);
+      const body: Record<string, unknown> = {
+        title: t,
+        description: description.trim() ? description : null,
+        status: statusDraft,
+        assigneeUserId: assigneeUserIdDraft ? assigneeUserIdDraft : '',
+        dueAt: dueDraft ? dueDraft.toISOString() : '',
+      };
       await apiFetch(
         `/studios/${tenantId}/tasks/${taskId}`,
         {
           method: 'PATCH',
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify(body),
         },
         tenantId
       );
-      setTask((prev) => (prev ? { ...prev, status: newStatus } : prev));
+      await load('silent');
     } catch (e: unknown) {
-      setError(
-        e instanceof Error ? e.message : 'Failed to update status'
-      );
+      setError(e instanceof Error ? e.message : 'Could not save task.');
     } finally {
-      setStatusBusy(false);
+      setSaveBusy(false);
     }
   }
 
@@ -375,31 +501,6 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     }
   }
 
-  async function saveDescription() {
-    if (!task || !canEditTask) return;
-    setDescSaving(true);
-    setError('');
-    try {
-      await apiFetch(
-        `/studios/${tenantId}/tasks/${taskId}`,
-        {
-          method: 'PATCH',
-          body: JSON.stringify({ description: descDraft.trim() }),
-        },
-        tenantId
-      );
-      setTask((prev) =>
-        prev ? { ...prev, description: descDraft.trim() || null } : prev
-      );
-    } catch (e: unknown) {
-      setError(
-        e instanceof Error ? e.message : 'Could not save description.'
-      );
-    } finally {
-      setDescSaving(false);
-    }
-  }
-
   function logDisplayName(l: HourLog): string {
     return (l.userName ?? '').trim() || '—';
   }
@@ -420,159 +521,229 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
     );
   }
 
+  const contentPad = [
+    styles.content,
+    Platform.OS === 'web' ? styles.contentWeb : null,
+  ];
+
   return (
     <ScrollView
       style={styles.root}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={contentPad}
       keyboardShouldPersistTaps="handled"
     >
       {error ? <Text style={styles.bannerErr}>{error}</Text> : null}
 
-      <View style={styles.headerCard}>
-        <Text style={styles.headerTitle}>{displayTitle}</Text>
-        <View style={styles.metaBlock}>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Assigned to</Text>
-            <Text style={styles.metaValue}>{assigneeName}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Due date</Text>
-            {canEditTask ? (
-              editingDueDate ? (
-                <View style={{ gap: spacing[2], flex: 1, alignItems: 'flex-end' }}>
-                  <DateTimeField
-                    label="Due date"
-                    value={dueAtDate ?? new Date()}
-                    onChange={async (d) => {
-                      setDueAtDate(d);
-                      setEditingDueDate(false);
-                      try {
-                        await apiFetch(
-                          `/studios/${tenantId}/tasks/${taskId}`,
-                          {
-                            method: 'PATCH',
-                            body: JSON.stringify({ dueAt: d.toISOString() }),
-                          },
-                          tenantId
-                        );
-                        await load();
-                      } catch {
-                        /* silent */
-                      }
-                    }}
-                    mode="date"
-                  />
-                  <TouchableOpacity
-                    onPress={() => {
-                      setEditingDueDate(false);
-                      setDueAtDate(
-                        task.dueAt != null &&
-                          String(task.dueAt).trim() !== ''
-                          ? new Date(String(task.dueAt))
-                          : null
-                      );
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: typography.mono,
-                        fontSize: fontSize.xs,
-                        color: colors.inkLight,
-                      }}
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={() => setEditingDueDate(true)}
-                  style={{ flex: 1, alignItems: 'flex-end' }}
-                >
-                  <Text
-                    style={[styles.metaMono, overdue && styles.metaOverdue]}
-                  >
-                    {due || 'Add due date'}
-                  </Text>
-                </TouchableOpacity>
-              )
-            ) : (
-              <Text
-                style={[styles.metaMono, overdue && styles.metaOverdue]}
-              >
-                {due || '—'}
-              </Text>
-            )}
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Created by</Text>
-            <Text style={styles.metaCreator}>{creatorName}</Text>
-          </View>
-        </View>
-      </View>
-
-      <SectionLabel>DESCRIPTION</SectionLabel>
       {canEditTask ? (
-        <View style={styles.descCard}>
+        <>
+          <View style={styles.headerCard}>
+            <Input
+              label="Task title"
+              value={titleDraft}
+              onChangeText={setTitleDraft}
+              placeholder="Task title"
+            />
+            <View style={[styles.metaRow, styles.assignRow]}>
+              <Text style={styles.metaLabel}>Assigned to</Text>
+              <View style={styles.assignRowRight}>
+                <Text style={styles.metaValue} numberOfLines={1}>
+                  {assigneeRowLabel}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowAssignModal(true)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Re-assign task"
+                >
+                  <Text style={styles.reassignLink}>Re-assign</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <DateTimeField
+              label="Due date"
+              value={dueDraft ?? new Date()}
+              onChange={(d) => setDueDraft(d)}
+              mode="date"
+            />
+            <TouchableOpacity
+              onPress={() => setDueDraft(null)}
+              style={styles.clearDueWrap}
+              accessibilityRole="button"
+            >
+              <Text style={styles.linkMuted}>Clear due date</Text>
+            </TouchableOpacity>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Created by</Text>
+              <Text style={styles.metaCreator}>{creatorName}</Text>
+            </View>
+          </View>
+
+          <SectionLabel>DESCRIPTION</SectionLabel>
           <TextInput
-            value={descDraft}
-            onChangeText={setDescDraft}
+            value={descMainDraft}
+            onChangeText={setDescMainDraft}
             placeholder="Add details for your studio…"
             placeholderTextColor={colors.inkFaint}
             multiline
             style={styles.descInput}
             textAlignVertical="top"
           />
-          <Button
-            label="Save description"
-            variant="secondary"
-            onPress={() => void saveDescription()}
-            loading={descSaving}
-            disabled={descSaving}
-            style={styles.descSaveBtn}
+
+          <Divider style={styles.dividerPad} />
+
+          <SectionLabel>STATUS</SectionLabel>
+          <View style={styles.statusRow}>
+            {STATUS_OPTS.map((opt) => {
+              const sel = statusDraft === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[
+                    styles.statusBtn,
+                    sel ? statusBtnContainerSel(opt.key) : null,
+                  ]}
+                  onPress={() => setStatusDraft(opt.key)}
+                  disabled={saveBusy}
+                >
+                  <View
+                    style={[styles.statusDotSm, { backgroundColor: opt.dot }]}
+                  />
+                  <Text
+                    style={[
+                      styles.statusBtnLabel,
+                      sel && { color: statusBtnLabelSelColor(opt.key) },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <SectionLabel>NOTES (OPTIONAL)</SectionLabel>
+          <TextInput
+            value={notesDraft}
+            onChangeText={setNotesDraft}
+            placeholder="Internal notes…"
+            placeholderTextColor={colors.inkFaint}
+            multiline
+            style={styles.notesInput}
+            textAlignVertical="top"
           />
-        </View>
+
+          <Button
+            label="Save"
+            variant="primary"
+            onPress={() => void saveTask()}
+            loading={saveBusy}
+            disabled={
+              saveBusy || !titleDraft.trim() || !isDirty
+            }
+            fullWidth
+            style={styles.saveBtn}
+          />
+        </>
       ) : (
-        <Text style={styles.descReadOnly}>
-          {(task.description ?? '').trim() || 'No description.'}
-        </Text>
+        <>
+          <View style={styles.headerCard}>
+            <Text style={styles.headerTitle}>{displayTitle}</Text>
+            <View style={styles.metaBlock}>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Assigned to</Text>
+                <Text style={styles.metaValue}>{assigneeRowLabel}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Due date</Text>
+                <Text
+                  style={[styles.metaMono, overdueSaved && styles.metaOverdue]}
+                >
+                  {dueSaved || '—'}
+                </Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Created by</Text>
+                <Text style={styles.metaCreator}>{creatorName}</Text>
+              </View>
+            </View>
+          </View>
+
+          <SectionLabel>DESCRIPTION</SectionLabel>
+          <Text style={styles.descReadOnly}>
+            {readOnlyDescParts.main.trim() || 'No description.'}
+          </Text>
+          {readOnlyDescParts.notes.trim() ? (
+            <>
+              <SectionLabel>NOTES</SectionLabel>
+              <Text style={styles.descReadOnly}>
+                {readOnlyDescParts.notes.trim()}
+              </Text>
+            </>
+          ) : null}
+
+          <View style={styles.sectionGap} />
+          <SectionLabel>STATUS</SectionLabel>
+          <Text style={styles.memberStatus}>
+            {STATUS_OPTS.find((o) => o.key === currentStatusSaved)?.label ??
+              currentStatusSaved}
+          </Text>
+        </>
       )}
 
-      <View style={styles.sectionGap} />
-      <SectionLabel>STATUS</SectionLabel>
-      {canEditTask ? (
-        <View style={styles.statusRow}>
-          {STATUS_OPTS.map((opt) => {
-            const sel = currentStatus === opt.key;
-            return (
+      <Modal
+        visible={showAssignModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAssignModal(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setShowAssignModal(false)}
+        >
+          <Pressable
+            style={styles.modalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={styles.modalTitle}>Assign to</Text>
+            <ScrollView style={styles.modalList}>
               <TouchableOpacity
-                key={opt.key}
-                style={[
-                  styles.statusBtn,
-                  sel ? statusBtnContainerSel(opt.key) : null,
-                ]}
-                onPress={() => void handleStatusChange(opt.key)}
-                disabled={statusBusy}
+                style={styles.modalRow}
+                onPress={() => {
+                  setAssigneeUserIdDraft(null);
+                  setShowAssignModal(false);
+                }}
               >
-                <View style={[styles.statusDotSm, { backgroundColor: opt.dot }]} />
-                <Text
-                  style={[
-                    styles.statusBtnLabel,
-                    sel && { color: statusBtnLabelSelColor(opt.key) },
-                  ]}
-                >
-                  {opt.label}
-                </Text>
+                <Text style={styles.modalRowText}>Unassigned</Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : (
-        <Text style={styles.memberStatus}>
-          {STATUS_OPTS.find((o) => o.key === currentStatus)?.label ??
-            currentStatus}
-        </Text>
-      )}
+              {activeMembers.map((m) => (
+                <TouchableOpacity
+                  key={m.userId}
+                  style={styles.modalRow}
+                  onPress={() => {
+                    setAssigneeUserIdDraft(m.userId);
+                    setShowAssignModal(false);
+                  }}
+                >
+                  <Avatar
+                    name={m.name || m.email || '?'}
+                    size="sm"
+                    imageUrl={m.avatarUrl}
+                  />
+                  <Text style={styles.modalRowText}>
+                    {m.name || m.email || m.userId}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Button
+              label="Close"
+              variant="ghost"
+              onPress={() => setShowAssignModal(false)}
+              fullWidth
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <View style={styles.sectionGap} />
       <SectionLabel>LOG TIME</SectionLabel>
@@ -695,6 +866,11 @@ export default function TaskDetailScreen({ route }: { route: Route }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: 24, paddingBottom: 40 },
+  contentWeb: {
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
+  },
   centered: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -722,7 +898,40 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   metaBlock: { marginTop: 8, gap: 6 },
-  metaRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  assignRow: {
+    marginTop: spacing[3],
+    alignItems: 'center',
+  },
+  assignRowRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[2],
+    minWidth: 0,
+  },
+  reassignLink: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+  },
+  clearDueWrap: {
+    alignSelf: 'flex-start',
+    marginTop: spacing[2],
+  },
+  linkMuted: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  dividerPad: { marginVertical: spacing[4] },
+  saveBtn: { marginTop: spacing[4] },
   metaLabel: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
@@ -777,22 +986,30 @@ const styles = StyleSheet.create({
     color: colors.inkMid,
     marginBottom: spacing[2],
   },
-  descCard: {
-    backgroundColor: colors.cream,
-    borderRadius: radius.md,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    padding: spacing[3],
-    marginBottom: spacing[2],
-  },
   descInput: {
     minHeight: 88,
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.ink,
-    marginBottom: spacing[3],
+    marginBottom: spacing[2],
+    padding: spacing[2],
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
   },
-  descSaveBtn: { alignSelf: 'flex-start' },
+  notesInput: {
+    minHeight: 72,
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: spacing[2],
+    padding: spacing[2],
+    backgroundColor: colors.surfaceRaised,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+  },
   descReadOnly: {
     fontFamily: typography.body,
     fontSize: fontSize.md,
@@ -928,5 +1145,40 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkLight,
     marginTop: spacing[1],
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 26, 22, 0.45)',
+    justifyContent: 'center',
+    padding: spacing[5],
+  },
+  modalCard: {
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    maxHeight: '80%',
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontFamily: typography.display,
+    fontSize: fontSize.xl,
+    color: colors.ink,
+    marginBottom: spacing[3],
+  },
+  modalList: { maxHeight: 320 },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  modalRowText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    flex: 1,
   },
 });

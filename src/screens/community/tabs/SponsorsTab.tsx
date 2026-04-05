@@ -81,15 +81,6 @@ const BASE =
   process.env.EXPO_PUBLIC_API_URL ??
   'https://aruru-backend-production.up.railway.app';
 
-const CATEGORY_OPTIONS = [
-  { key: 'clay', label: 'Clay' },
-  { key: 'glazes', label: 'Glazes' },
-  { key: 'tools', label: 'Tools' },
-  { key: 'equipment', label: 'Equipment' },
-  { key: 'books', label: 'Books' },
-  { key: 'other', label: 'Other' },
-] as const;
-
 function companyInitials(name: string): string {
   return (
     name
@@ -223,7 +214,7 @@ function normalizePost(row: Record<string, unknown>): SponsorPost {
 }
 
 export default function SponsorsTab() {
-  const { user, studios } = useAuth();
+  const { user } = useAuth();
   const navigation = useNavigation();
   const stackNav =
     navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
@@ -240,15 +231,6 @@ export default function SponsorsTab() {
   );
   const [sponsorStats, setSponsorStats] = useState<SponsorStats | null>(null);
   const [myPosts, setMyPosts] = useState<SponsorPost[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [companyName, setCompanyName] = useState('');
-  const [category, setCategory] = useState('other');
-  const [description, setDescription] = useState('');
-  const [websiteUrl, setWebsiteUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState('');
-
   const [showPostForm, setShowPostForm] = useState(false);
   const [postTitle, setPostTitle] = useState('');
   const [postContent, setPostContent] = useState('');
@@ -355,60 +337,6 @@ export default function SponsorsTab() {
     if (href) void Linking.openURL(href);
   }
 
-  function resetFormFields() {
-    setCompanyName('');
-    setCategory('other');
-    setDescription('');
-    setWebsiteUrl('');
-    setFormError('');
-  }
-
-  function closeForm() {
-    setShowForm(false);
-    setSubmitted(false);
-    resetFormFields();
-  }
-
-  async function handlePartnerSubmit() {
-    setFormError('');
-    if (companyName.trim().length < 2) {
-      setFormError('Company name required');
-      return;
-    }
-    if (description.trim().length < 10) {
-      setFormError('Description too short');
-      return;
-    }
-    if (!websiteUrl.trim()) {
-      setFormError('Website URL required');
-      return;
-    }
-
-    const tenantId = studios[0]?.tenantId ?? '';
-
-    setSubmitting(true);
-    try {
-      await apiFetch(
-        '/community/sponsors/register',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            company_name: companyName.trim(),
-            category,
-            description: description.trim(),
-            website_url: websiteUrl.trim(),
-          }),
-        },
-        tenantId
-      );
-      setSubmitted(true);
-    } catch (e: unknown) {
-      setFormError(e instanceof Error ? e.message : 'Could not submit.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   async function handlePublishPost() {
     setPostFormError('');
     if (!postTitle.trim()) {
@@ -449,122 +377,6 @@ export default function SponsorsTab() {
         : sponsorStats.monthClicks >= sponsorStats.prevMonthClicks
           ? `vs last month: +${sponsorStats.monthClicks - sponsorStats.prevMonthClicks}`
           : `vs last month: ${sponsorStats.monthClicks - sponsorStats.prevMonthClicks}`;
-
-  if (showForm && !isSponsor) {
-    if (submitted) {
-      return (
-        <ScrollView
-          style={styles.root}
-          contentContainerStyle={styles.formScroll}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.successEmoji} accessibilityLabel="Success">
-            ✓
-          </Text>
-          <Text style={styles.successTitle}>Application submitted!</Text>
-          <Text style={styles.successBody}>
-            We&apos;ll review it and get back to you soon.
-          </Text>
-          <Button
-            label="Back to sponsors"
-            onPress={() => {
-              setSubmitted(false);
-              setShowForm(false);
-              resetFormFields();
-              void load();
-            }}
-            fullWidth
-          />
-        </ScrollView>
-      );
-    }
-
-    return (
-      <ScrollView
-        style={styles.root}
-        contentContainerStyle={styles.formScroll}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.formHeaderRow}>
-          <Text style={styles.formHeaderTitle}>Apply as a partner</Text>
-          <TouchableOpacity
-            onPress={closeForm}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <Text style={styles.formClose}>✕</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Input
-          label="Company name"
-          value={companyName}
-          onChangeText={setCompanyName}
-          placeholder="Your company or brand"
-          autoCapitalize="words"
-        />
-
-        <View>
-          <Text style={styles.chipsLabel}>Category</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsScroll}
-          >
-            {CATEGORY_OPTIONS.map((opt) => (
-              <TouchableOpacity
-                key={opt.key}
-                style={[
-                  styles.chip,
-                  category === opt.key && styles.chipActive,
-                ]}
-                onPress={() => setCategory(opt.key)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    category === opt.key && styles.chipLabelActive,
-                  ]}
-                >
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        <Input
-          label="Description"
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Min. 10 characters — how you support the community"
-          multiline
-          numberOfLines={4}
-          style={styles.textArea}
-        />
-
-        <Input
-          label="Website URL"
-          value={websiteUrl}
-          onChangeText={setWebsiteUrl}
-          placeholder="https://example.com"
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-
-        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-
-        <Button
-          label="Submit"
-          onPress={() => void handlePartnerSubmit()}
-          loading={submitting}
-          fullWidth
-        />
-      </ScrollView>
-    );
-  }
 
   return (
     <ScrollView
@@ -815,11 +627,6 @@ export default function SponsorsTab() {
               ? 'No partners in this filter.'
               : 'No partners yet.'}
           </Text>
-          {!countryFilter ? (
-            <Text style={styles.emptySub}>
-              Want to support the community?
-            </Text>
-          ) : null}
         </View>
       ) : (
         <View style={styles.cards}>
@@ -876,20 +683,6 @@ export default function SponsorsTab() {
         </View>
       )}
 
-      {!isSponsor ? (
-        <TouchableOpacity
-          style={styles.partnerLink}
-          onPress={() => {
-            resetFormFields();
-            setSubmitted(false);
-            setShowForm(true);
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Become a partner"
-        >
-          <Text style={styles.partnerLinkText}>Become a partner →</Text>
-        </TouchableOpacity>
-      ) : null}
     </ScrollView>
   );
 }
@@ -916,11 +709,6 @@ const styles = StyleSheet.create({
   listScroll: {
     padding: spacing[4],
     paddingBottom: spacing[10],
-  },
-  formScroll: {
-    padding: spacing[4],
-    paddingBottom: spacing[10],
-    gap: spacing[4],
   },
   pendingBanner: {
     backgroundColor: '#EDE4A8',
@@ -1152,13 +940,6 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     textAlign: 'center',
   },
-  emptySub: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-    textAlign: 'center',
-    marginTop: spacing[1],
-  },
   cards: { gap: 0 },
   card: {
     flexDirection: 'row',
@@ -1231,67 +1012,6 @@ const styles = StyleSheet.create({
     color: colors.clay,
     textTransform: 'capitalize',
   },
-  partnerLink: {
-    marginTop: spacing[6],
-    paddingVertical: spacing[2],
-    alignSelf: 'flex-start',
-  },
-  partnerLinkText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.md,
-    color: colors.clay,
-  },
-  formHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing[1],
-  },
-  formHeaderTitle: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.lg,
-    color: colors.ink,
-    flex: 1,
-  },
-  formClose: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.lg,
-    color: colors.inkLight,
-    paddingHorizontal: spacing[2],
-  },
-  chipsLabel: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing[2],
-  },
-  chipsScroll: {
-    flexDirection: 'row',
-    gap: spacing[2],
-    paddingBottom: spacing[1],
-  },
-  chip: {
-    paddingHorizontal: spacing[3],
-    paddingVertical: spacing[2],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipActive: {
-    backgroundColor: colors.clay,
-    borderColor: colors.clay,
-  },
-  chipLabel: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-  },
-  chipLabelActive: {
-    color: colors.surface,
-  },
   textArea: {
     minHeight: 100,
     textAlignVertical: 'top',
@@ -1300,27 +1020,5 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.error,
-  },
-  successEmoji: {
-    fontFamily: typography.body,
-    fontSize: 48,
-    color: colors.moss,
-    textAlign: 'center',
-    marginBottom: spacing[3],
-  },
-  successTitle: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.lg,
-    color: colors.ink,
-    textAlign: 'center',
-    marginBottom: spacing[2],
-  },
-  successBody: {
-    fontFamily: typography.body,
-    fontSize: fontSize.md,
-    color: colors.inkLight,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing[6],
   },
 });
