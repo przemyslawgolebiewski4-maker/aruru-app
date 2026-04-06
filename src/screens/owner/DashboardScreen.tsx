@@ -550,6 +550,19 @@ export default function DashboardScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.emptyStudiosInner}>
+          <TouchableOpacity
+            onPress={() => {
+              if (typeof window !== 'undefined') {
+                void Linking.openURL('https://aruru.xyz');
+              }
+            }}
+            accessibilityRole="link"
+            accessibilityLabel="Aruru home"
+            hitSlop={8}
+            style={styles.emptyStudiosLogoWrap}
+          >
+            <Text style={styles.logoWordmark}>Aruru</Text>
+          </TouchableOpacity>
           <IconTwoCircles60 />
           <Text style={styles.emptyStudiosTitle}>Welcome to Aruru.</Text>
           <Text style={styles.emptyStudiosBody}>
@@ -605,10 +618,10 @@ export default function DashboardScreen() {
             }
           }}
           accessibilityRole="link"
-          accessibilityLabel="Go to aruru.xyz"
+          accessibilityLabel="Aruru home"
           hitSlop={8}
         >
-          <Text style={styles.wordmarkLink}>Aruru</Text>
+          <Text style={styles.logoWordmark}>Aruru</Text>
         </TouchableOpacity>
         <Text style={styles.studioMono} numberOfLines={1}>
           {studioLabel.toUpperCase()}
@@ -960,6 +973,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
   },
+  emptyStudiosLogoWrap: {
+    marginBottom: spacing[4],
+  },
   emptyStudiosTitle: {
     fontFamily: typography.display,
     fontSize: 24,
@@ -1029,9 +1045,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing[4],
     gap: spacing[3],
   },
-  wordmarkLink: {
+  logoWordmark: {
     fontFamily: typography.display,
-    fontSize: fontSize.lg,
+    fontStyle: 'italic',
+    fontSize: 22,
     color: colors.clay,
     letterSpacing: -0.3,
   },

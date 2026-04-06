@@ -55,7 +55,7 @@
     /* NAV */
     .nav{position:sticky;top:0;z-index:100;height:var(--nav-h);background:rgba(247,243,237,.90);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--border);}
     .nav__inner{display:flex;align-items:center;justify-content:space-between;height:100%;}
-    .nav__wordmark{font-family:var(--serif);font-size:22px;color:var(--clay);letter-spacing:-.3px;}
+    .nav__wordmark{font-family:var(--serif);font-size:22px;color:var(--clay);letter-spacing:-.3px;text-decoration:none;display:flex;flex-direction:column;align-items:flex-start;line-height:1;}
     .nav__links{display:flex;align-items:center;gap:28px;}
     .nav__links a{font-size:14px;font-weight:500;color:var(--ink-mid);transition:color .15s;} .nav__links a:hover{color:var(--ink);}
     .nav__cta{display:flex;align-items:center;gap:10px;}
@@ -212,7 +212,21 @@
 <!-- NAV -->
 <nav class="nav" role="navigation" aria-label="Main navigation">
   <div class="container nav__inner">
-    <a href="/" class="nav__wordmark">Aruru</a>
+    <a href="/" class="nav__wordmark" aria-label="Aruru home">
+      <svg height="28" viewBox="0 0 120 36" xmlns="http://www.w3.org/2000/svg">
+        <text x="0" y="26"
+          font-family="'DM Serif Display',Georgia,serif"
+          font-style="italic"
+          font-size="28"
+          letter-spacing="-0.8"
+          fill="#C4714A">Aruru</text>
+      </svg>
+      <span style="display:block;font-family:'Instrument Sans',sans-serif;
+        font-size:9px;font-weight:500;letter-spacing:2.5px;color:#4A5E3A;
+        text-transform:uppercase;line-height:1;margin-top:-2px;">
+        Clay Community
+      </span>
+    </a>
     <ul class="nav__links" role="list">
       <li><a href="#value">For you</a></li>
       <li><a href="#community">Community</a></li>
