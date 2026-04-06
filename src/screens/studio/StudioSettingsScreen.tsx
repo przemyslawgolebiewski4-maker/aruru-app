@@ -282,12 +282,22 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       const days = trialDaysLeft(currentStudio?.trialEndsAt);
       if (days > 7) {
         return (
-          <View style={styles.statusBadge}>
-            <View style={[styles.statusDot, { backgroundColor: colors.moss }]} />
-            <Text style={[styles.statusText, { color: colors.ink }]}>
-              Trial — {days} days remaining
-            </Text>
-          </View>
+          <>
+            <View style={styles.statusBadge}>
+              <View style={[styles.statusDot, { backgroundColor: colors.moss }]} />
+              <Text style={[styles.statusText, { color: colors.ink }]}>
+                Trial — {days} days remaining
+              </Text>
+            </View>
+            <Button
+              label="Subscribe now"
+              variant="primary"
+              onPress={() => void openCheckout()}
+              loading={checkoutLoading}
+              fullWidth
+              style={styles.subscriptionBtn}
+            />
+          </>
         );
       }
       if (days > 0) {

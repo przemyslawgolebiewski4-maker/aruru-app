@@ -678,7 +678,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {ownerTrialDaysLeft !== null && ownerTrialDaysLeft <= 7 ? (
+      {ownerTrialDaysLeft !== null && ownerTrialDaysLeft > 0 ? (
         <TouchableOpacity
           style={styles.trialBanner}
           onPress={() => void openCheckout()}
@@ -687,11 +687,9 @@ export default function DashboardScreen() {
           accessibilityLabel="Open subscription checkout"
         >
           <Text style={styles.trialBannerText}>
-            {ownerTrialDaysLeft <= 0
-              ? 'Your trial has ended — subscribe to continue'
-              : `Trial ends in ${ownerTrialDaysLeft} day${
-                  ownerTrialDaysLeft === 1 ? '' : 's'
-                } — Subscribe`}
+            {`Trial — ${ownerTrialDaysLeft} day${
+              ownerTrialDaysLeft === 1 ? '' : 's'
+            } remaining · Subscribe`}
           </Text>
           <Text style={styles.trialBannerArrow}>→</Text>
         </TouchableOpacity>
