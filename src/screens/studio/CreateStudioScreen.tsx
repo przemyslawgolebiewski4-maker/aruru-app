@@ -63,7 +63,7 @@ export default function CreateStudioScreen() {
         }
       );
       await refresh();
-      navigation.replace('SetupPricing', {
+      navigation.replace('StudioOnboarding', {
         tenantId: res.id,
         studioName: name.trim(),
       });
@@ -83,6 +83,11 @@ export default function CreateStudioScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.stepRow}>
+          <View style={[styles.stepDot, styles.stepDotActive]} />
+          <View style={styles.stepDot} />
+          <View style={styles.stepDot} />
+        </View>
         <View style={styles.top}>
           <Text style={styles.title}>Your studio</Text>
           <Text style={styles.subtitle}>
@@ -165,6 +170,15 @@ const styles = StyleSheet.create({
     padding: spacing[6],
     paddingBottom: spacing[10],
   },
+  stepRow: { flexDirection: 'row', gap: 8, marginBottom: spacing[6] },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  stepDotActive: { backgroundColor: colors.clay },
+  stepDotDone: { backgroundColor: colors.moss },
   top: {
     marginBottom: spacing[8],
   },

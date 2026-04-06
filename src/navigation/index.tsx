@@ -29,6 +29,8 @@ import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import AccountSecurityScreen from '../screens/profile/AccountSecurityScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
+import StudioOnboardingScreen from '../screens/studio/StudioOnboardingScreen';
+import InviteFirstMemberScreen from '../screens/studio/InviteFirstMemberScreen';
 import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import PricingSettingsScreen from '../screens/studio/PricingSettingsScreen';
 import StudioSettingsScreen from '../screens/studio/StudioSettingsScreen';
@@ -333,12 +335,32 @@ function AppNavigator() {
         }}
       />
       <AppStack.Screen
+        name="StudioOnboarding"
+        component={StudioOnboardingScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Your studio',
+          headerBackTitle: 'Studio',
+        }}
+      />
+      <AppStack.Screen
         name="SetupPricing"
         component={SetupPricingScreen}
         options={{
           headerShown: true,
           title: 'Pricing',
           ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="InviteFirstMember"
+        component={InviteFirstMemberScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Invite a member',
+          headerBackTitle: 'Back',
         }}
       />
       <AppStack.Screen

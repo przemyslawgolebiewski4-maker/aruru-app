@@ -43,6 +43,8 @@ export type AppStackParamList = {
   AccountSecurity: undefined;
   Support: undefined;
   CreateStudio: undefined;
+  StudioOnboarding: { tenantId: string; studioName: string };
+  InviteFirstMember: { tenantId: string; studioName: string };
   SetupPricing: { tenantId: string; studioName: string };
   PricingSettings: { tenantId: string; studioName: string };
   StudioSettings: { tenantId: string; studioName: string };

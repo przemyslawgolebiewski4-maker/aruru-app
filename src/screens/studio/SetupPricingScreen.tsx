@@ -8,7 +8,7 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Button } from '../../components/ui';
@@ -24,15 +24,6 @@ function parseAmount(s: string): number {
   if (!t) return 0;
   const n = parseFloat(t);
   return Number.isFinite(n) ? n : 0;
-}
-
-function resetToMain(navigation: Nav) {
-  navigation.dispatch(
-    CommonActions.reset({
-      index: 0,
-      routes: [{ name: 'Main' }],
-    })
-  );
 }
 
 type FieldRowProps = {
@@ -94,7 +85,10 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         kilnPrivatePerFiring: parseAmount(priv),
         membershipFee: parseAmount(membership),
       });
-      resetToMain(navigation);
+      navigation.replace('InviteFirstMember', {
+        tenantId,
+        studioName,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not save pricing.');
     } finally {
@@ -111,6 +105,11 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.stepRow}>
+          <View style={[styles.stepDot, styles.stepDotDone]} />
+          <View style={[styles.stepDot, styles.stepDotActive]} />
+          <View style={styles.stepDot} />
+        </View>
         <View style={styles.top}>
           <Text style={styles.title}>{studioName}</Text>
           <Text style={styles.subtitle}>
@@ -178,7 +177,12 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         <Button
           label="Skip for now"
           variant="ghost"
-          onPress={() => resetToMain(navigation)}
+          onPress={() =>
+            navigation.replace('InviteFirstMember', {
+              tenantId,
+              studioName,
+            })
+          }
           fullWidth
           accessibilityLabel="Skip pricing setup"
           style={styles.skipBelowPrimary}
@@ -197,6 +201,15 @@ const styles = StyleSheet.create({
     padding: spacing[6],
     paddingBottom: spacing[10],
   },
+  stepRow: { flexDirection: 'row', gap: 8, marginBottom: spacing[6] },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  stepDotActive: { backgroundColor: colors.clay },
+  stepDotDone: { backgroundColor: colors.moss },
   top: {
     marginBottom: spacing[8],
   },
