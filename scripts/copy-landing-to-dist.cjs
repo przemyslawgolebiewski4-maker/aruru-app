@@ -23,6 +23,7 @@ if (!fs.existsSync(path.join(root, 'dist'))) {
 fs.copyFileSync(src, dest);
 console.log('copy-landing-to-dist: public/landing.html → dist/landing.html');
 
+// Open Graph asset (canonical name: og-image.jpg — not aruru_og_image.jpg / .png)
 const ogSrc = path.join(root, 'public', 'og-image.jpg');
 const ogDest = path.join(root, 'dist', 'og-image.jpg');
 if (fs.existsSync(ogSrc)) {
