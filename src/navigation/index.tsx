@@ -59,6 +59,7 @@ import AdminForumScreen from '../screens/admin/AdminForumScreen';
 import AdminAdminsScreen from '../screens/admin/AdminAdminsScreen';
 import AdminPricingScreen from '../screens/admin/AdminPricingScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
+import StudioPlanScreen from '../screens/studio/StudioPlanScreen';
 import SponsorPlanScreen from '../screens/sponsor/SponsorPlanScreen';
 import SponsorEditProfileScreen from '../screens/sponsor/SponsorEditProfileScreen';
 import type {
@@ -287,6 +288,15 @@ function AppNavigator() {
       <AppStack.Screen
         name="SponsorPlan"
         component={SponsorPlanScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Choose your plan',
+        }}
+      />
+      <AppStack.Screen
+        name="StudioPlan"
+        component={StudioPlanScreen}
         options={{
           ...appModalHeaderOptions,
           headerShown: true,

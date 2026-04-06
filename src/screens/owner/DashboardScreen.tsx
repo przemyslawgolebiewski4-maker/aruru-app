@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -194,30 +193,11 @@ export default function DashboardScreen() {
       currentStudio?.role === 'assistant') &&
     currentStudio?.status === 'active';
 
-  async function openCheckout() {
-    try {
-      const tier = currentStudio?.subscriptionTier ?? 'solo';
-      const res = await apiFetch<{
-        checkoutUrl?: string;
-        checkout_url?: string;
-      }>(
-        '/stripe/studio/checkout',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            tenant_id: currentStudio?.tenantId,
-            tier,
-          }),
-        },
-        currentStudio?.tenantId ?? ''
-      );
-      const url = res.checkoutUrl ?? res.checkout_url;
-      if (url) {
-        void Linking.openURL(url);
-      }
-    } catch {
-      alertMessage('Error', 'Could not open checkout. Please try again.');
-    }
+  function openCheckout() {
+    if (!tenantId) return;
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('StudioPlan', { tenantId });
   }
 
   const load = useCallback(async () => {

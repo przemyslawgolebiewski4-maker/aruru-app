@@ -121,7 +121,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [portalLoading, setPortalLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [communityVisible, setCommunityVisible] = useState(true);
   const [visibilityLoading, setVisibilityLoading] = useState(false);
@@ -245,33 +244,11 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     }
   }
 
-  async function openCheckout() {
-    setCheckoutLoading(true);
-    try {
-      const tier = currentStudio?.subscriptionTier ?? 'solo';
-      const res = await apiFetch<{
-        checkoutUrl?: string;
-        checkout_url?: string;
-      }>(
-        '/stripe/studio/checkout',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            tenant_id: tenantId,
-            tier,
-          }),
-        },
-        tenantId
-      );
-      const url = res.checkoutUrl ?? res.checkout_url;
-      if (url) {
-        void Linking.openURL(url);
-      }
-    } catch {
-      alertMessage('Error', 'Could not open checkout.');
-    } finally {
-      setCheckoutLoading(false);
-    }
+  function openCheckout() {
+    if (!tenantId) return;
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('StudioPlan', { tenantId });
   }
 
   function subscriptionStatusUI() {
@@ -292,8 +269,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
             <Button
               label="Subscribe now"
               variant="primary"
-              onPress={() => void openCheckout()}
-              loading={checkoutLoading}
+              onPress={openCheckout}
               fullWidth
               style={styles.subscriptionBtn}
             />
@@ -333,8 +309,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           <Button
             label="Subscribe to continue"
             variant="primary"
-            onPress={() => void openCheckout()}
-            loading={checkoutLoading}
+            onPress={openCheckout}
             fullWidth
             style={styles.subscriptionBtn}
           />
@@ -404,8 +379,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           <Button
             label="Resubscribe ↗"
             variant="ghost"
-            onPress={() => void openCheckout()}
-            loading={checkoutLoading}
+            onPress={openCheckout}
             fullWidth
             style={styles.subscriptionBtn}
           />
