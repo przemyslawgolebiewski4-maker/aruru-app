@@ -22,3 +22,10 @@ if (!fs.existsSync(path.join(root, 'dist'))) {
 
 fs.copyFileSync(src, dest);
 console.log('copy-landing-to-dist: public/landing.html → dist/landing.html');
+
+const ogSrc = path.join(root, 'public', 'og-image.jpg');
+const ogDest = path.join(root, 'dist', 'og-image.jpg');
+if (fs.existsSync(ogSrc)) {
+  fs.copyFileSync(ogSrc, ogDest);
+  console.log('copy-landing-to-dist: public/og-image.jpg → dist/og-image.jpg');
+}
