@@ -394,6 +394,8 @@ const styles = StyleSheet.create({
   statPill: {
     backgroundColor: colors.cream,
     borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
     paddingHorizontal: spacing[3],
     paddingVertical: 6,
     marginRight: spacing[2],

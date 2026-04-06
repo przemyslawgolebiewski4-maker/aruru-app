@@ -881,6 +881,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
     backgroundColor: 'transparent',
   },
   tabActive: { backgroundColor: colors.clay },
@@ -1102,7 +1104,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: typography.display,
     fontSize: fontSize['2xl'],
-    color: colors.ink,
+    color: colors.inkLight,
     marginBottom: spacing[2],
     textAlign: 'center',
   },

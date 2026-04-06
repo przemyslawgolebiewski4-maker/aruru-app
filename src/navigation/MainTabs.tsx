@@ -29,13 +29,14 @@ const tabScreenOptions = {
   },
   tabBarLabelStyle: {
     fontFamily: typography.mono,
-    fontSize: 11,
-    letterSpacing: 0.8,
+    fontSize: 10,
+    letterSpacing: 0.4,
     textTransform: 'uppercase' as const,
   },
   tabBarActiveTintColor: colors.clay,
   tabBarInactiveTintColor: colors.inkLight,
-  tabBarItemStyle: { paddingVertical: 10 },
+  tabBarScrollEnabled: true,
+  tabBarItemStyle: { paddingVertical: 8 },
   tabBarShowLabel: true,
   tabBarPressColor: colors.clayLight,
 };
@@ -86,7 +87,7 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="Notifications"
         component={NotificationsScreen}
-        options={{ title: 'Notifications' }}
+        options={{ title: 'Alerts' }}
       />
       <Tab.Screen
         name="Profile"
