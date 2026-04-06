@@ -850,69 +850,62 @@ export default function DashboardScreen() {
         <View style={styles.actionQuarter}>
           <Button
             label="New firing"
-            variant="ghost"
+            variant="secondary"
             onPress={goKilnList}
-            fullWidth
-            style={styles.actionBtn}
+            style={styles.quickActionBtn}
           />
         </View>
         {currentStudio?.role !== 'assistant' ? (
           <View style={styles.actionQuarter}>
             <Button
               label="Members"
-              variant="ghost"
+              variant="secondary"
               onPress={goMembers}
-              fullWidth
-              style={styles.actionBtn}
+              style={styles.quickActionBtn}
             />
           </View>
         ) : null}
         <View style={styles.actionQuarter}>
           <Button
             label="Tasks"
-            variant="ghost"
+            variant="secondary"
             onPress={goTasks}
-            fullWidth
-            style={styles.actionBtn}
+            style={styles.quickActionBtn}
           />
         </View>
         <View style={styles.actionQuarter}>
           <Button
             label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
-            variant="ghost"
+            variant="secondary"
             onPress={goCosts}
-            fullWidth
-            style={styles.actionBtn}
+            style={styles.quickActionBtn}
           />
         </View>
         {currentStudio?.role === 'assistant' ? (
           <View style={styles.actionQuarter}>
             <Button
               label="Attendance"
-              variant="ghost"
+              variant="secondary"
               onPress={goAttendance}
-              fullWidth
-              style={styles.actionBtn}
+              style={styles.quickActionBtn}
             />
           </View>
         ) : null}
         <View style={styles.actionQuarter}>
           <Button
             label="Events"
-            variant="ghost"
+            variant="secondary"
             onPress={goEvents}
-            fullWidth
-            style={styles.actionBtn}
+            style={styles.quickActionBtn}
           />
         </View>
         {canManageMembers ? (
           <View style={styles.actionQuarter}>
             <Button
               label="Catalog"
-              variant="ghost"
+              variant="secondary"
               onPress={goCatalog}
-              fullWidth
-              style={styles.actionBtn}
+              style={styles.quickActionBtn}
             />
           </View>
         ) : null}
@@ -920,10 +913,9 @@ export default function DashboardScreen() {
           <View style={styles.actionQuarter}>
             <Button
               label="Assistants"
-              variant="ghost"
+              variant="secondary"
               onPress={goAssistants}
-              fullWidth
-              style={styles.actionBtn}
+              style={styles.quickActionBtn}
             />
           </View>
         ) : null}
@@ -931,10 +923,9 @@ export default function DashboardScreen() {
           <View style={styles.actionQuarter}>
             <Button
               label="Pricing"
-              variant="ghost"
+              variant="secondary"
               onPress={goPricing}
-              fullWidth
-              style={styles.actionBtn}
+              style={styles.quickActionBtn}
             />
           </View>
         ) : null}
@@ -942,10 +933,9 @@ export default function DashboardScreen() {
           <View style={styles.actionQuarter}>
             <Button
               label="Studio settings"
-              variant="ghost"
+              variant="secondary"
               onPress={goStudioSettings}
-              fullWidth
-              style={styles.actionBtn}
+              style={styles.quickActionBtn}
             />
           </View>
         ) : null}
@@ -1211,9 +1201,8 @@ const styles = StyleSheet.create({
     flexBasis: '22%',
     minWidth: 88,
   },
-  actionBtn: {
-    borderColor: colors.clay,
-    borderWidth: 0.5,
-    borderRadius: radius.sm,
+  quickActionBtn: {
+    flex: 1,
+    minWidth: '45%',
   },
 });
