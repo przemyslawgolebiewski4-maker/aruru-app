@@ -79,6 +79,30 @@ const appModalHeaderOptions = {
   headerShadowVisible: false,
 } as const;
 
+/** Placeholder until SupportScreen.tsx ships. */
+function SupportScreen() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surface,
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: typography.mono,
+          fontSize: fontSize.sm,
+          color: colors.inkLight,
+        }}
+      >
+        Support coming soon
+      </Text>
+    </View>
+  );
+}
+
 const ONBOARDING_KEY = 'aruru_onboarding_done';
 
 export type { AuthStackParamList, AppStackParamList, MainTabParamList } from './types';
@@ -283,6 +307,15 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Security',
+        }}
+      />
+      <AppStack.Screen
+        name="Support"
+        component={SupportScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Contact support',
         }}
       />
       <AppStack.Screen

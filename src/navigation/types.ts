@@ -41,6 +41,7 @@ export type AppStackParamList = {
   PaymentCancelled: undefined;
   EditProfile: undefined;
   AccountSecurity: undefined;
+  Support: undefined;
   CreateStudio: undefined;
   SetupPricing: { tenantId: string; studioName: string };
   PricingSettings: { tenantId: string; studioName: string };

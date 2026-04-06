@@ -468,6 +468,8 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
+        {/* ─── Studio identity ─────────── */}
+        <SectionLabel>Studio identity</SectionLabel>
         <View style={styles.logoSection}>
           <ImageUpload
             currentUrl={logoUrl || null}
@@ -551,6 +553,10 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
             </ScrollView>
           ) : null}
         </View>
+
+        {/* ─── About ───────────────────── */}
+        <View style={styles.sectionGap} />
+        <SectionLabel>About</SectionLabel>
         <Input
           label="Description (internal)"
           value={description}
@@ -560,7 +566,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           numberOfLines={3}
           containerStyle={styles.fieldGap}
         />
-
         <Input
           label="Public description (optional)"
           value={publicDescription}
@@ -570,7 +575,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           numberOfLines={3}
           containerStyle={styles.fieldGap}
         />
-
         <View style={styles.tagSection}>
           <Text style={styles.tagSectionLabel}>Tags (max 5)</Text>
           <View style={styles.tagGrid}>
@@ -603,6 +607,9 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           </View>
         </View>
 
+        {/* ─── Online presence ─────────── */}
+        <View style={styles.sectionGap} />
+        <SectionLabel>Online presence</SectionLabel>
         <Input
           label="Instagram"
           value={instagramUrl}
@@ -642,15 +649,15 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           style={styles.saveBtn}
         />
 
-        <View style={styles.subscriptionSection}>
-          <SectionLabel>Subscription</SectionLabel>
-          {subscriptionStatusUI()}
-        </View>
+        {/* ─── Subscription ────────────── */}
+        <View style={styles.sectionGap} />
+        <SectionLabel>Subscription</SectionLabel>
+        {subscriptionStatusUI()}
 
-        {/* ── Community visibility ── */}
-        <View style={styles.dangerSection}>
-          <SectionLabel>Community</SectionLabel>
-
+        {/* ─── Visibility & privacy ─────── */}
+        <View style={styles.sectionGap} />
+        <SectionLabel>Visibility & privacy</SectionLabel>
+        <View style={styles.visibilityBlock}>
           <View style={styles.dangerRow}>
             <View style={styles.dangerRowText}>
               <Text style={styles.dangerRowTitle}>Visible in community</Text>
@@ -675,9 +682,13 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
               />
             </TouchableOpacity>
           </View>
+        </View>
 
-          {/* ── Delete studio ── */}
-          <View style={[styles.dangerRow, { marginTop: spacing[4] }]}>
+        {/* ─── Danger zone ─────────────── */}
+        <View style={styles.sectionGap} />
+        <SectionLabel>Danger zone</SectionLabel>
+        <View style={styles.dangerZoneBlock}>
+          <View style={styles.dangerRow}>
             <View style={styles.dangerRowText}>
               <Text style={styles.dangerRowTitle}>Delete studio</Text>
               <Text style={styles.dangerRowSub}>
@@ -754,7 +765,9 @@ const styles = StyleSheet.create({
   },
   saveBtn: { marginTop: spacing[4] },
   subscriptionBtn: { marginTop: spacing[2] },
-  subscriptionSection: { marginTop: spacing[6] },
+  sectionGap: { height: spacing[6] },
+  visibilityBlock: { gap: spacing[3] },
+  dangerZoneBlock: { gap: spacing[3] },
   pickerLabel: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.sm,
@@ -838,13 +851,6 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 20,
     marginBottom: spacing[2],
-  },
-  dangerSection: {
-    marginTop: spacing[8],
-    paddingTop: spacing[6],
-    borderTopWidth: 0.5,
-    borderTopColor: colors.border,
-    gap: spacing[3],
   },
   dangerRow: {
     flexDirection: 'row',

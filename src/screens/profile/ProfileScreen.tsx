@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,8 +16,6 @@ import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
-
-const DELETE_LABEL_GRAY = '#9E9890';
 
 async function confirmDeleteAccountFlow(): Promise<boolean> {
   const step1 = await confirmDestructive(
@@ -117,6 +115,7 @@ export default function ProfileScreen() {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      {/* ── Identity ── */}
       <View style={styles.avatarBlock}>
         <Avatar
           name={user?.name ?? 'User'}
@@ -125,14 +124,20 @@ export default function ProfileScreen() {
         />
         <Text style={styles.name}>{user?.name ?? '—'}</Text>
         <Text style={styles.email}>{user?.email ?? ''}</Text>
+        {user?.city || user?.country ? (
+          <Text style={styles.location}>
+            {[user?.city, user?.country].filter(Boolean).join(', ')}
+          </Text>
+        ) : null}
         {user?.emailVerified ? (
-          <Text style={styles.verifiedHint}>E-mail verified</Text>
+          <Text style={styles.verifiedHint}>Email verified</Text>
         ) : (
-          <Text style={styles.unverifiedHint}>E-mail not verified</Text>
+          <Text style={styles.unverifiedHint}>Email not verified</Text>
         )}
       </View>
 
-      <SectionLabel>Your studios</SectionLabel>
+      {/* ── Studios ── */}
+      <SectionLabel>Studios</SectionLabel>
       {studios.length === 0 ? (
         <Text style={styles.empty}>
           {isSponsor
@@ -163,95 +168,105 @@ export default function ProfileScreen() {
                       onPress={() => goStudioSettings(s)}
                       hitSlop={8}
                       accessibilityRole="button"
-                      accessibilityLabel="Studio settings"
                     >
-                      <Text style={styles.editPricingLink}>Studio settings →</Text>
+                      <Text style={styles.studioLink}>Studio settings →</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => goPricingSettings(s)}
                       hitSlop={8}
                       accessibilityRole="button"
-                      accessibilityLabel="Edit pricing"
                     >
-                      <Text style={styles.editPricingLink}>Edit pricing →</Text>
+                      <Text style={styles.studioLink}>Edit pricing →</Text>
                     </TouchableOpacity>
                   </View>
                 ) : null}
               </View>
-              <Badge
-                label={formatRole(s.role)}
-                variant={roleToBadgeVariant(s.role)}
-              />
+              <Badge label={formatRole(s.role)} variant={roleToBadgeVariant(s.role)} />
             </View>
             {i < studios.length - 1 ? <Divider style={styles.rowDivider} /> : null}
           </View>
         ))
       )}
-
       {!isSponsor && (
         <Button
           label="+ Create studio"
-          variant="ghost"
+          variant="secondary"
           onPress={() =>
             navigation
               .getParent<NativeStackNavigationProp<AppStackParamList>>()
               ?.navigate('CreateStudio')
           }
           fullWidth
-          style={styles.createStudioBtn}
+          style={styles.sectionBtn}
         />
       )}
 
-      <View style={{ height: spacing[8] }} />
-
+      {/* ── Account ── */}
+      <View style={styles.sectionGap} />
       <SectionLabel>Account</SectionLabel>
       <Button
         label="Edit profile"
         variant="ghost"
         onPress={goEditProfile}
         fullWidth
-        style={styles.accountBtn}
+        style={styles.menuBtn}
       />
       <Button
         label="Security & two-factor"
         variant="ghost"
         onPress={() => stackNav?.navigate('AccountSecurity')}
         fullWidth
-        style={styles.accountBtn}
+        style={styles.menuBtn}
       />
-      <Divider style={styles.rowDivider} />
-      <TouchableOpacity
-        style={styles.signOutBtn}
-        onPress={() => signOut()}
-        accessibilityRole="button"
-        accessibilityLabel="Sign out"
-      >
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
+      <Button
+        label="Contact support"
+        variant="ghost"
+        onPress={() => stackNav?.navigate('Support')}
+        fullWidth
+        style={styles.menuBtn}
+      />
 
-      <Divider style={styles.rowDivider} />
-      <Text style={styles.deleteExportHint}>
-        You can download a copy of your data first: Security & two-factor → Your
-        data.
-      </Text>
-      <TouchableOpacity
-        style={styles.deleteAccountBtn}
+      {/* ── Legal ── */}
+      <View style={styles.sectionGap} />
+      <SectionLabel>Legal</SectionLabel>
+      <Button
+        label="Privacy Policy ↗"
+        variant="ghost"
+        onPress={() => void Linking.openURL('https://aruru.xyz/privacy')}
+        fullWidth
+        style={styles.menuBtn}
+      />
+      <Button
+        label="Terms of Service ↗"
+        variant="ghost"
+        onPress={() => void Linking.openURL('https://aruru.xyz/terms')}
+        fullWidth
+        style={styles.menuBtn}
+      />
+
+      {/* ── Danger zone ── */}
+      <View style={styles.sectionGap} />
+      <SectionLabel>Account actions</SectionLabel>
+      <Button
+        label="Sign out"
+        variant="ghost"
+        onPress={() => signOut()}
+        fullWidth
+        style={styles.menuBtn}
+      />
+      <View style={styles.deleteHint}>
+        <Text style={styles.deleteHintText}>
+          Download your data before deleting: Security & two-factor → Your data.
+        </Text>
+      </View>
+      <Button
+        label="Delete account"
+        variant="danger"
         onPress={() => void handleDeleteAccount()}
-        disabled={deleting}
-        accessibilityRole="button"
-        accessibilityLabel="Delete account"
-      >
-        {deleting ? (
-          <ActivityIndicator color={DELETE_LABEL_GRAY} />
-        ) : (
-          <>
-            <Text style={styles.deleteAccountText}>Delete account</Text>
-            <Text style={styles.deleteAccountSub}>
-              Permanently removes your data
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
+        loading={deleting}
+        fullWidth
+        style={styles.menuBtn}
+      />
       {deleteError ? (
         <Text style={styles.deleteErrorText}>{deleteError}</Text>
       ) : null}
@@ -262,17 +277,9 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  content: {
-    padding: spacing[6],
-  },
-  avatarBlock: {
-    alignItems: 'center',
-    marginBottom: spacing[8],
-  },
+  scroll: { flex: 1, backgroundColor: colors.surface },
+  content: { padding: spacing[6] },
+  avatarBlock: { alignItems: 'center', marginBottom: spacing[8] },
   name: {
     fontFamily: typography.display,
     fontSize: 24,
@@ -286,6 +293,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkLight,
     marginTop: spacing[2],
+    textAlign: 'center',
+  },
+  location: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: spacing[1],
     textAlign: 'center',
   },
   verifiedHint: {
@@ -325,74 +339,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  studioCol: {
-    flex: 1,
-    minWidth: 0,
-  },
+  studioCol: { flex: 1, minWidth: 0 },
   studioName: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.base,
     color: colors.ink,
   },
-  ownerStudioLinks: {
-    gap: spacing[1],
-    marginTop: 2,
-  },
-  editPricingLink: {
+  ownerStudioLinks: { gap: spacing[1], marginTop: 2 },
+  studioLink: {
     fontFamily: typography.mono,
     fontSize: 11,
     color: colors.clay,
     marginTop: 2,
   },
-  rowDivider: {
-    marginVertical: 0,
-  },
-  createStudioBtn: {
+  rowDivider: { marginVertical: 0 },
+  sectionBtn: { marginTop: spacing[3] },
+  sectionGap: { height: spacing[8] },
+  menuBtn: { marginTop: spacing[1] },
+  deleteHint: {
+    paddingHorizontal: spacing[2],
     marginTop: spacing[3],
-    borderWidth: 0.5,
-    borderColor: colors.clay,
+    marginBottom: spacing[1],
   },
-  accountBtn: {
-    marginTop: spacing[2],
-    alignSelf: 'stretch',
-  },
-  signOutBtn: {
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    marginTop: spacing[1],
-  },
-  signOutText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.error,
-  },
-  deleteExportHint: {
+  deleteHintText: {
     fontFamily: typography.mono,
     fontSize: 10,
     color: colors.inkLight,
     textAlign: 'center',
     lineHeight: 16,
-    marginBottom: spacing[2],
-    paddingHorizontal: spacing[2],
-  },
-  deleteAccountBtn: {
-    paddingVertical: 11,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    marginTop: spacing[1],
-  },
-  deleteAccountText: {
-    fontFamily: typography.body,
-    fontSize: 13,
-    color: DELETE_LABEL_GRAY,
-  },
-  deleteAccountSub: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.inkLight,
-    marginTop: 2,
-    textAlign: 'center',
   },
   deleteErrorText: {
     fontFamily: typography.body,
