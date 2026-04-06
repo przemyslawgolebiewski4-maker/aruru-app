@@ -15,9 +15,8 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudioPlan'>;
 
-type Tier = 'solo' | 'studio' | 'studio_large' | 'community';
+type Tier = 'solo' | 'studio' | 'community' | 'large';
 
-/** Order and pricing match FOUNDATION.md → „Subskrypcja studia (owner)”. */
 const PLANS: {
   tier: Tier;
   name: string;
@@ -32,11 +31,11 @@ const PLANS: {
     price: '€15 / month',
     members: 'Up to 5 members',
     features: [
-      'Kiln sessions, costs, and firing history',
-      'Tasks with priorities and hour logs',
-      'Events and public studio feed',
+      'Kiln management & cost tracking',
+      'Task management with hour logs',
+      'Events & community feed',
       'Materials catalogue',
-      'Per-member cost summaries (HTML export)',
+      'Cost summaries & PDF export',
     ],
   },
   {
@@ -47,30 +46,32 @@ const PLANS: {
     recommended: true,
     features: [
       'Everything in Solo',
+      'Larger member capacity',
       'Assistant roles',
       'Attendance tracking',
     ],
   },
   {
-    tier: 'studio_large',
-    name: 'Aruru Studio Large',
-    price: '€45 / month',
-    members: 'Up to 35 members',
+    tier: 'community',
+    name: 'Community',
+    price: '€49 / month',
+    members: 'Up to 50 members',
     features: [
       'Everything in Studio',
-      'More seats for classes and members',
+      'Large community studios',
+      'Multiple assistants',
+      'Full operational suite',
     ],
   },
   {
-    tier: 'community',
-    name: 'Community',
-    price: '€59 / month',
-    members: 'Up to 50 members',
+    tier: 'large',
+    name: 'Large',
+    price: '€79 / month',
+    members: 'Unlimited members',
     features: [
-      'Everything in Aruru Studio Large',
-      'Largest member capacity',
-      'Multiple assistants at scale',
-      'Full operational suite',
+      'Everything in Community',
+      'Unlimited member capacity',
+      'Ideal for large studios and collectives',
     ],
   },
 ];
