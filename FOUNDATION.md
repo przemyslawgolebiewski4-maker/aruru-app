@@ -108,13 +108,14 @@ Przykładowe klucze: `typography.display`, `typography.body`, `typography.bodyMe
 - **StudioPlanScreen** — wybór planu przed Stripe Checkout; wejście z **DashboardScreen** lub **StudioSettingsScreen** przez `navigation.getParent()?.navigate('StudioPlan', { tenantId })`.
 - **`POST /stripe/studio/checkout`** — body: `tenant_id`, `tier` (jak poniżej). Odpowiedź: `checkoutUrl` / `checkout_url`.
 - **Backend / Stripe:** muszą mapować każdy `tier` na właściwy price ID (w tym `studio_large`).
+- **Kolejność na ekranie:** zawsze od najniższego do najwyższego tieru — jak w tabeli (Solo → Studio → Aruru Studio Large → Community).
 
-| Nazwa w UI | `tier` (API) | Cena (UI) | Limit członków (UI) |
-|------------|--------------|-----------|---------------------|
-| Solo | `solo` | €15 / mies. | do 5 |
-| Studio | `studio` | €29 / mies. | do 20 |
-| Aruru Studio Large | `studio_large` | €45 / mies. | do 35 |
-| Community | `community` | €59 / mies. | do 50 |
+| Nazwa w UI (EN) | `tier` (API) | Cena w UI (EN) | Limit w UI (EN) | Skrót możliwości (UI EN) |
+|-----------------|--------------|----------------|-----------------|---------------------------|
+| Solo | `solo` | €15 / month | Up to 5 members | Kiln & costs, tasks & hours, events & feed, materials, HTML cost summaries |
+| Studio | `studio` | €29 / month | Up to 20 members | Everything in Solo + assistants + attendance |
+| Aruru Studio Large | `studio_large` | €45 / month | Up to 35 members | Everything in Studio + more seats for classes and members |
+| Community | `community` | €59 / month | Up to 50 members | Everything in Aruru Studio Large + largest capacity, full ops suite |
 
 ## Badge variant
 - `'clay' | 'moss' | 'neutral'` (nie używaj `'default'`).

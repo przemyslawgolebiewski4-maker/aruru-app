@@ -17,6 +17,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'StudioPlan'>;
 
 type Tier = 'solo' | 'studio' | 'studio_large' | 'community';
 
+/** Order and pricing match FOUNDATION.md → „Subskrypcja studia (owner)”. */
 const PLANS: {
   tier: Tier;
   name: string;
@@ -31,11 +32,11 @@ const PLANS: {
     price: '€15 / month',
     members: 'Up to 5 members',
     features: [
-      'Kiln management & cost tracking',
-      'Task management with hour logs',
-      'Events & community feed',
+      'Kiln sessions, costs, and firing history',
+      'Tasks with priorities and hour logs',
+      'Events and public studio feed',
       'Materials catalogue',
-      'Cost summaries & PDF export',
+      'Per-member cost summaries (HTML export)',
     ],
   },
   {
@@ -46,7 +47,6 @@ const PLANS: {
     recommended: true,
     features: [
       'Everything in Solo',
-      'Larger member capacity',
       'Assistant roles',
       'Attendance tracking',
     ],
@@ -59,8 +59,6 @@ const PLANS: {
     features: [
       'Everything in Studio',
       'More seats for classes and members',
-      'Same roles, kiln, tasks, and costs',
-      'Step up before you need Community',
     ],
   },
   {
@@ -70,8 +68,8 @@ const PLANS: {
     members: 'Up to 50 members',
     features: [
       'Everything in Aruru Studio Large',
-      'Large community studios',
-      'Multiple assistants',
+      'Largest member capacity',
+      'Multiple assistants at scale',
       'Full operational suite',
     ],
   },
