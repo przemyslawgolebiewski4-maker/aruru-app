@@ -149,7 +149,11 @@ export default function AdminSupportScreen() {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {openCount > 0 ? (
         <View style={styles.alertBanner}>
           <Text style={styles.alertText}>
@@ -187,16 +191,19 @@ export default function AdminSupportScreen() {
         <Text style={styles.empty}>No tickets.</Text>
       ) : (
         tickets.map((t) => (
-          <TouchableOpacity
-            key={t.id}
-            style={styles.card}
-            onPress={() => {
-              setExpanded(expanded === t.id ? null : t.id);
-              setReply('');
-            }}
-            activeOpacity={0.85}
-          >
-            <View style={styles.cardHeader}>
+          <View key={t.id} style={styles.card}>
+            <TouchableOpacity
+              style={styles.cardHeader}
+              onPress={() => {
+                setExpanded(expanded === t.id ? null : t.id);
+                setReply('');
+              }}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={
+                expanded === t.id ? 'Collapse ticket' : 'Expand ticket'
+              }
+            >
               <View style={styles.cardLeft}>
                 <View
                   style={[styles.statusDot, { backgroundColor: statusColor(t.status) }]}
@@ -210,7 +217,7 @@ export default function AdminSupportScreen() {
                 <Text style={styles.cardTopic}>{t.topicLabel}</Text>
                 <Text style={styles.cardDate}>{formatDate(t.createdAt)}</Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
             {expanded === t.id ? (
               <View style={styles.cardBody}>
@@ -268,7 +275,7 @@ export default function AdminSupportScreen() {
                 />
               </View>
             ) : null}
-          </TouchableOpacity>
+          </View>
         ))
       )}
     </ScrollView>
