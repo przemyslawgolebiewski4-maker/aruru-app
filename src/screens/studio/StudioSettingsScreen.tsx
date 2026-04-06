@@ -33,8 +33,15 @@ function trialDaysLeft(iso?: string): number {
 }
 
 function formatTierLabel(tier?: string): string {
-  const t = (tier ?? 'solo').trim() || 'solo';
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+  const raw = (tier ?? 'solo').trim().toLowerCase() || 'solo';
+  if (raw === 'studio_large') return 'Aruru Studio Large';
+  if (!raw.includes('_')) {
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  }
+  return raw
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
 }
 import type { AppStackParamList } from '../../navigation/types';
 import {

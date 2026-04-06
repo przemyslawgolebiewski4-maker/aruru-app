@@ -39,7 +39,8 @@ src/
     members/       # MembersScreen, MemberProfileScreen, InviteMemberScreen
     profile/       # ProfileScreen, EditProfileScreen, AccountSecurityScreen
     payment/       # PaymentSuccessScreen, PaymentCancelledScreen
-    studio/        # CreateStudioScreen, SetupPricingScreen, PricingSettingsScreen, StudioSettingsScreen
+    studio/        # CreateStudioScreen, SetupPricingScreen, PricingSettingsScreen, StudioSettingsScreen,
+                   # StudioPlanScreen (wybór planu przed Stripe Checkout)
     notifications/ # NotificationsScreen
     admin/         # AdminScreen, AdminStudiosScreen, AdminSponsorsScreen, AdminForumScreen,
                    # AdminAdminsScreen, AdminPricingScreen, AdminUsersScreen
@@ -78,7 +79,7 @@ Mapowanie:
 - **Bearer:** `Authorization: Bearer <access_token>` dla chronionych żądań (domyślnie w `apiFetch`).
 - **Publiczne ścieżki** (bez Bearer): m.in. `POST /auth/login`, `POST /auth/register`, `POST /auth/login/2fa`, `POST /auth/login/2fa/email/send`, `POST /auth/forgot-password`, `POST /auth/reset-password` — w kodzie: `apiFetch(..., { public: true })`.
 - **GET /auth/me:** Bearer; **bez** nagłówka `X-Tenant-ID` (jak community). Odpowiedź: `{ user, studios }` — użytkownik normalizowany do camelCase (`normalizeAuthUser`). Wpis studia może zawierać **`subscriptionStatus`**, **`subscriptionTier`**, **`trialEndsAt`** (camelCase lub snake_case w JSON → normalizacja w `getMe` / `normalizeStudios`).
-- **Owner dashboard:** przy `subscriptionStatus === 'trial'` i ≤7 dni do końca (lub trial skończony) oraz przy `past_due` — baner z `POST /stripe/studio/checkout` (checkout URL w przeglądarce).
+- **Owner dashboard / Studio settings:** przy aktywnym trialu (`subscriptionStatus === 'trial'`, dni > 0) baner CTA oraz przy `past_due` — nawigacja do **StudioPlanScreen** (wybór planu), potem **Stripe Checkout** z wybranym `tier` (URL w przeglądarce).
 - **PATCH /auth/me:** body w **snake_case** (`name`, `avatar_url`, `bio`, `community_visibility`, …); odpowiedź to pełny publiczny user — po sukcesie **`setUserFull`**, żeby nie gubić `adminRole`, `adminPermissions`, pól `twoFactor*`.
 - **Logowanie:** `POST /auth/login` może zwrócić `access_token` albo `two_factor_required` + `pending_token` + `methods` → ekran **Login2FAScreen** (TOTP i/lub kod e-mail).
 - **Avatar:** `POST /uploads/avatar` z Bearer; **`tenantId` pusty** przy wywołaniu `apiFetch`, żeby nie wysłać `X-Tenant-ID`.
@@ -102,6 +103,18 @@ Przykładowe klucze: `typography.display`, `typography.body`, `typography.bodyMe
 - **DateTimeField:** web = natywny HTML `input`, native = RN picker (lazy load).
 - **Kwoty:** EUR (€).
 - **Copy interfejsu:** język angielski (UI).
+
+## Subskrypcja studia (owner)
+- **StudioPlanScreen** — wybór planu przed Stripe Checkout; wejście z **DashboardScreen** lub **StudioSettingsScreen** przez `navigation.getParent()?.navigate('StudioPlan', { tenantId })`.
+- **`POST /stripe/studio/checkout`** — body: `tenant_id`, `tier` (jak poniżej). Odpowiedź: `checkoutUrl` / `checkout_url`.
+- **Backend / Stripe:** muszą mapować każdy `tier` na właściwy price ID (w tym `studio_large`).
+
+| Nazwa w UI | `tier` (API) | Cena (UI) | Limit członków (UI) |
+|------------|--------------|-----------|---------------------|
+| Solo | `solo` | €15 / mies. | do 5 |
+| Studio | `studio` | €29 / mies. | do 20 |
+| Aruru Studio Large | `studio_large` | €45 / mies. | do 35 |
+| Community | `community` | €59 / mies. | do 50 |
 
 ## Badge variant
 - `'clay' | 'moss' | 'neutral'` (nie używaj `'default'`).

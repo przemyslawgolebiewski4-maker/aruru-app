@@ -15,7 +15,7 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudioPlan'>;
 
-type Tier = 'solo' | 'studio' | 'community';
+type Tier = 'solo' | 'studio' | 'studio_large' | 'community';
 
 const PLANS: {
   tier: Tier;
@@ -52,12 +52,24 @@ const PLANS: {
     ],
   },
   {
+    tier: 'studio_large',
+    name: 'Aruru Studio Large',
+    price: '€45 / month',
+    members: 'Up to 35 members',
+    features: [
+      'Everything in Studio',
+      'More seats for classes and members',
+      'Same roles, kiln, tasks, and costs',
+      'Step up before you need Community',
+    ],
+  },
+  {
     tier: 'community',
     name: 'Community',
     price: '€59 / month',
     members: 'Up to 50 members',
     features: [
-      'Everything in Studio',
+      'Everything in Aruru Studio Large',
       'Large community studios',
       'Multiple assistants',
       'Full operational suite',
