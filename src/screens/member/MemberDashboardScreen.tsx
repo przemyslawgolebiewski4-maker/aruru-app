@@ -15,7 +15,7 @@ import {
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
-import { Badge, SectionLabel, Divider } from '../../components/ui';
+import { Badge, SectionLabel, Divider, Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
@@ -280,34 +280,30 @@ export default function MemberDashboardScreen() {
       <Divider />
 
       <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.actionBtn}
+        <Button
+          label="My costs"
+          variant="secondary"
           onPress={goCosts}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionLabel}>My costs</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionBtn}
+          fullWidth
+        />
+        <Button
+          label="Events"
+          variant="secondary"
           onPress={goEvents}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionLabel}>Events</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionBtn}
+          fullWidth
+        />
+        <Button
+          label="Buy materials"
+          variant="secondary"
           onPress={goShop}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionLabel}>Buy materials</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.actionBtn}
+          fullWidth
+        />
+        <Button
+          label="Book studio time"
+          variant="secondary"
           onPress={goBookStudio}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.actionLabel}>Book studio time</Text>
-        </TouchableOpacity>
+          fullWidth
+        />
       </View>
     </ScrollView>
   );
@@ -393,22 +389,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[2],
   },
   actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: spacing[2],
     marginTop: spacing[2],
-  },
-  actionBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: colors.clay,
-    borderRadius: radius.md,
-    paddingVertical: spacing[2],
-    alignItems: 'center',
-  },
-  actionLabel: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.clay,
   },
 });

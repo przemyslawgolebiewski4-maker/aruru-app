@@ -347,6 +347,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Pricing',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -356,6 +357,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Studio settings',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -365,6 +367,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Members',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -374,6 +377,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Invite member',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -383,6 +387,7 @@ function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: route.params.memberName,
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         })}
       />
@@ -392,6 +397,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Kiln firings',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -401,6 +407,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'New firing',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -410,6 +417,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Load kiln',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -419,6 +427,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Firing detail',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -428,6 +437,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Tasks',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -437,6 +447,7 @@ function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: route.params.taskTitle?.trim() || 'Task',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         })}
       />
@@ -447,6 +458,7 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Attendance',
+          headerBackTitle: 'Studio',
         }}
       />
       <AppStack.Screen
@@ -456,6 +468,7 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Assistants',
+          headerBackTitle: 'Studio',
         }}
       />
       <AppStack.Screen
@@ -464,6 +477,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Cost summaries',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -473,6 +487,7 @@ function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: route.params.memberName,
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         })}
       />
@@ -482,6 +497,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Events',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -491,6 +507,7 @@ function AppNavigator() {
         options={({ route }) => ({
           headerShown: true,
           title: route.params.eventTitle,
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         })}
       />
@@ -500,6 +517,7 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Book studio',
+          headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}
       />
@@ -510,6 +528,7 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Catalog',
+          headerBackTitle: 'Studio',
         }}
       />
       <AppStack.Screen
@@ -519,6 +538,7 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Materials',
+          headerBackTitle: 'Studio',
         }}
       />
       <AppStack.Screen

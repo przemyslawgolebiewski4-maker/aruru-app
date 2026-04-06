@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -597,6 +598,18 @@ export default function DashboardScreen() {
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.topRow}>
+        <TouchableOpacity
+          onPress={() => {
+            if (typeof window !== 'undefined') {
+              void Linking.openURL('https://aruru.xyz');
+            }
+          }}
+          accessibilityRole="link"
+          accessibilityLabel="Go to aruru.xyz"
+          hitSlop={8}
+        >
+          <Text style={styles.wordmarkLink}>Aruru</Text>
+        </TouchableOpacity>
         <Text style={styles.studioMono} numberOfLines={1}>
           {studioLabel.toUpperCase()}
         </Text>
@@ -1025,6 +1038,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing[4],
     gap: spacing[3],
+  },
+  wordmarkLink: {
+    fontFamily: typography.display,
+    fontSize: fontSize.lg,
+    color: colors.clay,
+    letterSpacing: -0.3,
   },
   studioMono: {
     fontFamily: typography.mono,

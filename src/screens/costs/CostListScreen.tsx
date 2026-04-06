@@ -10,7 +10,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Badge } from '../../components/ui';
+import { Avatar, Badge, Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -196,6 +196,17 @@ export default function CostListScreen({ route }: { route: Route }) {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [costsMap, setCostsMap] = useState<Record<string, LiveCostRow>>({});
   const [loading, setLoading] = useState(true);
+  const [showMiscForm, setShowMiscForm] = useState(false);
+  const [miscUserId, setMiscUserId] = useState('');
+  const [miscDesc, setMiscDesc] = useState('');
+  const [miscCost, setMiscCost] = useState('');
+  const [miscDate, setMiscDate] = useState(
+    () => new Date().toISOString().slice(0, 10)
+  );
+  const [miscSubmitting, setMiscSubmitting] = useState(false);
+  const [miscError, setMiscError] = useState('');
+
+  const isOwner = currentStudio?.role === 'owner';
 
   useLayoutEffect(() => {
     if (currentStudio?.role !== 'owner') {
@@ -271,6 +282,49 @@ export default function CostListScreen({ route }: { route: Route }) {
   const nextPeriod = bumpMonthForward(selectedYear, selectedMonth);
   const nextMonthDisabled = isAfterCurrentMonth(nextPeriod.y, nextPeriod.m);
 
+  async function handleAddMiscCharge() {
+    setMiscError('');
+    if (!miscUserId) {
+      setMiscError('Select a member.');
+      return;
+    }
+    if (!miscDesc.trim()) {
+      setMiscError('Description is required.');
+      return;
+    }
+    const costNum = parseFloat(miscCost);
+    if (isNaN(costNum) || costNum <= 0) {
+      setMiscError('Enter a valid amount.');
+      return;
+    }
+    setMiscSubmitting(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/costs/misc`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            userId: miscUserId,
+            description: miscDesc.trim(),
+            cost: costNum,
+            date: new Date(miscDate + 'T12:00:00Z').toISOString(),
+          }),
+        },
+        tenantId
+      );
+      setShowMiscForm(false);
+      setMiscUserId('');
+      setMiscDesc('');
+      setMiscCost('');
+      setMiscDate(new Date().toISOString().slice(0, 10));
+      await load();
+    } catch (e: unknown) {
+      setMiscError(e instanceof Error ? e.message : 'Could not add charge.');
+    } finally {
+      setMiscSubmitting(false);
+    }
+  }
+
   const totalAll = members.reduce(
     (acc, m) => acc + (costsMap[m.userId]?.grandTotal ?? 0),
     0
@@ -322,6 +376,84 @@ export default function CostListScreen({ route }: { route: Route }) {
           {members.length} members · {formatEuro(totalAll)} total all members
         </Text>
       </View>
+
+      {isOwner ? (
+        <Button
+          label={showMiscForm ? 'Cancel' : '+ Add misc charge'}
+          variant={showMiscForm ? 'ghost' : 'secondary'}
+          onPress={() => {
+            setShowMiscForm((v) => !v);
+            setMiscError('');
+          }}
+          fullWidth
+          style={{ marginBottom: spacing[3] }}
+        />
+      ) : null}
+
+      {isOwner && showMiscForm ? (
+        <View style={styles.miscForm}>
+          <Text style={styles.miscFormTitle}>Add misc charge</Text>
+
+          <Text style={styles.miscLabel}>Member</Text>
+          <View style={styles.miscPickerWrap}>
+            {members.map((m) => (
+              <TouchableOpacity
+                key={m.userId}
+                style={[
+                  styles.miscMemberChip,
+                  miscUserId === m.userId && styles.miscMemberChipActive,
+                ]}
+                onPress={() => setMiscUserId(m.userId)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.miscMemberChipText,
+                    miscUserId === m.userId && styles.miscMemberChipTextActive,
+                  ]}
+                >
+                  {m.name || m.userId}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Input
+            label="Description"
+            value={miscDesc}
+            onChangeText={setMiscDesc}
+            placeholder="e.g. Studio access fee"
+          />
+          <Input
+            label="Amount (€)"
+            value={miscCost}
+            onChangeText={setMiscCost}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            containerStyle={{ marginTop: spacing[2] }}
+          />
+          <Input
+            label="Date (YYYY-MM-DD)"
+            value={miscDate}
+            onChangeText={setMiscDate}
+            placeholder={new Date().toISOString().slice(0, 10)}
+            containerStyle={{ marginTop: spacing[2] }}
+          />
+
+          {miscError ? (
+            <Text style={styles.miscError}>{miscError}</Text>
+          ) : null}
+
+          <Button
+            label="Add charge"
+            variant="primary"
+            onPress={() => void handleAddMiscCharge()}
+            loading={miscSubmitting}
+            fullWidth
+            style={{ marginTop: spacing[3] }}
+          />
+        </View>
+      ) : null}
 
       {loading ? (
         <View style={styles.loadingWrap}>
@@ -436,6 +568,60 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: 11,
     color: colors.inkMid,
+  },
+  miscForm: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    padding: spacing[4],
+    marginBottom: spacing[4],
+    gap: spacing[2],
+  },
+  miscFormTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  miscLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing[2],
+  },
+  miscPickerWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  miscMemberChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  miscMemberChipActive: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  miscMemberChipText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  miscMemberChipTextActive: {
+    color: colors.surface,
+  },
+  miscError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
   },
   loadingWrap: {
     paddingVertical: spacing[8],
