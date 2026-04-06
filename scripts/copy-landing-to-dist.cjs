@@ -1,6 +1,7 @@
 /**
  * Expo web export does not copy repo-root public/*.html into dist.
- * Vercel routes / and /privacy|/terms to /landing.html — file must exist in dist.
+ * Vercel routes / to /landing.html; /privacy and /terms use their own HTML in dist.
+ * Expo export copies public/*.html into dist; this copies fresh public/landing.html after export.
  */
 const fs = require('fs');
 const path = require('path');
