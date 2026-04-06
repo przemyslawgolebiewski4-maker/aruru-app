@@ -95,6 +95,7 @@ export type AppStackParamList = {
   AdminAdmins: undefined;
   AdminPricing: undefined;
   AdminUsers: undefined;
+  AdminSupport: undefined;
   SponsorPlan: undefined;
   SponsorEditProfile: undefined;
 };

@@ -26,12 +26,14 @@ type AdminMenuRoute =
   | 'AdminForum'
   | 'AdminAdmins'
   | 'AdminPricing'
-  | 'AdminUsers';
+  | 'AdminUsers'
+  | 'AdminSupport';
 
 type DashboardData = {
   activeStudios: number;
   trialStudios: number;
   pendingSponsors: number;
+  openSupportCount?: number;
   expiringTrials: {
     id: string;
     name: string;
@@ -79,7 +81,11 @@ export default function AdminScreen() {
     setError('');
     try {
       const res = await apiFetch<DashboardData>('/admin/dashboard', {}, tenantId);
-      setData(res);
+      setData({
+        ...res,
+        openSupportCount:
+          typeof res.openSupportCount === 'number' ? res.openSupportCount : 0,
+      });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load admin dashboard.');
     } finally {
@@ -141,6 +147,13 @@ export default function AdminScreen() {
       label: 'Users',
       desc: 'Search & GDPR delete',
       color: colors.inkLight,
+    },
+    can('community') && {
+      key: 'AdminSupport' as const,
+      label: 'Support',
+      desc: 'User tickets & replies',
+      color: colors.clay,
+      alert: (data?.openSupportCount ?? 0) > 0,
     },
   ].filter(Boolean) as {
     key: AdminMenuRoute;

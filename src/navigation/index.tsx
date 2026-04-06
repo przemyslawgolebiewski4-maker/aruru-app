@@ -59,6 +59,8 @@ import AdminForumScreen from '../screens/admin/AdminForumScreen';
 import AdminAdminsScreen from '../screens/admin/AdminAdminsScreen';
 import AdminPricingScreen from '../screens/admin/AdminPricingScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
+import AdminSupportScreen from '../screens/admin/AdminSupportScreen';
+import SupportScreen from '../screens/support/SupportScreen';
 import StudioPlanScreen from '../screens/studio/StudioPlanScreen';
 import SponsorPlanScreen from '../screens/sponsor/SponsorPlanScreen';
 import SponsorEditProfileScreen from '../screens/sponsor/SponsorEditProfileScreen';
@@ -78,30 +80,6 @@ const appModalHeaderOptions = {
   },
   headerShadowVisible: false,
 } as const;
-
-/** Placeholder until SupportScreen.tsx ships. */
-function SupportScreen() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: colors.surface,
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: typography.mono,
-          fontSize: fontSize.sm,
-          color: colors.inkLight,
-        }}
-      >
-        Support coming soon
-      </Text>
-    </View>
-  );
-}
 
 const ONBOARDING_KEY = 'aruru_onboarding_done';
 
@@ -595,6 +573,15 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Users',
+        }}
+      />
+      <AppStack.Screen
+        name="AdminSupport"
+        component={AdminSupportScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Support',
         }}
       />
     </AppStack.Navigator>
