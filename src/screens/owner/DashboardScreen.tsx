@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
+  Modal,
+  Pressable,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -164,7 +166,8 @@ function IconTwoCircles60() {
 }
 
 export default function DashboardScreen() {
-  const { user, studios, activeCurrency } = useAuth();
+  const { user, studios, activeCurrency, activeTenantId, switchStudio } =
+    useAuth();
   const navigation = useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
   const [stats, setStats] = useState({
     members: 0,
@@ -178,6 +181,7 @@ export default function DashboardScreen() {
   const [income, setIncome] = useState<IncomeData | null>(null);
   const [summariesDue, setSummariesDue] = useState(0);
   const [showCommunityBanner, setShowCommunityBanner] = useState(false);
+  const [showSwitcher, setShowSwitcher] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -185,7 +189,9 @@ export default function DashboardScreen() {
     hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   const currentStudio =
-    studios.find((s) => s.status === 'active') ?? studios[0];
+    studios.find((s) => s.tenantId === activeTenantId) ??
+    studios.find((s) => s.status === 'active') ??
+    studios[0];
   const studioLabel = currentStudio?.studioName?.trim() || 'Your studio';
   const tenantId = currentStudio?.tenantId;
   const canManageMembers =
@@ -616,7 +622,8 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+    <>
+      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.topRow}>
         <TouchableOpacity
           onPress={() => {
@@ -630,9 +637,24 @@ export default function DashboardScreen() {
         >
           <Text style={styles.logoWordmark}>Aruru</Text>
         </TouchableOpacity>
-        <Text style={styles.studioMono} numberOfLines={1}>
-          {studioLabel.toUpperCase()}
-        </Text>
+        {studios.length > 1 ? (
+          <TouchableOpacity
+            style={styles.studioPill}
+            onPress={() => setShowSwitcher(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Switch studio"
+            hitSlop={4}
+          >
+            <Text style={styles.studioMono} numberOfLines={1}>
+              {studioLabel.toUpperCase()}
+            </Text>
+            <Text style={styles.studioPillChevron}>⌄</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.studioMono} numberOfLines={1}>
+            {studioLabel.toUpperCase()}
+          </Text>
+        )}
         <TouchableOpacity
           onPress={() => navigation.jumpTo('Profile')}
           accessibilityRole="button"
@@ -1020,7 +1042,97 @@ export default function DashboardScreen() {
       </View>
 
       <View style={{ height: spacing[10] }} />
-    </ScrollView>
+      </ScrollView>
+
+      <Modal
+        visible={showSwitcher}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSwitcher(false)}
+      >
+        <Pressable
+          style={styles.switcherBackdrop}
+          onPress={() => setShowSwitcher(false)}
+        >
+          <Pressable
+            style={styles.switcherSheet}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.switcherHandle} />
+            <Text style={styles.switcherTitle}>SWITCH STUDIO</Text>
+            {studios.map((s) => {
+              const isActive = s.tenantId === currentStudio?.tenantId;
+              return (
+                <TouchableOpacity
+                  key={s.tenantId}
+                  style={[
+                    styles.switcherRow,
+                    isActive && styles.switcherRowActive,
+                  ]}
+                  onPress={() => {
+                    switchStudio(s.tenantId);
+                    setShowSwitcher(false);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <View
+                    style={[
+                      styles.switcherLogo,
+                      {
+                        backgroundColor: isActive
+                          ? colors.clayLight
+                          : colors.mossLight,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.switcherLogoText,
+                        {
+                          color: isActive ? colors.clayDark : colors.mossDark,
+                        },
+                      ]}
+                    >
+                      {(s.studioName || s.studioSlug || '?')
+                        .split(' ')
+                        .filter(Boolean)
+                        .map((w) => w[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.switcherInfo}>
+                    <Text style={styles.switcherName} numberOfLines={1}>
+                      {s.studioName || s.studioSlug}
+                    </Text>
+                    <Text style={styles.switcherRole}>
+                      {(s.role ?? 'member').charAt(0).toUpperCase() +
+                        (s.role ?? 'member').slice(1)}
+                      {' · '}
+                      {s.subscriptionStatus === 'active'
+                        ? 'active'
+                        : s.subscriptionStatus === 'trial'
+                          ? 'trial'
+                          : s.status}
+                    </Text>
+                  </View>
+                  {isActive ? (
+                    <View style={styles.switcherCheck}>
+                      <Text style={styles.switcherCheckMark}>✓</Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              );
+            })}
+            <Text style={styles.switcherHint}>
+              Tap a studio to switch your active view
+            </Text>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -1124,6 +1236,114 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     flex: 1,
+  },
+  studioPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.creamDark,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 3,
+    minWidth: 0,
+  },
+  studioPillChevron: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+    flexShrink: 0,
+  },
+  switcherBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(30,26,22,0.45)',
+    justifyContent: 'flex-end',
+  },
+  switcherSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    paddingBottom: spacing[6],
+  },
+  switcherHandle: {
+    width: 36,
+    height: 3,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: spacing[3],
+    marginBottom: spacing[4],
+  },
+  switcherTitle: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 0.8,
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  switcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    padding: spacing[4],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  switcherRowActive: {
+    backgroundColor: colors.creamDark,
+  },
+  switcherLogo: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  switcherLogoText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+  },
+  switcherInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  switcherName: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  switcherRole: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+  switcherCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.clay,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  switcherCheckMark: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  switcherHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textAlign: 'center',
+    paddingTop: spacing[3],
+    paddingHorizontal: spacing[4],
   },
   greetingBlock: {
     marginBottom: spacing[6],

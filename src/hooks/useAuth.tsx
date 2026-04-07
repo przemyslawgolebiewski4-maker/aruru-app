@@ -72,6 +72,7 @@ interface AuthActions {
   setUserFull: (user: AuthUser) => void;
   /** Merge partial fields (legacy). */
   mergeServerUser: (patch: Partial<AuthUser>) => void;
+  switchStudio: (tenantId: string) => void;
 }
 
 const AuthContext = createContext<(AuthState & AuthActions) | null>(null);
@@ -81,31 +82,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [studios, setStudios] = useState<StudioMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [manualTenantId, setManualTenantId] = useState<string | null>(null);
 
-  const activeTenantId = useMemo(() => {
+  const defaultTenantId = useMemo(() => {
     const active =
       studios.find((s) => s.status === 'active') ?? studios[0];
     return active?.tenantId ?? '';
   }, [studios]);
 
+  const activeTenantId = useMemo(() => {
+    if (manualTenantId && studios.some((s) => s.tenantId === manualTenantId)) {
+      return manualTenantId;
+    }
+    return defaultTenantId;
+  }, [manualTenantId, defaultTenantId, studios]);
+
   const activeCurrency = useMemo(() => {
-    const active = studios.find((s) => s.tenantId === activeTenantId) ??
+    const active =
+      studios.find((s) => s.tenantId === activeTenantId) ??
       studios.find((s) => s.status === 'active') ??
       studios[0];
     return (active?.currency ?? 'EUR').toUpperCase();
   }, [studios, activeTenantId]);
+
+  function switchStudio(tenantId: string) {
+    setManualTenantId(tenantId);
+  }
 
   async function refresh() {
     const token = await getToken();
     if (!token) {
       setUser(null);
       setStudios([]);
+      setManualTenantId(null);
       return;
     }
     try {
       const me = await getMe();
       setUser(me.user);
       setStudios(normalizeStudios(me.studios));
+      setManualTenantId((prev) => {
+        if (!prev) return null;
+        const still = normalizeStudios(me.studios);
+        return still.some((s) => s.tenantId === prev) ? prev : null;
+      });
 
       // Auto-accept pending invites
       for (const studio of me.studios) {
@@ -126,11 +146,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updated = await getMe();
         setUser(updated.user);
         setStudios(normalizeStudios(updated.studios));
+        setManualTenantId((prev) => {
+          if (!prev) return null;
+          const still = normalizeStudios(updated.studios);
+          return still.some((s) => s.tenantId === prev) ? prev : null;
+        });
       }
     } catch {
       await clearAuth();
       setUser(null);
       setStudios([]);
+      setManualTenantId(null);
     }
   }
 
@@ -139,11 +165,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) {
       setUser(null);
       setStudios([]);
+      setManualTenantId(null);
       return;
     }
     const me = await getMe();
     setUser(me.user);
     setStudios(normalizeStudios(me.studios));
+    setManualTenantId((prev) => {
+      if (!prev) return null;
+      const still = normalizeStudios(me.studios);
+      return still.some((s) => s.tenantId === prev) ? prev : null;
+    });
 
     for (const studio of me.studios) {
       if (studio.status === 'invited') {
@@ -162,6 +194,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const updated = await getMe();
       setUser(updated.user);
       setStudios(normalizeStudios(updated.studios));
+      setManualTenantId((prev) => {
+        if (!prev) return null;
+        const still = normalizeStudios(updated.studios);
+        return still.some((s) => s.tenantId === prev) ? prev : null;
+      });
     }
   }
 
@@ -265,6 +302,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logout();
     setUser(null);
     setStudios([]);
+    setManualTenantId(null);
   }
 
   function setUserFull(next: AuthUser) {
@@ -300,6 +338,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refresh,
         setUserFull,
         mergeServerUser,
+        switchStudio,
       }}
     >
       {children}
