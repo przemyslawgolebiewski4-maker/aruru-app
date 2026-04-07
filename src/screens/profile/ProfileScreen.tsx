@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -12,7 +13,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { AvatarImage } from '../../components/AvatarImage';
 import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
@@ -60,6 +61,39 @@ export default function ProfileScreen() {
     navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
   const [deleteError, setDeleteError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteSent, setInviteSent] = useState(false);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+
+  async function handleInviteToAruru() {
+    setInviteError('');
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setInviteError('Enter a valid email address.');
+      return;
+    }
+    setInviteSending(true);
+    try {
+      await apiFetch('/auth/invite-to-aruru', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      setInviteSent(true);
+      setInviteEmail('');
+      setTimeout(() => {
+        setInviteSent(false);
+        setShowInviteForm(false);
+      }, 3000);
+    } catch (e: unknown) {
+      setInviteError(
+        e instanceof Error ? e.message : 'Could not send invitation.'
+      );
+    } finally {
+      setInviteSending(false);
+    }
+  }
 
   async function handleDeleteAccount() {
     setDeleteError('');
@@ -225,6 +259,45 @@ export default function ProfileScreen() {
         fullWidth
         style={styles.menuBtn}
       />
+      <Button
+        label="Invite a friend to Aruru"
+        variant="ghost"
+        onPress={() => setShowInviteForm((v) => !v)}
+        fullWidth
+        style={styles.menuBtn}
+      />
+
+      {showInviteForm ? (
+        <View style={styles.inviteForm}>
+          <TextInput
+            style={styles.inviteInput}
+            value={inviteEmail}
+            onChangeText={(v) => {
+              setInviteEmail(v);
+              setInviteError('');
+              setInviteSent(false);
+            }}
+            placeholder="friend@email.com"
+            placeholderTextColor={colors.inkLight}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {inviteError ? (
+            <Text style={styles.inviteError}>{inviteError}</Text>
+          ) : null}
+          {inviteSent ? (
+            <Text style={styles.inviteSent}>Invitation sent!</Text>
+          ) : null}
+          <Button
+            label="Send invitation"
+            variant="primary"
+            onPress={() => void handleInviteToAruru()}
+            loading={inviteSending}
+            fullWidth
+          />
+        </View>
+      ) : null}
 
       {/* ── Legal ── */}
       <View style={styles.sectionGap} />
@@ -356,6 +429,34 @@ const styles = StyleSheet.create({
   sectionBtn: { marginTop: spacing[3] },
   sectionGap: { height: spacing[8] },
   menuBtn: { marginTop: spacing[1] },
+  inviteForm: {
+    marginTop: spacing[3],
+    gap: spacing[2],
+  },
+  inviteInput: {
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 10,
+    fontFamily: typography.body,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    backgroundColor: colors.surface,
+    marginBottom: spacing[2],
+  },
+  inviteError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    marginBottom: spacing[2],
+  },
+  inviteSent: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
+    marginBottom: spacing[2],
+  },
   deleteHint: {
     paddingHorizontal: spacing[2],
     marginTop: spacing[3],
