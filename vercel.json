@@ -5,6 +5,7 @@
     { "src": "^/terms$", "dest": "/terms.html" },
     { "src": "^/sitemap\\.xml$", "dest": "/sitemap.xml" },
     { "src": "^/robots\\.txt$", "dest": "/robots.txt" },
+    { "src": "^/og-image\\.jpg$", "dest": "/og-image.jpg" },
     { "handle": "filesystem" },
     { "src": ".*", "dest": "/index.html" }
   ]
