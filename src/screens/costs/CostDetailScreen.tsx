@@ -15,6 +15,7 @@ import { colors, typography, fontSize, spacing, radius } from '../../theme/token
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { confirmNeutral } from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'CostDetail'>;
 type Route = RouteProp<AppStackParamList, 'CostDetail'>;
@@ -581,9 +582,11 @@ export default function CostDetailScreen({ route }: { route: Route }) {
       }
       return;
     }
-    const ok =
-      typeof window !== 'undefined' &&
-      window.confirm(`Send cost summary to ${displayName}?`);
+    const ok = await confirmNeutral(
+      'Send cost summary',
+      `Send cost summary to ${displayName}?`,
+      'Send'
+    );
     if (!ok) return;
     setSending(true);
     try {

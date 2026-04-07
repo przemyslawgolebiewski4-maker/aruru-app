@@ -14,6 +14,7 @@ import { Avatar, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
+import { confirmDestructive } from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'KilnLoadMembers'>;
 type Route = RouteProp<AppStackParamList, 'KilnLoadMembers'>;
@@ -312,10 +313,11 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
   }
 
   async function handleCloseSession() {
-    const ok =
-      typeof window !== 'undefined'
-        ? window.confirm('Close this session?')
-        : true;
+    const ok = await confirmDestructive(
+      'Close session',
+      'Close this kiln session? Members will no longer be able to add pieces.',
+      'Close'
+    );
     if (!ok) return;
     setClosing(true);
     try {

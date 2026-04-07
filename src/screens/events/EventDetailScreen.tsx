@@ -13,6 +13,7 @@ import { colors, typography, fontSize, spacing, radius } from '../../theme/token
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { confirmDestructive } from '../../utils/confirmAction';
 import type { StudioEvent } from './EventListScreen';
 import {
   formatDate,
@@ -78,10 +79,11 @@ export default function EventDetailScreen({ route }: { route: Route }) {
   );
 
   async function onCancelEvent() {
-    const ok =
-      typeof window !== 'undefined'
-        ? window.confirm('Cancel this event?')
-        : true;
+    const ok = await confirmDestructive(
+      'Cancel event',
+      'Cancel this event? This cannot be undone.',
+      'Cancel event'
+    );
     if (!ok) return;
     setCancelling(true);
     setError('');

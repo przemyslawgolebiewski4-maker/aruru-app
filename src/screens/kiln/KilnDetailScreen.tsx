@@ -14,6 +14,7 @@ import { colors, typography, fontSize, spacing, radius } from '../../theme/token
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch, formatCurrency } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
+import { confirmDestructive } from '../../utils/confirmAction';
 import type { KilnType } from './KilnListScreen';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'KilnDetail'>;
@@ -186,12 +187,11 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   async function confirmClose() {
-    const ok =
-      typeof window !== 'undefined'
-        ? window.confirm(
-            'Close this firing session? Costs will be calculated and added to member summaries.'
-          )
-        : true;
+    const ok = await confirmDestructive(
+      'Close firing',
+      'Close this firing session? This cannot be undone.',
+      'Close'
+    );
     if (!ok) return;
 
     try {
@@ -210,10 +210,11 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   }
 
   async function confirmReopen() {
-    const ok =
-      typeof window !== 'undefined'
-        ? window.confirm('Reopen this firing session?')
-        : true;
+    const ok = await confirmDestructive(
+      'Reopen firing',
+      'Reopen this firing session?',
+      'Reopen'
+    );
     if (!ok) return;
 
     try {

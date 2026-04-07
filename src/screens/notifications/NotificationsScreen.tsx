@@ -125,7 +125,7 @@ export default function NotificationsScreen() {
       const res = await apiFetch<{
         notifications?: unknown[];
         unread?: number;
-      }>('/notifications', {}, '');
+      }>('/notifications', {}, fallbackTenantId);
       const rawList = Array.isArray(res.notifications) ? res.notifications : [];
       const list = rawList
         .map((item) =>
@@ -143,7 +143,7 @@ export default function NotificationsScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fallbackTenantId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -153,7 +153,7 @@ export default function NotificationsScreen() {
 
   async function markAllRead() {
     try {
-      await apiFetch('/notifications/read-all', { method: 'POST' }, '');
+      await apiFetch('/notifications/read-all', { method: 'POST' }, fallbackTenantId);
       await load();
     } catch {
       /* silent */
@@ -164,7 +164,7 @@ export default function NotificationsScreen() {
     const stack =
       navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
     try {
-      await apiFetch(`/notifications/${item.id}/read`, { method: 'POST' }, '');
+      await apiFetch(`/notifications/${item.id}/read`, { method: 'POST' }, fallbackTenantId);
       await load();
     } catch {
       /* still try navigation */
