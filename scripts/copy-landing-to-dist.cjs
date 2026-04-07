@@ -38,6 +38,13 @@ if (fs.existsSync(sitemapSrc)) {
   console.log('copy-landing-to-dist: public/sitemap.xml → dist/sitemap.xml');
 }
 
+const sitemapXslSrc = path.join(root, 'public', 'sitemap.xsl');
+const sitemapXslDest = path.join(root, 'dist', 'sitemap.xsl');
+if (fs.existsSync(sitemapXslSrc)) {
+  fs.copyFileSync(sitemapXslSrc, sitemapXslDest);
+  console.log('copy-landing-to-dist: public/sitemap.xsl → dist/sitemap.xsl');
+}
+
 const robotsSrc = path.join(root, 'public', 'robots.txt');
 const robotsDest = path.join(root, 'dist', 'robots.txt');
 if (fs.existsSync(robotsSrc)) {
