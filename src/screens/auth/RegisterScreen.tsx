@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -54,6 +54,15 @@ export default function RegisterScreen({ navigation }: Props) {
   const [isSponsor, setIsSponsor] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [termsError, setTermsError] = useState('');
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('invite_token');
+      if (token) setInviteToken(token);
+    }
+  }, []);
 
   function runValidation(): boolean {
     const next: Partial<Record<FieldKey, string>> = {
@@ -116,6 +125,14 @@ export default function RegisterScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.form}>
+          {inviteToken ? (
+            <View style={styles.inviteBanner}>
+              <Text style={styles.inviteBannerText}>
+                You have a studio invitation waiting. Create your account to
+                join.
+              </Text>
+            </View>
+          ) : null}
           <Input
             label="Full name"
             value={name}
@@ -364,6 +381,21 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   form: { marginBottom: spacing[8] },
+  inviteBanner: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    marginBottom: spacing[4],
+    borderWidth: 0.5,
+    borderColor: colors.clayBorder,
+  },
+  inviteBannerText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.clayDark,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   passwordBlock: {
     marginBottom: spacing[3],
   },
