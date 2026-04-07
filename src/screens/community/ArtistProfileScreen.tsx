@@ -169,6 +169,63 @@ export default function ArtistProfileScreen({ route }: Props) {
           </View>
         </>
       ) : null}
+
+      {hasLinks ? (
+        <>
+          <Divider />
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Links</Text>
+            {ig ? (
+              <TouchableOpacity
+                style={styles.socialLinkRow}
+                onPress={() =>
+                  void Linking.openURL(
+                    ig.startsWith('http') ? ig : `https://${ig}`
+                  )
+                }
+                activeOpacity={0.75}
+              >
+                <Text style={styles.linkText}>Instagram →</Text>
+                <Text style={styles.linkUrl} numberOfLines={1}>
+                  {ig}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+            {web ? (
+              <TouchableOpacity
+                style={styles.socialLinkRow}
+                onPress={() =>
+                  void Linking.openURL(
+                    web.startsWith('http') ? web : `https://${web}`
+                  )
+                }
+                activeOpacity={0.75}
+              >
+                <Text style={styles.linkText}>Website →</Text>
+                <Text style={styles.linkUrl} numberOfLines={1}>
+                  {web}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+            {shop ? (
+              <TouchableOpacity
+                style={styles.socialLinkRow}
+                onPress={() =>
+                  void Linking.openURL(
+                    shop.startsWith('http') ? shop : `https://${shop}`
+                  )
+                }
+                activeOpacity={0.75}
+              >
+                <Text style={styles.linkText}>Shop →</Text>
+                <Text style={styles.linkUrl} numberOfLines={1}>
+                  {shop}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -251,10 +308,20 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     marginTop: 2,
   },
-  linkRow: {
-    fontFamily: typography.mono,
+  socialLinkRow: {
+    paddingVertical: spacing[2],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+    gap: 2,
+  },
+  linkText: {
+    fontFamily: typography.bodyMedium,
     fontSize: fontSize.sm,
     color: colors.clay,
-    paddingVertical: spacing[1],
+  },
+  linkUrl: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
   },
 });

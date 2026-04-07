@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,8 +17,17 @@ import { COUNTRY_NAMES } from '../../utils/locationData';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
+function pickStringVisibility(
+  cv?: Record<string, string | string[] | undefined>
+): Record<string, string> {
+  if (!cv) return {};
+  return Object.fromEntries(
+    Object.entries(cv).filter(([, v]) => typeof v === 'string')
+  ) as Record<string, string>;
+}
+
 export default function EditProfileScreen({ navigation }: Props) {
-  const { user, refresh, setUserFull } = useAuth();
+  const { user, refresh, setUserFull, studios } = useAuth();
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? '');
   const [name, setName] = useState(user?.name ?? '');
   const [bio, setBio] = useState(user?.bio ?? '');
@@ -34,8 +43,12 @@ export default function EditProfileScreen({ navigation }: Props) {
     events: 'only_me',
     forum_activity: 'everyone',
     links: 'everyone',
-    ...user?.communityVisibility,
+    ...pickStringVisibility(user?.communityVisibility),
   }));
+  const [hiddenStudios, setHiddenStudios] = useState<string[]>(() => {
+    const hs = user?.communityVisibility?.hidden_studios;
+    return Array.isArray(hs) ? hs.map(String) : [];
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -52,10 +65,23 @@ export default function EditProfileScreen({ navigation }: Props) {
     if (user?.communityVisibility) {
       setVisibility((v) => ({
         ...v,
-        ...user.communityVisibility,
+        ...pickStringVisibility(user.communityVisibility),
       }));
     }
   }, [user?.communityVisibility]);
+
+  useEffect(() => {
+    const hs = user?.communityVisibility?.hidden_studios;
+    setHiddenStudios(Array.isArray(hs) ? hs.map(String) : []);
+  }, [user?.communityVisibility]);
+
+  function toggleHiddenStudio(tenantId: string) {
+    setHiddenStudios((prev) =>
+      prev.includes(tenantId)
+        ? prev.filter((id) => id !== tenantId)
+        : [...prev, tenantId]
+    );
+  }
 
   async function onSave() {
     setError('');
@@ -74,7 +100,10 @@ export default function EditProfileScreen({ navigation }: Props) {
         instagram_url: instagramUrl.trim() || null,
         website_url: websiteUrl.trim() || null,
         shop_url: shopUrl.trim() || null,
-        community_visibility: visibility,
+        community_visibility: {
+          ...visibility,
+          hidden_studios: hiddenStudios,
+        },
       };
       const trimmedAvatar = avatarUrl.trim();
       if (trimmedAvatar) {
@@ -246,39 +275,86 @@ export default function EditProfileScreen({ navigation }: Props) {
           { key: 'events', label: 'My events' },
           { key: 'forum_activity', label: 'Forum activity' },
           { key: 'links', label: 'Social links' },
-        ].map((item) => (
-          <View key={item.key} style={styles.privacyRow}>
-            <Text style={styles.privacyLabel}>{item.label}</Text>
-            <View style={styles.visOptions}>
-              {['everyone', 'my_studios', 'only_me'].map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[
-                    styles.visChip,
-                    visibility[item.key] === opt && styles.visChipActive,
-                  ]}
-                  onPress={() =>
-                    setVisibility((v) => ({ ...v, [item.key]: opt }))
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.visChipLabel,
-                      visibility[item.key] === opt && styles.visChipLabelActive,
-                    ]}
-                  >
-                    {opt === 'everyone'
-                      ? 'Everyone'
-                      : opt === 'my_studios'
-                        ? 'My studios'
-                        : 'Only me'}
+        ].map((item) => {
+          const activeStudios = studios.filter((s) => s.status === 'active');
+          return (
+            <Fragment key={item.key}>
+              <View style={styles.privacyRow}>
+                <Text style={styles.privacyLabel}>{item.label}</Text>
+                <View style={styles.visOptions}>
+                  {['everyone', 'my_studios', 'only_me'].map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[
+                        styles.visChip,
+                        visibility[item.key] === opt && styles.visChipActive,
+                      ]}
+                      onPress={() =>
+                        setVisibility((v) => ({ ...v, [item.key]: opt }))
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.visChipLabel,
+                          visibility[item.key] === opt &&
+                            styles.visChipLabelActive,
+                        ]}
+                      >
+                        {opt === 'everyone'
+                          ? 'Everyone'
+                          : opt === 'my_studios'
+                            ? 'My studios'
+                            : 'Only me'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              {item.key === 'studios' &&
+              visibility.studios !== 'only_me' &&
+              activeStudios.length > 0 ? (
+                <View style={styles.studioToggles}>
+                  <Text style={styles.studioTogglesLabel}>
+                    Which studios appear on your profile?
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ))}
+                  {activeStudios.map((s, idx) => {
+                    const hidden = hiddenStudios.includes(s.tenantId);
+                    const isLast = idx === activeStudios.length - 1;
+                    return (
+                      <TouchableOpacity
+                        key={s.tenantId}
+                        style={[
+                          styles.studioToggleRow,
+                          isLast && styles.studioToggleRowLast,
+                        ]}
+                        onPress={() => toggleHiddenStudio(s.tenantId)}
+                        activeOpacity={0.75}
+                      >
+                        <View style={styles.studioToggleInfo}>
+                          <Text style={styles.studioToggleName}>
+                            {s.studioName || s.studioSlug}
+                          </Text>
+                          <Text style={styles.studioToggleRole}>{s.role}</Text>
+                        </View>
+                        <View
+                          style={[
+                            styles.studioToggleCheck,
+                            hidden && styles.studioToggleCheckHidden,
+                          ]}
+                        >
+                          <Text style={styles.studioToggleCheckMark}>
+                            {hidden ? '✕' : '✓'}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </Fragment>
+          );
+        })}
       </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -419,6 +495,59 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   visChipLabelActive: { color: colors.surface },
+  studioToggles: {
+    marginTop: spacing[2],
+    paddingLeft: spacing[2],
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+  },
+  studioTogglesLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 0.4,
+    marginBottom: spacing[2],
+  },
+  studioToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[2],
+    gap: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  studioToggleRowLast: { borderBottomWidth: 0 },
+  studioToggleInfo: { flex: 1 },
+  studioToggleName: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  studioToggleRole: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  studioToggleCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.moss,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  studioToggleCheckHidden: {
+    backgroundColor: colors.border,
+  },
+  studioToggleCheckMark: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '500',
+  },
   error: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,

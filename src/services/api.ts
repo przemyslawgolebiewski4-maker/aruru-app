@@ -16,8 +16,11 @@ export interface AuthUser {
   instagramUrl?: string | null;
   websiteUrl?: string | null;
   shopUrl?: string | null;
-  /** Keys: profile, studios, events, forum_activity, links — values: everyone | my_studios | only_me */
-  communityVisibility?: Record<string, string>;
+  /**
+   * Keys: profile, studios, events, forum_activity, links — values: everyone | my_studios | only_me.
+   * hidden_studios: tenant IDs to hide from public profile when studios visibility is shared.
+   */
+  communityVisibility?: Record<string, string | string[] | undefined>;
   adminRole?: string | null;
   adminPermissions?: {
     studios?: boolean;
@@ -63,7 +66,7 @@ export function normalizeAuthUser(raw: Record<string, unknown>): AuthUser {
     shopUrl: (raw.shopUrl ?? raw.shop_url ?? null) as string | null,
     communityVisibility:
       cv && typeof cv === 'object' && !Array.isArray(cv)
-        ? { ...(cv as Record<string, string>) }
+        ? { ...(cv as Record<string, string | string[] | undefined>) }
         : undefined,
     adminRole: (raw.adminRole ?? raw.admin_role ?? null) as string | null,
     adminPermissions,
@@ -139,7 +142,7 @@ export type PatchMeBody = {
   instagram_url?: string | null;
   website_url?: string | null;
   shop_url?: string | null;
-  community_visibility?: Record<string, string>;
+  community_visibility?: Record<string, string | string[] | undefined>;
 };
 
 export interface StudioMembership {
