@@ -49,6 +49,7 @@ export type AppStackParamList = {
   PricingSettings: { tenantId: string; studioName: string };
   StudioSettings: { tenantId: string; studioName: string };
   StudioPlan: { tenantId: string };
+  StudioFreeTier: { tenantId: string };
   Members: { tenantId: string };
   InviteMember: { tenantId: string };
   MemberProfile: {

@@ -64,6 +64,7 @@ import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import AdminSupportScreen from '../screens/admin/AdminSupportScreen';
 import SupportScreen from '../screens/support/SupportScreen';
 import StudioPlanScreen from '../screens/studio/StudioPlanScreen';
+import StudioFreeTierScreen from '../screens/studio/StudioFreeTierScreen';
 import SponsorPlanScreen from '../screens/sponsor/SponsorPlanScreen';
 import SponsorEditProfileScreen from '../screens/sponsor/SponsorEditProfileScreen';
 import type {
@@ -314,6 +315,15 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Choose your plan',
+        }}
+      />
+      <AppStack.Screen
+        name="StudioFreeTier"
+        component={StudioFreeTierScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Your plan',
         }}
       />
       <AppStack.Screen

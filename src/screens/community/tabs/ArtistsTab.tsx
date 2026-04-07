@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   FlatList,
   TouchableOpacity,
@@ -11,9 +12,16 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import { AvatarImage } from '../../../components/AvatarImage';
+import { Button } from '../../../components/ui';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
-import { colors, typography, fontSize, spacing } from '../../../theme/tokens';
+import {
+  colors,
+  typography,
+  fontSize,
+  spacing,
+  radius,
+} from '../../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../../navigation/types';
 
 type Nav = MaterialTopTabNavigationProp<MainTabParamList>;
@@ -45,6 +53,11 @@ export default function ArtistsTab() {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  const [inviteError, setInviteError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -82,6 +95,34 @@ export default function ArtistsTab() {
       ?.navigate('ArtistProfile', { userId });
   }
 
+  async function handleInvite() {
+    setInviteError('');
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setInviteError('Enter a valid email address.');
+      return;
+    }
+    setInviteSending(true);
+    try {
+      await apiFetch('/auth/invite-to-aruru', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+      setInviteSent(true);
+      setInviteEmail('');
+      setTimeout(() => {
+        setInviteSent(false);
+        setShowInviteForm(false);
+      }, 3000);
+    } catch (e: unknown) {
+      setInviteError(
+        e instanceof Error ? e.message : 'Could not send invitation.'
+      );
+    } finally {
+      setInviteSending(false);
+    }
+  }
+
   if (loading)
     return (
       <View style={styles.center}>
@@ -94,21 +135,78 @@ export default function ArtistsTab() {
         <Text style={styles.errorText}>{error}</Text>
       </View>
     );
-  if (artists.length === 0)
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyText}>No artists found.</Text>
-        <Text style={styles.emptyHint}>
-          Artists appear here when their profile is set to public.
-        </Text>
-      </View>
-    );
+  const inviteSection = (
+    <View style={styles.inviteSection}>
+      <Text style={styles.inviteTitle}>
+        Know a ceramicist who would enjoy Aruru?
+      </Text>
+      {!showInviteForm ? (
+        <Button
+          label="Invite a friend"
+          variant="secondary"
+          onPress={() => setShowInviteForm(true)}
+        />
+      ) : (
+        <View style={styles.inviteForm}>
+          <TextInput
+            style={styles.inviteInput}
+            value={inviteEmail}
+            onChangeText={(v) => {
+              setInviteEmail(v);
+              setInviteError('');
+              setInviteSent(false);
+            }}
+            placeholder="friend@email.com"
+            placeholderTextColor={colors.inkLight}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {inviteError ? (
+            <Text style={styles.inviteError}>{inviteError}</Text>
+          ) : null}
+          {inviteSent ? (
+            <Text style={styles.inviteSent}>Invitation sent!</Text>
+          ) : null}
+          <Button
+            label="Send invitation"
+            variant="primary"
+            onPress={() => void handleInvite()}
+            loading={inviteSending}
+            fullWidth
+          />
+          <Button
+            label="Cancel"
+            variant="ghost"
+            onPress={() => {
+              setShowInviteForm(false);
+              setInviteEmail('');
+              setInviteError('');
+            }}
+            fullWidth
+          />
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <FlatList
       data={artists}
       keyExtractor={(a) => a.id}
       style={styles.list}
+      contentContainerStyle={
+        artists.length === 0 ? styles.listContentEmpty : styles.listContent
+      }
+      ListHeaderComponent={inviteSection}
+      ListEmptyComponent={
+        <View style={styles.emptyInList}>
+          <Text style={styles.emptyText}>No artists found.</Text>
+          <Text style={styles.emptyHint}>
+            Artists appear here when their profile is set to public.
+          </Text>
+        </View>
+      }
       ItemSeparatorComponent={() => <View style={styles.sep} />}
       renderItem={({ item: a }) => (
         <TouchableOpacity
@@ -154,6 +252,52 @@ export default function ArtistsTab() {
 
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.cream },
+  listContent: { paddingBottom: spacing[2] },
+  listContentEmpty: { flexGrow: 1, paddingBottom: spacing[2] },
+  emptyInList: {
+    paddingVertical: spacing[6],
+    paddingHorizontal: spacing[4],
+    alignItems: 'center',
+  },
+  inviteSection: {
+    margin: spacing[4],
+    marginBottom: spacing[2],
+    padding: spacing[4],
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+  },
+  inviteTitle: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    marginBottom: spacing[3],
+    lineHeight: 20,
+  },
+  inviteForm: { gap: spacing[2] },
+  inviteInput: {
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 10,
+    fontFamily: typography.body,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    backgroundColor: colors.cream,
+    marginBottom: spacing[1],
+  },
+  inviteError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+  },
+  inviteSent: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',

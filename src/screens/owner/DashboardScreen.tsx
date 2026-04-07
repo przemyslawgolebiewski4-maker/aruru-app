@@ -177,6 +177,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [income, setIncome] = useState<IncomeData | null>(null);
   const [summariesDue, setSummariesDue] = useState(0);
+  const [showCommunityBanner, setShowCommunityBanner] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -543,6 +544,11 @@ export default function DashboardScreen() {
       ? trialDaysLeft(currentStudio.trialEndsAt)
       : null;
 
+  const showFreeBanner =
+    currentStudio?.role === 'owner' &&
+    currentStudio?.status === 'active' &&
+    currentStudio?.subscriptionStatus !== 'active';
+
   if (studios.length === 0) {
     return (
       <ScrollView
@@ -717,6 +723,64 @@ export default function DashboardScreen() {
           </Text>
           <Text style={styles.trialBannerArrow}>→</Text>
         </TouchableOpacity>
+      ) : null}
+
+      {showFreeBanner ? (
+        <View style={styles.communityBanner}>
+          <View style={styles.communityBannerRow}>
+            <View style={styles.communityBannerText}>
+              <Text style={styles.communityBannerTitle}>
+                You can already build your community - for free.
+              </Text>
+              <Text style={styles.communityBannerSub}>
+                Invite members, publish events and join the forum - no
+                subscription needed.
+              </Text>
+            </View>
+            {!showCommunityBanner ? (
+              <TouchableOpacity
+                onPress={() => setShowCommunityBanner(true)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="See more community features"
+              >
+                <Text style={styles.communityBannerSeeMore}>See more</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {showCommunityBanner ? (
+            <View style={styles.communityBannerExpanded}>
+              {[
+                'Invite members - owner and member roles are free',
+                'Publish events visible in the community feed',
+                'Studio profile discoverable by ceramicists',
+                'Forum - read, post and reply',
+                'Artist profiles and discovery',
+              ].map((item) => (
+                <Text key={item} style={styles.communityBannerItem}>
+                  · {item}
+                </Text>
+              ))}
+              <TouchableOpacity
+                style={styles.communityBannerLink}
+                onPress={() =>
+                  navigation
+                    .getParent<NativeStackNavigationProp<AppStackParamList>>()
+                    ?.navigate('StudioFreeTier', {
+                      tenantId: tenantId ?? '',
+                    })
+                }
+                accessibilityRole="button"
+                accessibilityLabel="See full plan details"
+              >
+                <Text style={styles.communityBannerLinkText}>
+                  See full plan details →
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
       ) : null}
 
       <Divider />
@@ -1107,6 +1171,60 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.sm,
     color: colors.clay,
+  },
+  communityBanner: {
+    backgroundColor: colors.mossLight,
+    borderWidth: 0.5,
+    borderColor: colors.mossBorder,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+  },
+  communityBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[2],
+  },
+  communityBannerText: { flex: 1 },
+  communityBannerTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.mossDark,
+    marginBottom: 3,
+    lineHeight: 18,
+  },
+  communityBannerSub: {
+    fontFamily: typography.body,
+    fontSize: 11,
+    color: colors.moss,
+    lineHeight: 16,
+  },
+  communityBannerSeeMore: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.moss,
+    letterSpacing: 0.3,
+  },
+  communityBannerExpanded: {
+    marginTop: spacing[3],
+    paddingTop: spacing[3],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.mossBorder,
+  },
+  communityBannerItem: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
+    lineHeight: 22,
+  },
+  communityBannerLink: {
+    marginTop: spacing[2],
+  },
+  communityBannerLinkText: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.mossDark,
   },
   statCardWrap: {
     width: '48%',
