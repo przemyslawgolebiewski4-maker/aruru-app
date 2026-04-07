@@ -30,3 +30,17 @@ if (fs.existsSync(ogSrc)) {
   fs.copyFileSync(ogSrc, ogDest);
   console.log('copy-landing-to-dist: public/og-image.jpg → dist/og-image.jpg');
 }
+
+const sitemapSrc = path.join(root, 'public', 'sitemap.xml');
+const sitemapDest = path.join(root, 'dist', 'sitemap.xml');
+if (fs.existsSync(sitemapSrc)) {
+  fs.copyFileSync(sitemapSrc, sitemapDest);
+  console.log('copy-landing-to-dist: public/sitemap.xml → dist/sitemap.xml');
+}
+
+const robotsSrc = path.join(root, 'public', 'robots.txt');
+const robotsDest = path.join(root, 'dist', 'robots.txt');
+if (fs.existsSync(robotsSrc)) {
+  fs.copyFileSync(robotsSrc, robotsDest);
+  console.log('copy-landing-to-dist: public/robots.txt → dist/robots.txt');
+}

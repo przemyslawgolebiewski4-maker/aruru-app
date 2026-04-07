@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /privacy
+Allow: /terms
+Disallow: /login
+Disallow: /register
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /Studio
+Disallow: /Community
+Disallow: /Profile
+Disallow: /Admin
+Disallow: /Notifications
+Sitemap: https://aruru.xyz/sitemap.xml
