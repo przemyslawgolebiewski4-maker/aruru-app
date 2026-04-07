@@ -21,6 +21,8 @@ type Post = {
   authorEmail: string;
   replyCount: number;
   createdAt?: string;
+  isPinned?: boolean;
+  reportCount?: number;
 };
 
 function timeAgo(iso?: string): string {
@@ -51,12 +53,19 @@ export default function AdminForumScreen() {
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch<{ posts: Post[] }>(
+      const res = await apiFetch<{ posts: (Post & Record<string, unknown>)[] }>(
         '/admin/forum/posts',
         {},
         tenantId
       );
-      setPosts(res.posts ?? []);
+      const raw = res.posts ?? [];
+      setPosts(
+        raw.map((p) => ({
+          ...p,
+          isPinned: Boolean(p.isPinned ?? p.is_pinned),
+          reportCount: Number(p.reportCount ?? p.report_count ?? 0),
+        }))
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load posts.');
     } finally {
@@ -92,6 +101,22 @@ export default function AdminForumScreen() {
     }
   }
 
+  async function togglePin(post: Post) {
+    try {
+      await apiFetch(
+        `/admin/forum/posts/${post.id}/pin`,
+        { method: 'PATCH' },
+        tenantId
+      );
+      await load();
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not pin.'
+      );
+    }
+  }
+
   if (loading)
     return (
       <View style={styles.center}>
@@ -122,18 +147,31 @@ export default function AdminForumScreen() {
             <View style={styles.cardInfo}>
               <Text style={styles.postTitle}>{p.title}</Text>
               <Text style={styles.postMeta}>{postMetaLine(p)}</Text>
+              {(p.reportCount ?? 0) > 0 ? (
+                <Text style={styles.reportBadge}>
+                  {p.reportCount} report{(p.reportCount ?? 0) > 1 ? 's' : ''}
+                </Text>
+              ) : null}
               <Text style={styles.postSub}>
                 {p.replyCount} replies · {p.authorEmail}
               </Text>
             </View>
-            <Button
-              label="Delete"
-              variant="danger"
-              onPress={() => void deletePost(p)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel={`Delete post ${p.title}`}
-              style={styles.deleteBtn}
-            />
+            <View style={styles.cardActions}>
+              <Button
+                label={p.isPinned ? 'Unpin' : 'Pin'}
+                variant="secondary"
+                onPress={() => void togglePin(p)}
+                style={styles.deleteBtn}
+              />
+              <Button
+                label="Delete"
+                variant="danger"
+                onPress={() => void deletePost(p)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={`Delete post ${p.title}`}
+                style={styles.deleteBtn}
+              />
+            </View>
           </View>
         </View>
       )}
@@ -181,6 +219,17 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  reportBadge: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.error,
+    marginTop: 2,
+  },
+  cardActions: {
+    flexDirection: 'column',
+    gap: spacing[2],
+    alignItems: 'flex-end',
   },
   deleteBtn: {
     paddingHorizontal: spacing[2],

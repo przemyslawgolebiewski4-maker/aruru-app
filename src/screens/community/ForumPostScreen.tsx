@@ -6,6 +6,7 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -24,6 +25,7 @@ type Reply = {
   authorName: string;
   authorAvatarUrl?: string;
   createdAt?: string;
+  authorId?: string;
 };
 
 type PostDetail = {
@@ -37,6 +39,8 @@ type PostDetail = {
   viewCount: number;
   createdAt?: string;
   replies: Reply[];
+  authorId?: string;
+  isPinned?: boolean;
 };
 
 function authorInitials(name: string): string {
@@ -59,9 +63,40 @@ function timeAgo(iso?: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-export default function ForumPostScreen({ route }: Props) {
+function normalizeForumPost(raw: PostDetail & Record<string, unknown>): PostDetail {
+  const repliesRaw = (raw.replies ?? []) as Record<string, unknown>[];
+  const replies: Reply[] = repliesRaw.map((r) => ({
+    id: String(r.id ?? ''),
+    content: String(r.content ?? ''),
+    authorName: String(r.authorName ?? r.author_name ?? ''),
+    authorAvatarUrl: (r.authorAvatarUrl ?? r.author_avatar_url) as
+      | string
+      | undefined,
+    createdAt: (r.createdAt ?? r.created_at) as string | undefined,
+    authorId: String(r.authorId ?? r.author_id ?? ''),
+  }));
+  return {
+    id: String(raw.id),
+    title: String(raw.title ?? ''),
+    content: String(raw.content ?? ''),
+    category: String(raw.category ?? ''),
+    authorName: String(raw.authorName ?? raw.author_name ?? ''),
+    authorAvatarUrl: (raw.authorAvatarUrl ?? raw.author_avatar_url) as
+      | string
+      | undefined,
+    replyCount: Number(raw.replyCount ?? raw.reply_count ?? 0),
+    viewCount: Number(raw.viewCount ?? raw.view_count ?? 0),
+    createdAt: (raw.createdAt ?? raw.created_at) as string | undefined,
+    replies,
+    authorId: String(raw.authorId ?? raw.author_id ?? ''),
+    isPinned: Boolean(raw.isPinned ?? raw.is_pinned),
+  };
+}
+
+export default function ForumPostScreen({ route, navigation }: Props) {
   const { postId } = route.params;
-  const { studios } = useAuth();
+  const { user, studios } = useAuth();
+  const currentUserId = user?.id;
   const tenantId =
     (studios.find((s) => s.status === 'active') ?? studios[0])?.tenantId ?? '';
 
@@ -71,17 +106,18 @@ export default function ForumPostScreen({ route }: Props) {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState('');
   const [replyError, setReplyError] = useState('');
+  const [reportSent, setReportSent] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch<PostDetail>(
+      const res = await apiFetch<PostDetail & Record<string, unknown>>(
         `/community/forum/${postId}`,
         {},
         tenantId
       );
       setError('');
-      setPost(res);
+      setPost(normalizeForumPost(res));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load post.');
       setPost(null);
@@ -89,6 +125,63 @@ export default function ForumPostScreen({ route }: Props) {
       setLoading(false);
     }
   }, [postId, tenantId]);
+
+  async function handleDeletePost() {
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm('Delete this post? This cannot be undone.')
+        : true;
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/community/forum/${postId}`,
+        { method: 'DELETE' },
+        tenantId
+      );
+      navigation.goBack();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not delete post.');
+    }
+  }
+
+  async function handleDeleteReply(replyId: string) {
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm('Delete this reply?')
+        : true;
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/community/forum/${postId}/replies/${replyId}`,
+        { method: 'DELETE' },
+        tenantId
+      );
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not delete reply.');
+    }
+  }
+
+  async function handleReport() {
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm('Report this post as inappropriate?')
+        : true;
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/community/forum/${postId}/report`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ reason: 'Inappropriate content' }),
+        },
+        tenantId
+      );
+      setReportSent(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Could not report post.');
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -164,6 +257,23 @@ export default function ForumPostScreen({ route }: Props) {
             <Text style={styles.stat}>{post.replyCount} replies</Text>
             <Text style={styles.stat}>{post.viewCount} views</Text>
           </View>
+          <View style={styles.postActions}>
+            {post.authorId === currentUserId ? (
+              <Button
+                label="Delete post"
+                variant="danger"
+                onPress={() => void handleDeletePost()}
+              />
+            ) : reportSent ? (
+              <Text style={styles.reportedText}>Reported</Text>
+            ) : (
+              <Button
+                label="Report"
+                variant="ghost"
+                onPress={() => void handleReport()}
+              />
+            )}
+          </View>
         </View>
 
         <View style={styles.postBody}>
@@ -196,6 +306,15 @@ export default function ForumPostScreen({ route }: Props) {
                       </Text>
                     </Text>
                     <Text style={styles.replyContent}>{r.content}</Text>
+                    {r.authorId === currentUserId ? (
+                      <TouchableOpacity
+                        onPress={() => void handleDeleteReply(r.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete reply"
+                      >
+                        <Text style={styles.deleteReplyBtn}>Delete</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 </View>
               </View>
@@ -290,6 +409,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.clay,
   },
+  postActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: spacing[2],
+    marginBottom: spacing[3],
+  },
+  reportedText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
   postBody: {
     padding: spacing[4],
     backgroundColor: colors.surface,
@@ -344,6 +474,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.ink,
     lineHeight: 20,
+  },
+  deleteReplyBtn: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.error,
+    marginTop: spacing[1],
   },
   replyBar: {
     flexDirection: 'row',

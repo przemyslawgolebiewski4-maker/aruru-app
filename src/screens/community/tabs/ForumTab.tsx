@@ -29,6 +29,8 @@ type Post = {
   replyCount: number;
   viewCount: number;
   createdAt?: string;
+  isPinned?: boolean;
+  lastReplyAt?: string;
 };
 
 const CATEGORIES = [
@@ -80,14 +82,21 @@ export default function ForumTab() {
   const [newCategory, setNewCategory] = useState('general');
   const [posting, setPosting] = useState(false);
   const [postError, setPostError] = useState('');
+  const [sort, setSort] = useState<'latest' | 'active' | 'popular'>('latest');
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const qs = category ? `?category=${category}` : '';
+      const qs = new URLSearchParams();
+      if (category) qs.set('category', category);
+      if (sort !== 'latest') qs.set('sort', sort);
+      if (search) qs.set('q', search);
+      const q = qs.toString();
       const res = await apiFetch<{ posts: Post[] }>(
-        `/community/forum${qs}`,
+        `/community/forum${q ? `?${q}` : ''}`,
         {},
         tenantId
       );
@@ -98,6 +107,11 @@ export default function ForumTab() {
           authorAvatarUrl:
             p.authorAvatarUrl ??
             (p as { author_avatar_url?: string }).author_avatar_url,
+          isPinned:
+            p.isPinned ?? Boolean((p as { is_pinned?: boolean }).is_pinned),
+          lastReplyAt:
+            p.lastReplyAt ??
+            (p as { last_reply_at?: string }).last_reply_at,
         }))
       );
     } catch (e: unknown) {
@@ -105,7 +119,7 @@ export default function ForumTab() {
     } finally {
       setLoading(false);
     }
-  }, [category, tenantId]);
+  }, [category, tenantId, sort, search]);
 
   useFocusEffect(
     useCallback(() => {
@@ -157,6 +171,25 @@ export default function ForumTab() {
 
   return (
     <View style={styles.root}>
+      <View style={styles.sortRow}>
+        {(['latest', 'active', 'popular'] as const).map((s) => (
+          <TouchableOpacity
+            key={s}
+            style={[styles.sortChip, sort === s && styles.sortChipActive]}
+            onPress={() => setSort(s)}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                styles.sortChipText,
+                sort === s && styles.sortChipTextActive,
+              ]}
+            >
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <View style={styles.filterRow}>
         {CATEGORIES.map((c) => (
           <TouchableOpacity
@@ -175,6 +208,21 @@ export default function ForumTab() {
             </Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchInput}
+          onChangeText={(v) => {
+            setSearchInput(v);
+            if (!v) setSearch('');
+          }}
+          placeholder="Search posts..."
+          placeholderTextColor={colors.inkLight}
+          returnKeyType="search"
+          onSubmitEditing={() => setSearch(searchInput)}
+        />
       </View>
 
       {loading ? (
@@ -216,6 +264,9 @@ export default function ForumTab() {
                 </View>
                 <View style={styles.cardBody}>
                   <Text style={styles.postTitle}>{p.title}</Text>
+                  {p.isPinned ? (
+                    <Text style={styles.pinnedBadge}>Pinned</Text>
+                  ) : null}
                   <Text style={styles.postMeta}>
                     {p.authorName} · {timeAgo(p.createdAt)} ·{' '}
                     {categoryLabel(p.category)}
@@ -304,6 +355,34 @@ export default function ForumTab() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
+  sortRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    paddingHorizontal: spacing[4],
+    paddingTop: spacing[2],
+    paddingBottom: spacing[2],
+    backgroundColor: colors.surface,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  sortChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: 5,
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  sortChipActive: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  sortChipText: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+    letterSpacing: 0.4,
+  },
+  sortChipTextActive: { color: colors.surface },
   filterRow: {
     flexDirection: 'row',
     padding: spacing[2],
@@ -328,6 +407,33 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
   },
   chipLabelActive: { color: colors.surface },
+  searchRow: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[2],
+    paddingTop: spacing[2],
+    backgroundColor: colors.surface,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  searchInput: {
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 8,
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    backgroundColor: colors.surface,
+  },
+  pinnedBadge: {
+    fontFamily: typography.mono,
+    fontSize: 9,
+    color: colors.moss,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',
