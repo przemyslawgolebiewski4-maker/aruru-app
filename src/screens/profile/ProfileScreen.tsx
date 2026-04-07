@@ -245,6 +245,25 @@ export default function ProfileScreen() {
         fullWidth
         style={styles.menuBtn}
       />
+      <TouchableOpacity
+        style={styles.visibilityRow}
+        onPress={() => stackNav?.navigate('EditProfile')}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel="Community visibility, open edit profile"
+      >
+        <View style={styles.visibilityInfo}>
+          <Text style={styles.visibilityLabel}>Community visibility</Text>
+          <Text style={styles.visibilityValue}>
+            {user?.communityVisibility?.profile === 'only_me'
+              ? 'Profile hidden from community'
+              : user?.communityVisibility?.studios === 'only_me'
+                ? 'Studios hidden'
+                : 'Visible to everyone'}
+          </Text>
+        </View>
+        <Text style={styles.visibilityArrow}>→</Text>
+      </TouchableOpacity>
       <Button
         label="Security & two-factor"
         variant="ghost"
@@ -429,6 +448,32 @@ const styles = StyleSheet.create({
   sectionBtn: { marginTop: spacing[3] },
   sectionGap: { height: spacing[8] },
   menuBtn: { marginTop: spacing[1] },
+  visibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  visibilityInfo: { flex: 1 },
+  visibilityLabel: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  visibilityValue: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 2,
+    letterSpacing: 0.3,
+  },
+  visibilityArrow: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkLight,
+  },
   inviteForm: {
     marginTop: spacing[3],
     gap: spacing[2],

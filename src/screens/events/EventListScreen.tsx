@@ -227,6 +227,17 @@ export default function EventListScreen({ route }: { route: Route }) {
       setCreateError('Title is required.');
       return;
     }
+    const now = new Date();
+    now.setSeconds(0, 0);
+    if (startsAt < now) {
+      setCreateError('Start date cannot be in the past.');
+      return;
+    }
+    const maxNum = parseInt(maxP, 10);
+    if (maxP.trim() && (isNaN(maxNum) || maxNum < 1)) {
+      setCreateError('Max participants must be a positive number.');
+      return;
+    }
     if (endsAt <= startsAt) {
       setCreateError('End time must be after start time.');
       return;
@@ -317,6 +328,7 @@ export default function EventListScreen({ route }: { route: Route }) {
                 value={startsAt}
                 onChange={(d) => setStartsAt(d)}
                 mode="date"
+                minimumDate={new Date()}
               />
             </View>
             <View style={{ flex: 1 }}>
@@ -372,6 +384,12 @@ export default function EventListScreen({ route }: { route: Route }) {
               />
             </View>
           </TouchableOpacity>
+          {isPublic ? (
+            <Text style={styles.publicHint}>
+              This event will be visible to all Aruru users in the community
+              feed. You can change this later in event settings.
+            </Text>
+          ) : null}
           <Input
             label="Max participants (optional)"
             value={maxP}
@@ -408,6 +426,7 @@ export default function EventListScreen({ route }: { route: Route }) {
                 onPress={() => void onCreate()}
                 fullWidth
                 loading={creating}
+                disabled={creating}
               />
             </View>
           </View>
@@ -525,6 +544,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  publicHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.moss,
+    marginTop: spacing[1],
+    lineHeight: 18,
   },
   toggleTrack: {
     width: 40,
