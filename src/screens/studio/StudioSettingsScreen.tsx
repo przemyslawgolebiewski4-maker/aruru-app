@@ -47,6 +47,7 @@ import type { AppStackParamList } from '../../navigation/types';
 import {
   apiFetch,
   deleteStudio,
+  getToken,
   patchStudioVisibility,
   SUPPORTED_CURRENCIES,
 } from '../../services/api';
@@ -134,6 +135,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [communityVisible, setCommunityVisible] = useState(true);
   const [visibilityLoading, setVisibilityLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -266,6 +268,34 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     navigation
       .getParent<NativeStackNavigationProp<AppStackParamList>>()
       ?.navigate('StudioPlan', { tenantId });
+  }
+
+  async function handleExport() {
+    if (typeof window === 'undefined') return;
+    setExporting(true);
+    try {
+      const token = await getToken();
+      const url = `${process.env.EXPO_PUBLIC_API_URL ?? 'https://aruru-backend-production.up.railway.app'}/studios/${tenantId}/export`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token ?? ''}` },
+      });
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const cd = res.headers.get('Content-Disposition') ?? '';
+      const match = cd.match(/filename=([^;]+)/);
+      a.download = match ? match[1] : 'aruru_export.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Export failed.';
+      if (typeof window !== 'undefined') window.alert(msg);
+    } finally {
+      setExporting(false);
+    }
   }
 
   function subscriptionStatusUI() {
@@ -690,6 +720,22 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         <SectionLabel>Subscription</SectionLabel>
         {subscriptionStatusUI()}
 
+        <View style={styles.exportWrap}>
+          <Text style={styles.exportLabel}>Data backup</Text>
+          <Text style={styles.exportHint}>
+            Download all your studio data as an Excel file - members, firings,
+            tasks, costs and events.
+          </Text>
+          <Button
+            label={exporting ? 'Preparing...' : 'Export studio data'}
+            variant="secondary"
+            onPress={() => void handleExport()}
+            loading={exporting}
+            disabled={typeof window === 'undefined'}
+            fullWidth
+          />
+        </View>
+
         {/* ─── Visibility & privacy ─────── */}
         <View style={styles.sectionGap} />
         <SectionLabel>Visibility & privacy</SectionLabel>
@@ -801,6 +847,27 @@ const styles = StyleSheet.create({
   },
   saveBtn: { marginTop: spacing[4] },
   subscriptionBtn: { marginTop: spacing[2] },
+  exportWrap: {
+    marginTop: spacing[4],
+    paddingTop: spacing[4],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  exportLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: spacing[1],
+  },
+  exportHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+    marginBottom: spacing[3],
+  },
   sectionGap: { height: spacing[6] },
   visibilityBlock: { gap: spacing[3] },
   dangerZoneBlock: { gap: spacing[3] },
