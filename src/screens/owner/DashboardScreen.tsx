@@ -239,7 +239,8 @@ export default function DashboardScreen() {
       const activeCount = membersList.filter((m) => {
         if (!m || typeof m !== 'object') return false;
         const st = String((m as { status?: string }).status ?? '').toLowerCase();
-        return st === 'active';
+        const role = String((m as { role?: string }).role ?? '').toLowerCase();
+        return st === 'active' && role !== 'owner';
       }).length;
 
       const firings =
