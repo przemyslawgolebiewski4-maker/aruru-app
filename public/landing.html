@@ -60,7 +60,7 @@
     .nav__wordmark{font-family:var(--serif);font-size:26px;color:var(--clay);letter-spacing:-.3px;text-decoration:none;display:flex;flex-direction:column;align-items:flex-start;line-height:1;}
     .nav__links{display:flex;align-items:center;gap:28px;}
     .nav__links a{font-size:14px;font-weight:500;color:var(--ink-mid);transition:color .15s;} .nav__links a:hover{color:var(--ink);}
-    .nav__cta{display:flex;align-items:center;gap:10px;}
+    .nav__cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
     .nav__tog{display:none;background:none;border:none;cursor:pointer;flex-direction:column;gap:5px;padding:4px;}
     .nav__tog span{display:block;width:22px;height:2px;background:var(--ink);border-radius:2px;}
 
@@ -144,7 +144,9 @@
     .free-tag{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--moss);background:var(--moss-light);padding:3px 8px;border-radius:4px;margin-bottom:10px;}
     .free-subnote{font-size:14px;color:var(--ink-mid);line-height:1.6;margin-top:32px;max-width:560px;margin-left:auto;margin-right:auto;}
     .sp-emotional{font-size:18px;line-height:1.55;color:rgba(247,243,237,.88);margin-bottom:20px;font-weight:500;}
-    .sp-emotional-sub{font-size:15px;line-height:1.6;color:rgba(247,243,237,.58);margin-bottom:28px;}
+    .sp-emotional-sub{font-size:15px;line-height:1.6;color:rgba(247,243,237,.58);margin-bottom:20px;}
+    .sp-venues{font-size:14px;line-height:1.65;color:rgba(247,243,237,.52);margin-bottom:28px;max-width:34em;}
+    #sponsors .sec-sub{color:rgba(247,243,237,.62);}
     .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--border);border:0.5px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
     .fc{background:var(--surface);padding:32px 28px;transition:background .2s;} .fc:hover{background:#fff;}
     .fc__icon{width:42px;height:42px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:18px;}
@@ -249,11 +251,12 @@
       <li><a href="#free">Free tier</a></li>
       <li><a href="#community">Community</a></li>
       <li><a href="#features">Features</a></li>
-      <li><a href="#sponsors">Partners</a></li>
+      <li><a href="#sponsors">Partners & venues</a></li>
       <li><a href="#security">Security</a></li>
     </ul>
     <div class="nav__cta">
       <a href="/login" class="btn btn-ghost">Log in</a>
+      <a href="#sponsors" class="btn btn-outline" style="border-color:rgba(196,113,74,.55);color:var(--clay-dim);">Partner with us</a>
       <a href="/register" class="btn btn-primary">Join community</a>
     </div>
     <button class="nav__tog" aria-label="Open menu" onclick="openNav()"><span></span><span></span><span></span></button>
@@ -266,8 +269,9 @@
   <a href="#free" onclick="closeNav()">Free tier</a>
   <a href="#community" onclick="closeNav()">Community</a>
   <a href="#features" onclick="closeNav()">Features</a>
-  <a href="#sponsors" onclick="closeNav()">Partners</a>
+  <a href="#sponsors" onclick="closeNav()">Partners & venues</a>
   <a href="#security" onclick="closeNav()">Security</a>
+  <a href="#sponsors" onclick="closeNav()" style="margin-top:8px;padding:12px 16px;border:1.5px solid #C4714A;border-radius:6px;color:#9E5A37;font-weight:600;font-size:15px;text-align:center;font-family:var(--sans);">Partner with us</a>
   <a href="/login" style="margin-top:16px" onclick="closeNav()">Log in</a>
   <a href="/register" style="color:var(--clay);font-weight:600" onclick="closeNav()">Join community →</a>
 </nav>
@@ -487,13 +491,14 @@
   <div class="container">
     <div class="sp-inner">
       <div>
-        <p class="sec-label">For brands & suppliers</p>
+        <p class="sec-label">Partners - from clay brands to retreats & galleries</p>
         <p class="sp-emotional fu">Support our growing community - and grow with it.</p>
-        <p class="sp-emotional-sub fu d1">Aruru stays calm and ad-free for ceramicists because the product is built around trust, not algorithms. Partnering with us means your brand shows up where people already decide what clay, glaze, and tools to buy - beside studios they respect.</p>
-        <h2 id="sp-title" class="sec-title">Where ceramicists<br />discover what to buy.</h2>
-        <p class="sec-sub">The partner directory is where studio owners and members look for suppliers - from clay and glazes to tools and books. Honest placements, clear labels, real click stats.</p>
+        <p class="sp-emotional-sub fu d1">Aruru stays calm and ad-free for ceramicists because the product is built around trust, not algorithms. Partnering with us means your name shows up where people already make real decisions - what clay to buy, which glaze to try, and which room they want to work in next.</p>
+        <p class="sp-venues fu d2">That same feed welcomes pottery and ceramic retreats, residency programmes, and galleries looking for artists - not as noise, but as peers beside the studios and teachers our members already respect. You speak to an audience that is curious, skilled, and ready to travel for the right opportunity.</p>
+        <h2 id="sp-title" class="sec-title">Where ceramicists<br />discover what to buy - and where to go next.</h2>
+        <p class="sec-sub">The partner directory is where studio owners and members look for suppliers - clay, glazes, tools, and books - with honest labels and real click stats. It is also a quiet window for venues and curators - list a retreat week, an open call, or a gallery seeking work - so the right artists find you without shouting over the feed.</p>
         <div class="sp-cta-box" style="margin-top:32px;">
-          <p>As the community grows, so does your reach. Ceramicists visit the sponsor section to find materials, check out new products, and go directly to your store - all without leaving Aruru.</p>
+          <p>Whether you ship materials, host makers for a month, or hang new work on the wall - you meet ceramicists inside Aruru, then they tap through to your site or booking flow. No dark patterns - just clarity.</p>
           <a href="/register?sponsor=true" class="btn btn-primary">Apply as a partner</a>
         </div>
       </div>
