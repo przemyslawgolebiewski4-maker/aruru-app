@@ -8,7 +8,8 @@ import {
   Linking,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { apiFetch } from '../../services/api';
+import { apiFetch, formatCurrency } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -20,7 +21,7 @@ type Tier = 'solo' | 'studio' | 'community' | 'large';
 const PLANS: {
   tier: Tier;
   name: string;
-  price: string;
+  priceAmount: number;
   members: string;
   features: string[];
   recommended?: boolean;
@@ -28,7 +29,7 @@ const PLANS: {
   {
     tier: 'solo',
     name: 'Solo',
-    price: '€15 / month',
+    priceAmount: 15,
     members: 'Up to 5 members',
     features: [
       'Kiln management & cost tracking',
@@ -41,7 +42,7 @@ const PLANS: {
   {
     tier: 'studio',
     name: 'Studio',
-    price: '€29 / month',
+    priceAmount: 29,
     members: 'Up to 20 members',
     recommended: true,
     features: [
@@ -54,7 +55,7 @@ const PLANS: {
   {
     tier: 'community',
     name: 'Community',
-    price: '€49 / month',
+    priceAmount: 49,
     members: 'Up to 50 members',
     features: [
       'Everything in Studio',
@@ -66,7 +67,7 @@ const PLANS: {
   {
     tier: 'large',
     name: 'Large',
-    price: '€79 / month',
+    priceAmount: 79,
     members: 'Unlimited members',
     features: [
       'Everything in Community',
@@ -78,6 +79,10 @@ const PLANS: {
 
 export default function StudioPlanScreen({ route }: Props) {
   const { tenantId } = route.params;
+  const { studios } = useAuth();
+  const studioCurrency = (
+    studios.find((s) => s.tenantId === tenantId)?.currency ?? 'EUR'
+  ).toUpperCase();
   const [selectedTier, setSelectedTier] = useState<Tier>('solo');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -140,7 +145,9 @@ export default function StudioPlanScreen({ route }: Props) {
               <Text style={styles.planName}>{plan.name}</Text>
               <Text style={styles.planMembers}>{plan.members}</Text>
             </View>
-            <Text style={styles.planPrice}>{plan.price}</Text>
+            <Text style={styles.planPrice}>
+              {formatCurrency(plan.priceAmount, studioCurrency)} / month
+            </Text>
           </View>
           {plan.recommended ? (
             <View style={styles.recommendedBadge}>
@@ -156,7 +163,7 @@ export default function StudioPlanScreen({ route }: Props) {
       ))}
 
       <Button
-        label={`Subscribe to ${selected.name} — ${selected.price}`}
+        label={`Subscribe to ${selected.name} — ${formatCurrency(selected.priceAmount, studioCurrency)} / month`}
         onPress={() => void subscribe()}
         loading={loading}
         fullWidth

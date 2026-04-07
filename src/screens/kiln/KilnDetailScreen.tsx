@@ -12,7 +12,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Badge, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import { apiFetch, formatCurrency } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { KilnType } from './KilnListScreen';
 
@@ -119,6 +119,9 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
   const { studios } = useAuth();
 
   const studioRole = studios.find((s) => s.tenantId === tenantId)?.role;
+  const studioCurrency = (
+    studios.find((s) => s.tenantId === tenantId)?.currency ?? 'EUR'
+  ).toUpperCase();
   const canManageSession =
     studioRole === 'owner' || studioRole === 'assistant';
 
@@ -299,7 +302,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
           {isClosed && firing.totalCost != null ? (
             <View style={styles.pill}>
               <Text style={styles.pillText}>
-                €{Number(firing.totalCost).toFixed(2)} total
+                {formatCurrency(Number(firing.totalCost), studioCurrency)} total
               </Text>
             </View>
           ) : null}
@@ -370,7 +373,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
                 </Text>
                 {isClosed && it.cost != null ? (
                   <Text style={styles.itemCost}>
-                    €{Number(it.cost).toFixed(2)}
+                    {formatCurrency(Number(it.cost), studioCurrency)}
                   </Text>
                 ) : null}
               </View>

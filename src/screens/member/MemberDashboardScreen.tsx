@@ -17,7 +17,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { Badge, SectionLabel, Divider, Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import { apiFetch } from '../../services/api';
+import { apiFetch, formatCurrency } from '../../services/api';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
 type Nav = CompositeNavigationProp<
@@ -96,6 +96,9 @@ export default function MemberDashboardScreen() {
     studios.find((s) => s.status === 'active') ?? studios[0];
   const studioLabel = currentStudio?.studioName?.trim() || 'Studio';
   const tenantId = currentStudio?.tenantId ?? '';
+  const studioCurrency = (
+    currentStudio?.currency ?? 'EUR'
+  ).toUpperCase();
 
   const now = new Date();
   const year = now.getFullYear();
@@ -218,17 +221,20 @@ export default function MemberDashboardScreen() {
         activeOpacity={0.8}
       >
         <Text style={styles.costsTotal}>
-          {costs ? `€${costs.total.toFixed(2)}` : '—'}
+          {costs ? formatCurrency(costs.total, studioCurrency) : '—'}
         </Text>
         <View style={styles.costsRow}>
           <Text style={styles.costItem}>
-            Kiln: {costs ? `€${costs.kiln.toFixed(2)}` : '—'}
+            Kiln:{' '}
+            {costs ? formatCurrency(costs.kiln, studioCurrency) : '—'}
           </Text>
           <Text style={styles.costItem}>
-            Materials: {costs ? `€${costs.materials.toFixed(2)}` : '—'}
+            Materials:{' '}
+            {costs ? formatCurrency(costs.materials, studioCurrency) : '—'}
           </Text>
           <Text style={styles.costItem}>
-            Events: {costs ? `€${costs.events.toFixed(2)}` : '—'}
+            Events:{' '}
+            {costs ? formatCurrency(costs.events, studioCurrency) : '—'}
           </Text>
         </View>
         <Text style={styles.costsLink}>View full summary →</Text>

@@ -13,7 +13,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Badge, Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import { apiFetch, formatCurrency } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'CostList'>;
@@ -157,10 +157,6 @@ async function fetchMemberLiveCostRow(
   }
 }
 
-function formatEuro(n: number): string {
-  return `€${Number(n).toFixed(2)}`;
-}
-
 function periodLabel(year: number, month: number): string {
   const d = new Date(year, month - 1, 1);
   return d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
@@ -189,6 +185,9 @@ export default function CostListScreen({ route }: { route: Route }) {
     studios.find((s) => s.tenantId === tenantId) ??
     studios.find((s) => s.status === 'active') ??
     studios[0];
+  const studioCurrency = (
+    currentStudio?.currency ?? 'EUR'
+  ).toUpperCase();
 
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -373,7 +372,7 @@ export default function CostListScreen({ route }: { route: Route }) {
 
       <View style={styles.pillRow}>
         <Text style={styles.pillText}>
-          {members.length} members · {formatEuro(totalAll)} total all members
+          {members.length} members · {formatCurrency(totalAll, studioCurrency)} total all members
         </Text>
       </View>
 
@@ -425,7 +424,7 @@ export default function CostListScreen({ route }: { route: Route }) {
             placeholder="e.g. Studio access fee"
           />
           <Input
-            label="Amount (€)"
+            label={`Amount (${studioCurrency})`}
             value={miscCost}
             onChangeText={setMiscCost}
             keyboardType="decimal-pad"
@@ -498,7 +497,7 @@ export default function CostListScreen({ route }: { route: Route }) {
                 </View>
                 <View style={styles.cardRight}>
                   <Text style={styles.cardTotal}>
-                    {formatEuro(cost?.grandTotal ?? 0)}
+                    {formatCurrency(cost?.grandTotal ?? 0, studioCurrency)}
                   </Text>
                   {cost?.summaryStatus === 'draft' ? (
                     <Badge label="draft" variant="neutral" />

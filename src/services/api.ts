@@ -88,6 +88,48 @@ export function userHasAdminTabAccess(user: AuthUser | null | undefined): boolea
   return Object.values(p).some((v) => v === true);
 }
 
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  EUR: '€',
+  PLN: 'zł',
+  GBP: '£',
+  CZK: 'Kč',
+  SEK: 'kr',
+  DKK: 'kr',
+  CHF: 'CHF ',
+  NOK: 'kr',
+};
+
+export function formatCurrency(amount: number, currency = 'EUR'): string {
+  const c = (currency ?? 'EUR').toUpperCase();
+  const symbol = CURRENCY_SYMBOLS[c] ?? `${c} `;
+  return `${symbol}${amount.toFixed(2)}`;
+}
+
+export const SUPPORTED_CURRENCIES = [
+  'EUR',
+  'PLN',
+  'GBP',
+  'CZK',
+  'SEK',
+  'DKK',
+  'CHF',
+  'NOK',
+] as const;
+
+/** Suffix like `€ / kg` or `zł / hour` (symbol trimmed for multi-char codes). */
+export function formatCurrencyUnitSuffix(currency: string, unit: string): string {
+  const c = (currency ?? 'EUR').toUpperCase();
+  const sym = (CURRENCY_SYMBOLS[c] ?? c).trimEnd();
+  return `${sym} / ${unit}`;
+}
+
+/** Compact label e.g. `€/kg`, `zł/kg`. */
+export function formatCurrencyPerUnitLabel(currency: string, unit: string): string {
+  const c = (currency ?? 'EUR').toUpperCase();
+  const sym = (CURRENCY_SYMBOLS[c] ?? '€').trimEnd();
+  return `${sym}/${unit}`;
+}
+
 export type PatchMeBody = {
   name?: string;
   avatar_url?: string | null;
@@ -108,6 +150,8 @@ export interface StudioMembership {
   status: 'active' | 'invited' | 'suspended';
   /** From GET /auth/me — tenant logo (camelCase or normalized from logo_url). */
   logoUrl?: string;
+  /** ISO currency code, e.g. EUR, PLN. */
+  currency?: string;
   subscriptionStatus?: string;
   subscriptionTier?: string;
   trialEndsAt?: string;
@@ -379,6 +423,10 @@ export async function getMe(): Promise<MeResponse> {
         trialEndsAt:
           row.trialEndsAt != null || row.trial_ends_at != null
             ? String(row.trialEndsAt ?? row.trial_ends_at)
+            : undefined,
+        currency:
+          row.currency != null || row.currency_code != null
+            ? String(row.currency ?? row.currency_code).toUpperCase()
             : undefined,
       };
     }),

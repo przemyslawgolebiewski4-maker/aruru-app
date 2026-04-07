@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   getMe,
   logout,
@@ -19,6 +25,11 @@ export { TwoFactorRequiredError } from '../services/api';
 function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
   return list.map((s) => {
     const row = s as StudioMembership & Record<string, unknown>;
+    const curRaw = row.currency ?? row.currency_code ?? s.currency;
+    const currency =
+      curRaw != null && String(curRaw).trim() !== ''
+        ? String(curRaw).toUpperCase()
+        : 'EUR';
     return {
       ...s,
       logoUrl: s.logoUrl ?? (s as { logo_url?: string }).logo_url,
@@ -27,6 +38,7 @@ function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
       subscriptionTier:
         row.subscriptionTier ?? (row.subscription_tier as string | undefined),
       trialEndsAt: row.trialEndsAt ?? (row.trial_ends_at as string | undefined),
+      currency,
     };
   });
 }
@@ -36,6 +48,9 @@ interface AuthState {
   studios: StudioMembership[];
   loading: boolean;
   error: string | null;
+  /** First active studio (same rule as dashboard). */
+  activeTenantId: string;
+  activeCurrency: string;
 }
 
 interface AuthActions {
@@ -66,6 +81,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [studios, setStudios] = useState<StudioMembership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const activeTenantId = useMemo(() => {
+    const active =
+      studios.find((s) => s.status === 'active') ?? studios[0];
+    return active?.tenantId ?? '';
+  }, [studios]);
+
+  const activeCurrency = useMemo(() => {
+    const active = studios.find((s) => s.tenantId === activeTenantId) ??
+      studios.find((s) => s.status === 'active') ??
+      studios[0];
+    return (active?.currency ?? 'EUR').toUpperCase();
+  }, [studios, activeTenantId]);
 
   async function refresh() {
     const token = await getToken();
@@ -263,6 +291,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         studios,
         loading,
         error,
+        activeTenantId,
+        activeCurrency,
         signIn,
         completeSignInWith2FA,
         signUp,

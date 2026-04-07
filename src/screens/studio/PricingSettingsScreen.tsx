@@ -16,7 +16,12 @@ import type { RouteProp } from '@react-navigation/native';
 import { Button, SectionLabel, Divider, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import {
+  apiFetch,
+  formatCurrency,
+  formatCurrencyPerUnitLabel,
+  formatCurrencyUnitSuffix,
+} from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import {
   alertMessage,
@@ -105,6 +110,9 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
   const membership = studios.find((s) => s.tenantId === tenantId);
   const isOwner =
     membership?.role === 'owner' && membership?.status === 'active';
+  const studioCurrency = (
+    membership?.currency ?? 'EUR'
+  ).toUpperCase();
 
   const [openStudioPerH, setOpenStudioPerH] = useState('');
   const [kilnBisquePerKg, setKilnBisquePerKg] = useState('');
@@ -330,7 +338,7 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
               label="HOURLY RATE"
               value={openStudioPerH}
               onChange={setOpenStudioPerH}
-              suffix="€ / hour"
+              suffix={formatCurrencyUnitSuffix(studioCurrency, 'hour')}
             />
 
             <View style={styles.kilnSection}>
@@ -339,19 +347,19 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
                 label="BISQUE — PER KG"
                 value={kilnBisquePerKg}
                 onChange={setKilnBisquePerKg}
-                suffix="€ / kg"
+                suffix={formatCurrencyUnitSuffix(studioCurrency, 'kg')}
               />
               <PricingField
                 label="GLAZE — PER KG"
                 value={kilnGlazePerKg}
                 onChange={setKilnGlazePerKg}
-                suffix="€ / kg"
+                suffix={formatCurrencyUnitSuffix(studioCurrency, 'kg')}
               />
               <PricingField
                 label="PRIVATE — FLAT FEE"
                 value={kilnPrivatePerFiring}
                 onChange={setKilnPrivatePerFiring}
-                suffix="€ / firing"
+                suffix={formatCurrencyUnitSuffix(studioCurrency, 'firing')}
               />
             </View>
 
@@ -361,16 +369,16 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
               standard member rate.
             </Text>
             <PricingField
-              label="Bisque firing - external (€/kg)"
+              label={`Bisque firing - external (${formatCurrencyPerUnitLabel(studioCurrency, 'kg')})`}
               value={kilnBisqueExternalPerKg}
               onChange={setKilnBisqueExternalPerKg}
-              suffix="€/kg"
+              suffix={formatCurrencyPerUnitLabel(studioCurrency, 'kg')}
             />
             <PricingField
-              label="Glaze firing - external (€/kg)"
+              label={`Glaze firing - external (${formatCurrencyPerUnitLabel(studioCurrency, 'kg')})`}
               value={kilnGlazeExternalPerKg}
               onChange={setKilnGlazeExternalPerKg}
-              suffix="€/kg"
+              suffix={formatCurrencyPerUnitLabel(studioCurrency, 'kg')}
             />
 
             {error ? (
@@ -409,7 +417,7 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
                   placeholder="e.g. Standard, Student"
                 />
                 <Input
-                  label="Monthly fee (€)"
+                  label={`Monthly fee (${studioCurrency})`}
                   value={planPrice}
                   onChangeText={setPlanPrice}
                   placeholder="0.00"
@@ -441,7 +449,7 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
                   ) : null}
                 </View>
                 <Text style={styles.planPrice}>
-                  €{plan.price.toFixed(2)}/mo
+                  {formatCurrency(plan.price, studioCurrency)}/mo
                 </Text>
                 <TouchableOpacity
                   onPress={() => void onDeletePlan(plan.id)}

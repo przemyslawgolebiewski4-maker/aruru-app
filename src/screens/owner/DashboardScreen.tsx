@@ -24,7 +24,7 @@ import {
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 import { alertMessage } from '../../utils/confirmAction';
-import { apiFetch } from '../../services/api';
+import { apiFetch, formatCurrency } from '../../services/api';
 import MemberDashboardScreen from '../member/MemberDashboardScreen';
 
 type RecentFiring = {
@@ -164,7 +164,7 @@ function IconTwoCircles60() {
 }
 
 export default function DashboardScreen() {
-  const { user, studios } = useAuth();
+  const { user, studios, activeCurrency } = useAuth();
   const navigation = useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
   const [stats, setStats] = useState({
     members: 0,
@@ -730,31 +730,31 @@ export default function DashboardScreen() {
             >
               <Text style={styles.incomeCardLabel}>Total</Text>
               <Text style={styles.incomeCardValue}>
-                €{income.current.total.toFixed(2)}
+                {formatCurrency(income.current.total, activeCurrency)}
               </Text>
             </View>
             <View style={styles.incomeCard}>
               <Text style={styles.incomeCardLabel}>Membership</Text>
               <Text style={styles.incomeCardValue}>
-                €{income.current.membership.toFixed(2)}
+                {formatCurrency(income.current.membership, activeCurrency)}
               </Text>
             </View>
             <View style={styles.incomeCard}>
               <Text style={styles.incomeCardLabel}>Kiln</Text>
               <Text style={styles.incomeCardValue}>
-                €{income.current.kiln.toFixed(2)}
+                {formatCurrency(income.current.kiln, activeCurrency)}
               </Text>
             </View>
             <View style={styles.incomeCard}>
               <Text style={styles.incomeCardLabel}>Materials</Text>
               <Text style={styles.incomeCardValue}>
-                €{income.current.materials.toFixed(2)}
+                {formatCurrency(income.current.materials, activeCurrency)}
               </Text>
             </View>
             <View style={styles.incomeCard}>
               <Text style={styles.incomeCardLabel}>Open studio</Text>
               <Text style={styles.incomeCardValue}>
-                €{income.current.openStudio.toFixed(2)}
+                {formatCurrency(income.current.openStudio, activeCurrency)}
               </Text>
             </View>
           </View>

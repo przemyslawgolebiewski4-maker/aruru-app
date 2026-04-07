@@ -14,7 +14,11 @@ import type { RouteProp } from '@react-navigation/native';
 import { Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { setPricing } from '../../services/api';
+import {
+  formatCurrencyUnitSuffix,
+  setPricing,
+} from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'SetupPricing'>;
 type Route = RouteProp<AppStackParamList, 'SetupPricing'>;
@@ -65,6 +69,10 @@ function PricingFieldRow({
 export default function SetupPricingScreen({ route }: { route: Route }) {
   const { tenantId, studioName } = route.params;
   const navigation = useNavigation<Nav>();
+  const { studios } = useAuth();
+  const studioCurrency = (
+    studios.find((s) => s.tenantId === tenantId)?.currency ?? 'EUR'
+  ).toUpperCase();
 
   const [openH, setOpenH] = useState('');
   const [bisque, setBisque] = useState('');
@@ -128,7 +136,7 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
           label="HOURLY RATE"
           value={openH}
           onChangeText={setOpenH}
-          suffix="€ / hour"
+          suffix={formatCurrencyUnitSuffix(studioCurrency, 'hour')}
         />
 
         <Text style={styles.sectionLabel}>KILN FIRINGS</Text>
@@ -136,19 +144,19 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
           label="BISQUE — PER KG"
           value={bisque}
           onChangeText={setBisque}
-          suffix="€ / kg"
+          suffix={formatCurrencyUnitSuffix(studioCurrency, 'kg')}
         />
         <PricingFieldRow
           label="GLAZE — PER KG"
           value={glaze}
           onChangeText={setGlaze}
-          suffix="€ / kg"
+          suffix={formatCurrencyUnitSuffix(studioCurrency, 'kg')}
         />
         <PricingFieldRow
           label="PRIVATE — FLAT FEE"
           value={priv}
           onChangeText={setPriv}
-          suffix="€ / firing"
+          suffix={formatCurrencyUnitSuffix(studioCurrency, 'firing')}
         />
 
         <Text style={styles.sectionLabel}>MEMBERSHIP</Text>
@@ -156,7 +164,7 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
           label="MONTHLY FEE"
           value={membership}
           onChangeText={setMembership}
-          suffix="€ / month"
+          suffix={formatCurrencyUnitSuffix(studioCurrency, 'month')}
           helper="Set to 0 if you don't charge a monthly fee."
         />
 

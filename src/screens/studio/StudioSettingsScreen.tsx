@@ -48,6 +48,7 @@ import {
   apiFetch,
   deleteStudio,
   patchStudioVisibility,
+  SUPPORTED_CURRENCIES,
 } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { alertMessage, confirmDestructive } from '../../utils/confirmAction';
@@ -129,6 +130,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [error, setError] = useState('');
   const [portalLoading, setPortalLoading] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [currency, setCurrency] = useState('EUR');
   const [communityVisible, setCommunityVisible] = useState(true);
   const [visibilityLoading, setVisibilityLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -171,13 +173,20 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       setCommunityVisible(
         Boolean(s.communityVisible ?? s.community_visible ?? true)
       );
+      const curRaw = pickStr(s, 'currency') || membership?.currency || 'EUR';
+      const curUp = String(curRaw).toUpperCase();
+      setCurrency(
+        SUPPORTED_CURRENCIES.includes(curUp as (typeof SUPPORTED_CURRENCIES)[number])
+          ? curUp
+          : 'EUR'
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studio.');
       setName(studioName ?? '');
     } finally {
       setLoading(false);
     }
-  }, [tenantId, studioName, isOwner]);
+  }, [tenantId, studioName, isOwner, membership?.currency]);
 
   useFocusEffect(
     useCallback(() => {
@@ -208,6 +217,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
             instagram_url: instagramUrl.trim() || null,
             website_url: websiteUrl.trim() || null,
             shop_url: shopUrl.trim() || null,
+            currency: currency.toUpperCase(),
           }),
         },
         tenantId
@@ -554,6 +564,32 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           ) : null}
         </View>
 
+        <View style={styles.fieldGap}>
+          <Text style={styles.fieldLabel}>Currency</Text>
+          <View style={styles.currencyRow}>
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <TouchableOpacity
+                key={c}
+                style={[
+                  styles.currencyChip,
+                  currency === c && styles.currencyChipActive,
+                ]}
+                onPress={() => setCurrency(c)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.currencyChipText,
+                    currency === c && styles.currencyChipTextActive,
+                  ]}
+                >
+                  {c}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* ─── About ───────────────────── */}
         <View style={styles.sectionGap} />
         <SectionLabel>About</SectionLabel>
@@ -768,11 +804,43 @@ const styles = StyleSheet.create({
   sectionGap: { height: spacing[6] },
   visibilityBlock: { gap: spacing[3] },
   dangerZoneBlock: { gap: spacing[3] },
+  fieldLabel: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
   pickerLabel: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.sm,
     color: colors.ink,
     marginBottom: spacing[1],
+  },
+  currencyRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    marginBottom: spacing[4],
+  },
+  currencyChip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  currencyChipActive: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  currencyChipText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+  },
+  currencyChipTextActive: {
+    color: colors.surface,
   },
   pickerToggle: {
     flexDirection: 'row',
