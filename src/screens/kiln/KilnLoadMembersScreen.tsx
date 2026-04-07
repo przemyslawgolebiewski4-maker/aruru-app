@@ -27,10 +27,16 @@ export type StudioMember = {
 };
 
 type FiringItem = {
+  id?: string;
+  _id?: string;
   userId?: string;
   weightKg?: number;
   memberName?: string;
   member_name?: string;
+  externalName?: string;
+  external_name?: string;
+  isExternal?: boolean;
+  is_external?: boolean;
 };
 
 function memberDisplayLabel(m: StudioMember) {
@@ -41,6 +47,8 @@ function itemMemberFallback(it: FiringItem | undefined) {
   return (
     it?.memberName?.trim() ||
     it?.member_name?.trim() ||
+    it?.externalName?.trim() ||
+    it?.external_name?.trim() ||
     'Member'
   );
 }
@@ -72,6 +80,10 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
   const [loadError, setLoadError] = useState('');
   const [saveError, setSaveError] = useState('');
   const [mossInputIds, setMossInputIds] = useState<Record<string, boolean>>({});
+  const [externalName, setExternalName] = useState('');
+  const [externalWeight, setExternalWeight] = useState('');
+  const [externalSaving, setExternalSaving] = useState(false);
+  const [externalError, setExternalError] = useState('');
 
   const load = useCallback(async () => {
     setLoadError('');
@@ -150,7 +162,12 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
   }, [items]);
 
   const sessionTotalRows = useMemo(() => {
-    const rows: { userId: string; kg: number; name: string }[] = [];
+    const rows: {
+      key: string;
+      kg: number;
+      name: string;
+      isExternal: boolean;
+    }[] = [];
     for (const [userId, kg] of totalsByUser.entries()) {
       if (kg <= 0) continue;
       const m = members.find((x) => x.userId === userId);
@@ -158,7 +175,25 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
       const name = m
         ? memberDisplayLabel(m) || itemMemberFallback(sample)
         : itemMemberFallback(sample);
-      rows.push({ userId, kg, name: name || 'Member' });
+      rows.push({
+        key: userId,
+        kg,
+        name: name || 'Member',
+        isExternal: false,
+      });
+    }
+    let extIdx = 0;
+    for (const it of items) {
+      if (it.userId != null && String(it.userId).trim() !== '') continue;
+      const kg = Number(it.weightKg) || 0;
+      if (kg <= 0) continue;
+      const extFlag = it.isExternal ?? it.is_external;
+      rows.push({
+        key: String(it.id ?? it._id ?? `external-${extIdx++}`),
+        kg,
+        name: itemMemberFallback(it) || 'External guest',
+        isExternal: extFlag !== false,
+      });
     }
     rows.sort((a, b) => a.name.localeCompare(b.name));
     return rows;
@@ -239,6 +274,40 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAddExternal() {
+    setExternalError('');
+    const name = externalName.trim();
+    if (!name) {
+      setExternalError('Name is required.');
+      return;
+    }
+    const kg = parseFloat(externalWeight.replace(',', '.'));
+    if (isNaN(kg) || kg <= 0) {
+      setExternalError('Enter a valid weight.');
+      return;
+    }
+    setExternalSaving(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/kiln/firings/${firingId}/items/external`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ externalName: name, weightKg: kg }),
+        },
+        tenantId
+      );
+      setExternalName('');
+      setExternalWeight('');
+      await load();
+    } catch (e: unknown) {
+      setExternalError(
+        e instanceof Error ? e.message : 'Could not add external guest.'
+      );
+    } finally {
+      setExternalSaving(false);
     }
   }
 
@@ -324,6 +393,46 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
         })
       )}
 
+      <View style={styles.externalSection}>
+        <SectionLabel>External guest</SectionLabel>
+        <Text style={styles.externalHint}>
+          Not a studio member - pieces are loaded and costs tracked separately.
+        </Text>
+        <View style={styles.externalRow}>
+          <TextInput
+            style={[styles.externalInput, styles.externalNameInput]}
+            value={externalName}
+            onChangeText={(v) => {
+              setExternalName(v);
+              setExternalError('');
+            }}
+            placeholder="Guest name"
+            placeholderTextColor={colors.inkLight}
+            autoCapitalize="words"
+          />
+          <TextInput
+            style={[styles.externalInput, styles.externalWeightInput]}
+            value={externalWeight}
+            onChangeText={(v) => {
+              setExternalWeight(v);
+              setExternalError('');
+            }}
+            placeholder="kg"
+            placeholderTextColor={colors.inkLight}
+            keyboardType="decimal-pad"
+          />
+          <Button
+            label="Add"
+            variant="secondary"
+            onPress={() => void handleAddExternal()}
+            loading={externalSaving}
+          />
+        </View>
+        {externalError ? (
+          <Text style={styles.externalError}>{externalError}</Text>
+        ) : null}
+      </View>
+
       {saveError ? <View style={styles.errorBox}><Text style={styles.errorBoxText}>{saveError}</Text></View> : null}
 
       <Button
@@ -342,15 +451,20 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
           <SectionLabel>SESSION TOTALS</SectionLabel>
           {sessionTotalRows.map((row, idx) => (
             <View
-              key={row.userId}
+              key={row.key}
               style={[
                 styles.totalMemberRow,
                 idx < sessionTotalRows.length - 1 && styles.memberRowBorder,
               ]}
             >
-              <Text style={styles.sessionMemberName} numberOfLines={1}>
-                {row.name}
-              </Text>
+              <View style={styles.sessionNameRow}>
+                <Text style={styles.sessionMemberName} numberOfLines={1}>
+                  {row.name}
+                </Text>
+                {row.isExternal ? (
+                  <Text style={styles.externalBadge}>External</Text>
+                ) : null}
+              </View>
               <Text style={styles.sessionMemberKg}>
                 {row.kg.toFixed(1)} kg total
               </Text>
@@ -458,8 +572,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: spacing[2],
   },
-  sessionMemberName: {
+  sessionNameRow: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
+    marginRight: spacing[2],
+  },
+  sessionMemberName: {
+    flexShrink: 1,
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.inkMid,
@@ -494,5 +615,48 @@ const styles = StyleSheet.create({
   closeSessionBtn: {
     marginTop: spacing[6],
     borderColor: colors.moss,
+  },
+  externalSection: {
+    marginTop: spacing[6],
+    paddingTop: spacing[4],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  externalHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+    marginBottom: spacing[3],
+  },
+  externalRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    alignItems: 'center',
+  },
+  externalInput: {
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 10,
+    fontFamily: typography.body,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    backgroundColor: colors.surface,
+  },
+  externalNameInput: { flex: 1 },
+  externalWeightInput: { width: 64 },
+  externalError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    marginTop: spacing[2],
+  },
+  externalBadge: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    marginLeft: spacing[1],
   },
 });

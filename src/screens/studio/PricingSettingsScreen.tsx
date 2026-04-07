@@ -109,6 +109,8 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
   const [openStudioPerH, setOpenStudioPerH] = useState('');
   const [kilnBisquePerKg, setKilnBisquePerKg] = useState('');
   const [kilnGlazePerKg, setKilnGlazePerKg] = useState('');
+  const [kilnBisqueExternalPerKg, setKilnBisqueExternalPerKg] = useState('');
+  const [kilnGlazeExternalPerKg, setKilnGlazeExternalPerKg] = useState('');
   const [kilnPrivatePerFiring, setKilnPrivatePerFiring] = useState('');
   const [loadPricing, setLoadPricing] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -165,12 +167,20 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
       const glaze = numFromUnknown(
         data.kilnGlazePerKg ?? data.kiln_glaze_per_kg
       );
+      const bisqueExt = numFromUnknown(
+        data.kilnBisqueExternalPerKg ?? data.kiln_bisque_external_per_kg
+      );
+      const glazeExt = numFromUnknown(
+        data.kilnGlazeExternalPerKg ?? data.kiln_glaze_external_per_kg
+      );
       const priv = numFromUnknown(
         data.kilnPrivatePerFiring ?? data.kiln_private_per_firing
       );
       setOpenStudioPerH(formatInitialAmount(open));
       setKilnBisquePerKg(formatInitialAmount(bisque));
       setKilnGlazePerKg(formatInitialAmount(glaze));
+      setKilnBisqueExternalPerKg(formatInitialAmount(bisqueExt));
+      setKilnGlazeExternalPerKg(formatInitialAmount(glazeExt));
       setKilnPrivatePerFiring(formatInitialAmount(priv));
     } catch (e) {
       setPlans([]);
@@ -207,6 +217,8 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
             openStudioPerH: parseFloat(openStudioPerH) || 0,
             kilnBisquePerKg: parseFloat(kilnBisquePerKg) || 0,
             kilnGlazePerKg: parseFloat(kilnGlazePerKg) || 0,
+            kilnBisqueExternalPerKg: parseFloat(kilnBisqueExternalPerKg) || 0,
+            kilnGlazeExternalPerKg: parseFloat(kilnGlazeExternalPerKg) || 0,
             kilnPrivatePerFiring: parseFloat(kilnPrivatePerFiring) || 0,
           }),
         },
@@ -343,6 +355,24 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
               />
             </View>
 
+            <SectionLabel>External guest rates</SectionLabel>
+            <Text style={styles.sectionHint}>
+              Separate per-kg rate for external guests. Leave at 0 to use the
+              standard member rate.
+            </Text>
+            <PricingField
+              label="Bisque firing - external (€/kg)"
+              value={kilnBisqueExternalPerKg}
+              onChange={setKilnBisqueExternalPerKg}
+              suffix="€/kg"
+            />
+            <PricingField
+              label="Glaze firing - external (€/kg)"
+              value={kilnGlazeExternalPerKg}
+              onChange={setKilnGlazeExternalPerKg}
+              suffix="€/kg"
+            />
+
             {error ? (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{error}</Text>
@@ -469,6 +499,13 @@ const styles = StyleSheet.create({
   },
   kilnSection: {
     marginTop: 24,
+  },
+  sectionHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    marginBottom: spacing[3],
+    lineHeight: 20,
   },
   fieldWrap: {
     marginBottom: 20,
