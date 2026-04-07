@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import DateTimeField from '../../components/DateTimeField';
+import DateTimeField, { toLocalISOString } from '../../components/DateTimeField';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -52,7 +52,7 @@ export default function KilnNewSessionScreen({ route }: { route: Route }) {
     setLoading(true);
     try {
       const kilnTypeBody: 'bisque' | 'glaze' | 'private' = kilnType;
-      const scheduledAt = scheduledDate.toISOString();
+      const scheduledAt = toLocalISOString(scheduledDate);
       const body = {
         firingType: kilnTypeBody,
         scheduledAt,

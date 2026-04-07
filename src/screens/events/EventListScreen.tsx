@@ -11,7 +11,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import DateTimeField from '../../components/DateTimeField';
+import DateTimeField, { toLocalISOString } from '../../components/DateTimeField';
 import EventCalendar from '../../components/EventCalendar';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
@@ -240,8 +240,8 @@ export default function EventListScreen({ route }: { route: Route }) {
           body: JSON.stringify({
             title: title.trim(),
             kind,
-            startsAt: startsAt.toISOString(),
-            endsAt: endsAt.toISOString(),
+            startsAt: toLocalISOString(startsAt),
+            endsAt: toLocalISOString(endsAt),
             location: location.trim() || null,
             maxParticipants: parseInt(maxP, 10) || null,
             description: description.trim() || null,

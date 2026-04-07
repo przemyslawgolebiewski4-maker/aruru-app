@@ -22,6 +22,20 @@ function pad(n: number) {
   return String(n).padStart(2, '0');
 }
 
+/**
+ * Converts a local Date to an ISO-like string using LOCAL date/time parts.
+ * Use this instead of .toISOString() when sending user-selected dates to
+ * the backend — .toISOString() converts to UTC which shifts dates by 1-2h
+ * for users in UTC+1/UTC+2 (e.g. midnight in Berlin becomes 22:00 prev day).
+ */
+export function toLocalISOString(d: Date): string {
+  const z = (n: number) => String(n).padStart(2, '0');
+  return (
+    `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}` +
+    `T${z(d.getHours())}:${z(d.getMinutes())}:00.000Z`
+  );
+}
+
 function toDateString(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
