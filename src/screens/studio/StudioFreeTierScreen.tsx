@@ -25,6 +25,18 @@ const FREE_FEATURES = [
     desc: 'Visible in community feed across all studios',
   },
   {
+    name: 'Share personal events',
+    desc: 'Members can publish their own workshops and exhibitions in the community feed',
+  },
+  {
+    name: 'Book studio time',
+    desc: 'Members can reserve a slot and let the studio know what they are working on',
+  },
+  {
+    name: 'Sign up for events',
+    desc: 'Members can sign up for studio workshops and open studios directly in the app',
+  },
+  {
     name: 'Studio profile in directory',
     desc: 'Discoverable by ceramicists across Europe',
   },

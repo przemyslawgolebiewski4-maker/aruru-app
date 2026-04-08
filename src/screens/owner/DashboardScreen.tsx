@@ -776,6 +776,9 @@ export default function DashboardScreen() {
               {[
                 'Invite members - owner and member roles are free',
                 'Publish events visible in the community feed',
+                'Share personal events as a ceramicist',
+                'Book studio time - reserve a slot directly in the app',
+                'Sign up for studio events and workshops',
                 'Studio profile discoverable by ceramicists',
                 'Forum - read, post and reply',
                 'Artist profiles and discovery',
