@@ -8,8 +8,11 @@ import {
   TouchableOpacity,
   Linking,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useFocusEffect } from '@react-navigation/native';
+import type {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import { AvatarImage } from '../../components/AvatarImage';
@@ -27,6 +30,7 @@ type FeedEvent = {
   endsAt?: string;
   location?: string;
   maxParticipants?: number;
+  description?: string;
 };
 
 type StudioProfile = {
@@ -69,7 +73,21 @@ function formatDate(iso?: string): string {
   }
 }
 
+function formatTime(iso?: string): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
 export default function StudioPublicProfileScreen({ route }: Props) {
+  const stackNav =
+    useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { studioSlug, studioName } = route.params;
   const { studios } = useAuth();
   const tenantId =
@@ -102,7 +120,38 @@ export default function StudioPublicProfileScreen({ route }: Props) {
         ...res,
         logoUrl: res.logoUrl ?? res.logo_url,
       });
-      setEvents(res.upcomingEvents ?? []);
+      const rawEvents = res.upcomingEvents ?? [];
+      setEvents(
+        rawEvents.map((row) => {
+          const e = row as Record<string, unknown>;
+          return {
+            id: String(e.id ?? ''),
+            title: String(e.title ?? ''),
+            kind: String(e.kind ?? ''),
+            startsAt:
+              e.startsAt != null
+                ? String(e.startsAt)
+                : e.starts_at != null
+                  ? String(e.starts_at)
+                  : undefined,
+            endsAt:
+              e.endsAt != null
+                ? String(e.endsAt)
+                : e.ends_at != null
+                  ? String(e.ends_at)
+                  : undefined,
+            location: e.location != null ? String(e.location) : undefined,
+            maxParticipants:
+              e.maxParticipants != null
+                ? Number(e.maxParticipants)
+                : e.max_participants != null
+                  ? Number(e.max_participants)
+                  : undefined,
+            description:
+              e.description != null ? String(e.description) : undefined,
+          };
+        })
+      );
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studio.');
       setStudio(null);
@@ -189,16 +238,39 @@ export default function StudioPublicProfileScreen({ route }: Props) {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Upcoming events</Text>
             {events.map((e) => (
-              <View key={e.id} style={styles.eventRow}>
+              <TouchableOpacity
+                key={e.id}
+                style={styles.eventRow}
+                activeOpacity={0.75}
+                onPress={() =>
+                  stackNav.navigate('EventList', {
+                    tenantId: studio.id,
+                  })
+                }
+              >
                 <View style={styles.eventInfo}>
                   <Text style={styles.eventTitle}>{e.title}</Text>
                   <Text style={styles.eventMeta}>
                     {formatDate(e.startsAt)}
+                    {e.endsAt ? ` - ${formatTime(e.endsAt)}` : ''}
                     {e.location ? ` · ${e.location}` : ''}
                   </Text>
+                  {e.description ? (
+                    <Text style={styles.eventDesc} numberOfLines={2}>
+                      {e.description}
+                    </Text>
+                  ) : null}
+                  {e.maxParticipants ? (
+                    <Text style={styles.eventMeta}>
+                      {e.maxParticipants} spots max
+                    </Text>
+                  ) : null}
                 </View>
-                <Badge label={kindLabel(e.kind)} variant="neutral" />
-              </View>
+                <View style={styles.eventRight}>
+                  <Badge label={kindLabel(e.kind)} variant="neutral" />
+                  <Text style={styles.eventArrow}>→</Text>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         </>
@@ -324,6 +396,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     marginTop: 2,
+  },
+  eventDesc: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  eventRight: {
+    alignItems: 'flex-end',
+    gap: spacing[1],
+    flexShrink: 0,
+  },
+  eventArrow: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
   },
   linkRow: {
     fontFamily: typography.mono,

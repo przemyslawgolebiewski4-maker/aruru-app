@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Badge, Button, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
@@ -47,7 +48,8 @@ function parseEventDetail(data: unknown): StudioEvent | null {
 
 export default function EventDetailScreen({ route }: { route: Route }) {
   const { tenantId, eventId } = route.params;
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { studios } = useAuth();
 
   const role = studios.find((s) => s.tenantId === tenantId)?.role;
@@ -59,6 +61,14 @@ export default function EventDetailScreen({ route }: { route: Route }) {
   const [cancelling, setCancelling] = useState(false);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [signingUp, setSigningUp] = useState(false);
+  const [signedUp, setSignedUp] = useState(false);
+  const [signUpError, setSignUpError] = useState('');
+
+  useEffect(() => {
+    setSignedUp(false);
+    setSignUpError('');
+  }, [tenantId, eventId]);
 
   const load = useCallback(async () => {
     setError('');
@@ -135,6 +145,28 @@ export default function EventDetailScreen({ route }: { route: Route }) {
       void load();
     }, [load])
   );
+
+  async function handleSignUp() {
+    setSignUpError('');
+    setSigningUp(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/bookings`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ eventId, spots: 1 }),
+        },
+        tenantId
+      );
+      setSignedUp(true);
+    } catch (e: unknown) {
+      setSignUpError(
+        e instanceof Error ? e.message : 'Could not sign up.'
+      );
+    } finally {
+      setSigningUp(false);
+    }
+  }
 
   async function onCancelEvent() {
     const ok = await confirmDestructive(
@@ -253,6 +285,15 @@ export default function EventDetailScreen({ route }: { route: Route }) {
         <>
           <SectionLabel>ACTIONS</SectionLabel>
           <Button
+            label="Edit event"
+            variant="secondary"
+            onPress={() =>
+              navigation.navigate('EventList', { tenantId })
+            }
+            fullWidth
+            style={{ marginBottom: spacing[2] }}
+          />
+          <Button
             label="Cancel event"
             variant="danger"
             onPress={() => void onCancelEvent()}
@@ -261,6 +302,28 @@ export default function EventDetailScreen({ route }: { route: Route }) {
             fullWidth
             accessibilityLabel="Cancel event"
           />
+        </>
+      ) : null}
+
+      {!isStaff && isPublished && ev.kind !== 'member_booking' ? (
+        <>
+          <SectionLabel>SIGN UP</SectionLabel>
+          <Button
+            label="Sign up for this event"
+            variant="primary"
+            onPress={() => void handleSignUp()}
+            loading={signingUp}
+            disabled={signingUp || signedUp}
+            fullWidth
+          />
+          {signedUp ? (
+            <Text style={styles.signedUpText}>
+              You are signed up for this event.
+            </Text>
+          ) : null}
+          {signUpError ? (
+            <Text style={styles.errBanner}>{signUpError}</Text>
+          ) : null}
         </>
       ) : null}
 
@@ -324,6 +387,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
     marginBottom: spacing[2],
+  },
+  signedUpText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
+    textAlign: 'center',
+    marginTop: spacing[2],
   },
   bookingRow: {
     flexDirection: 'row',
