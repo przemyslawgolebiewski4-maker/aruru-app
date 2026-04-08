@@ -17,17 +17,19 @@ type Props = NativeStackScreenProps<AppStackParamList, 'SponsorPlan'>;
 
 const BASIC_FEATURES = [
   '1 post per month',
-  'Stats dashboard',
-  'Profile in Sponsors directory',
+  'Partner profile in directory',
   'Logo on your posts',
+  'Logo in aruru.xyz footer',
+  'Stats - clicks and profile views',
 ] as const;
 
 const STANDARD_FEATURES = [
   '2 posts per month',
-  'Stats dashboard',
-  'Profile in Sponsors directory',
+  'Partner profile in directory',
   'Logo on your posts',
-  'Logo in landing page footer',
+  'Logo in aruru.xyz footer',
+  'Stats - clicks and profile views',
+  'Country filter - reach studios you ship to',
 ] as const;
 
 export default function SponsorPlanScreen(_props: Props) {
@@ -77,7 +79,8 @@ export default function SponsorPlanScreen(_props: Props) {
     >
       <Text style={styles.screenTitle}>Choose your plan</Text>
       <Text style={styles.subtitle}>
-        Activate your partner profile and start reaching the Aruru community.
+        Reach ceramicists across Europe. Both plans include your logo in the
+        aruru.xyz footer.
       </Text>
 
       <TouchableOpacity
