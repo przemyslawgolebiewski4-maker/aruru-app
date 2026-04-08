@@ -99,6 +99,9 @@ export default function MemberDashboardScreen() {
   const studioCurrency = (
     currentStudio?.currency ?? 'EUR'
   ).toUpperCase();
+  const studioSubscriptionActive =
+    currentStudio?.subscriptionStatus === 'active' ||
+    currentStudio?.subscriptionStatus === 'trial';
 
   const now = new Date();
   const year = now.getFullYear();
@@ -212,58 +215,61 @@ export default function MemberDashboardScreen() {
         <Badge label="Member" variant="moss" />
       </View>
 
-      <Divider />
-
-      <SectionLabel>{`My costs — ${month}/${year}`}</SectionLabel>
-      <TouchableOpacity
-        style={styles.costsCard}
-        onPress={goCosts}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.costsTotal}>
-          {costs ? formatCurrency(costs.total, studioCurrency) : '—'}
-        </Text>
-        <View style={styles.costsRow}>
-          <Text style={styles.costItem}>
-            Kiln:{' '}
-            {costs ? formatCurrency(costs.kiln, studioCurrency) : '—'}
-          </Text>
-          <Text style={styles.costItem}>
-            Materials:{' '}
-            {costs ? formatCurrency(costs.materials, studioCurrency) : '—'}
-          </Text>
-          <Text style={styles.costItem}>
-            Events:{' '}
-            {costs ? formatCurrency(costs.events, studioCurrency) : '—'}
-          </Text>
-        </View>
-        <Text style={styles.costsLink}>View full summary →</Text>
-      </TouchableOpacity>
-
-      <Divider />
-
-      <SectionLabel>My firings</SectionLabel>
-      {firings.length === 0 ? (
-        <Text style={styles.empty}>No firings yet.</Text>
-      ) : (
-        firings.map((f) => (
+      {studioSubscriptionActive ? (
+        <>
+          <Divider />
+          <SectionLabel>{`My costs — ${month}/${year}`}</SectionLabel>
           <TouchableOpacity
-            key={f.id}
-            style={styles.row}
-            onPress={() => goKilnDetail(f.id)}
-            activeOpacity={0.7}
+            style={styles.costsCard}
+            onPress={goCosts}
+            activeOpacity={0.8}
           >
-            <View style={styles.rowMain}>
-              <Text style={styles.rowTitle}>{firingLabel(f)}</Text>
-              <Text style={styles.rowMeta}>{firingDate(f)}</Text>
+            <Text style={styles.costsTotal}>
+              {costs ? formatCurrency(costs.total, studioCurrency) : '—'}
+            </Text>
+            <View style={styles.costsRow}>
+              <Text style={styles.costItem}>
+                Kiln:{' '}
+                {costs ? formatCurrency(costs.kiln, studioCurrency) : '—'}
+              </Text>
+              <Text style={styles.costItem}>
+                Materials:{' '}
+                {costs ? formatCurrency(costs.materials, studioCurrency) : '—'}
+              </Text>
+              <Text style={styles.costItem}>
+                Events:{' '}
+                {costs ? formatCurrency(costs.events, studioCurrency) : '—'}
+              </Text>
             </View>
-            <Badge
-              label={f.status}
-              variant={f.status === 'closed' ? 'moss' : 'clay'}
-            />
+            <Text style={styles.costsLink}>View full summary →</Text>
           </TouchableOpacity>
-        ))
-      )}
+
+          <Divider />
+
+          <SectionLabel>My firings</SectionLabel>
+          {firings.length === 0 ? (
+            <Text style={styles.empty}>No firings yet.</Text>
+          ) : (
+            firings.map((f) => (
+              <TouchableOpacity
+                key={f.id}
+                style={styles.row}
+                onPress={() => goKilnDetail(f.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>{firingLabel(f)}</Text>
+                  <Text style={styles.rowMeta}>{firingDate(f)}</Text>
+                </View>
+                <Badge
+                  label={f.status}
+                  variant={f.status === 'closed' ? 'moss' : 'clay'}
+                />
+              </TouchableOpacity>
+            ))
+          )}
+        </>
+      ) : null}
 
       <Divider />
 
@@ -287,30 +293,40 @@ export default function MemberDashboardScreen() {
 
       <View style={styles.actions}>
         <Button
-          label="My costs"
-          variant="secondary"
-          onPress={goCosts}
-          fullWidth
-        />
-        <Button
           label="Events"
           variant="secondary"
           onPress={goEvents}
-          fullWidth
-        />
-        <Button
-          label="Buy materials"
-          variant="secondary"
-          onPress={goShop}
-          fullWidth
+          style={styles.actionBtn}
         />
         <Button
           label="Book studio time"
           variant="secondary"
           onPress={goBookStudio}
-          fullWidth
+          style={styles.actionBtn}
         />
+        {studioSubscriptionActive ? (
+          <>
+            <Button
+              label="My costs"
+              variant="secondary"
+              onPress={goCosts}
+              style={styles.actionBtn}
+            />
+            <Button
+              label="Buy materials"
+              variant="secondary"
+              onPress={goShop}
+              style={styles.actionBtn}
+            />
+          </>
+        ) : null}
       </View>
+      {!studioSubscriptionActive ? (
+        <Text style={styles.noSubHint}>
+          Costs, kiln history and materials are available when your studio
+          activates a subscription.
+        </Text>
+      ) : null}
     </ScrollView>
   );
 }
@@ -397,5 +413,17 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing[2],
     marginTop: spacing[2],
+  },
+  actionBtn: {
+    width: '100%',
+  },
+  noSubHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: spacing[4],
+    marginTop: spacing[3],
   },
 });

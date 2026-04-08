@@ -68,13 +68,34 @@ export function formatTime(iso: string): string {
   });
 }
 
-function parseEvents(data: unknown): StudioEvent[] {
-  if (Array.isArray(data)) return data as StudioEvent[];
-  if (data && typeof data === 'object' && 'events' in data) {
-    const ev = (data as { events?: StudioEvent[] }).events;
-    return Array.isArray(ev) ? ev : [];
-  }
-  return [];
+export function parseEvents(data: unknown): StudioEvent[] {
+  const rows: unknown[] = Array.isArray(data)
+    ? data
+    : data && typeof data === 'object' && 'events' in data
+      ? ((data as { events?: unknown[] }).events ?? [])
+      : [];
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      id: r.id != null ? String(r.id) : undefined,
+      title: r.title != null ? String(r.title) : undefined,
+      description:
+        r.description != null ? String(r.description) : undefined,
+      startsAt: (r.startsAt ?? r.starts_at) as string | undefined,
+      endsAt: (r.endsAt ?? r.ends_at) as string | undefined,
+      kind: r.kind != null ? String(r.kind) : undefined,
+      maxParticipants:
+        typeof r.maxParticipants === 'number'
+          ? r.maxParticipants
+          : typeof r.max_participants === 'number'
+            ? r.max_participants
+            : undefined,
+      location: r.location != null ? String(r.location) : undefined,
+      status: r.status != null ? String(r.status) : undefined,
+      createdAt: (r.createdAt ?? r.created_at) as string | undefined,
+    };
+  });
 }
 
 function eventId(e: StudioEvent): string {
