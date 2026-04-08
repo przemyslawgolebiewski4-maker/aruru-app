@@ -94,17 +94,14 @@ export default function BookStudioScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      {eventsLoading ? (
-        <ActivityIndicator
-          color={colors.clay}
-          style={{ marginBottom: spacing[4] }}
-        />
-      ) : events.length > 0 ? (
-        <View style={styles.calendarWrap}>
-          <Text style={styles.calendarLabel}>Studio calendar</Text>
-          <Text style={styles.calendarHint}>
-            Tap a date to set your booking start.
-          </Text>
+      <View style={styles.calendarWrap}>
+        <Text style={styles.calendarLabel}>Studio calendar</Text>
+        <Text style={styles.calendarHint}>
+          Tap a date to set your booking start.
+        </Text>
+        {eventsLoading ? (
+          <ActivityIndicator color={colors.clay} />
+        ) : (
           <EventCalendar
             events={events}
             onEventPress={(e) => {
@@ -122,8 +119,8 @@ export default function BookStudioScreen({ route, navigation }: Props) {
               }
             }}
           />
-        </View>
-      ) : null}
+        )}
+      </View>
 
       <Text style={styles.heading}>Book studio time</Text>
       <Text style={styles.sub}>
