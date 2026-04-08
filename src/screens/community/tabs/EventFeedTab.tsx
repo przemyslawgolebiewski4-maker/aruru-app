@@ -13,16 +13,20 @@ import type { MaterialTopTabNavigationProp } from '@react-navigation/material-to
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
 import { AvatarImage } from '../../../components/AvatarImage';
-import { Badge } from '../../../components/ui';
+import { Badge, Button, Input } from '../../../components/ui';
+import DateTimeField, { toLocalISOString } from '../../../components/DateTimeField';
 import { colors, typography, fontSize, spacing } from '../../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../../navigation/types';
 
 type FeedEvent = {
   id: string;
   tenantId?: string;
-  studioName: string;
+  studioName?: string;
   studioSlug?: string;
   studioLogoUrl?: string;
+  authorName?: string;
+  authorAvatarUrl?: string;
+  isPersonal?: boolean;
   title: string;
   description?: string;
   kind: string;
@@ -87,6 +91,59 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
+function normalizeFeedEvent(ev: unknown): FeedEvent {
+  const r = ev as Record<string, unknown>;
+  return {
+    id: String(r.id ?? ''),
+    tenantId:
+      r.tenantId != null
+        ? String(r.tenantId)
+        : r.tenant_id != null
+          ? String(r.tenant_id)
+          : undefined,
+    studioName:
+      (r.studioName ?? r.studio_name) != null
+        ? String(r.studioName ?? r.studio_name)
+        : undefined,
+    studioSlug:
+      (r.studioSlug ?? r.studio_slug) != null
+        ? String(r.studioSlug ?? r.studio_slug)
+        : undefined,
+    studioLogoUrl:
+      (r.studioLogoUrl ?? r.studio_logo_url) != null
+        ? String(r.studioLogoUrl ?? r.studio_logo_url)
+        : undefined,
+    authorName:
+      (r.authorName ?? r.author_name) != null
+        ? String(r.authorName ?? r.author_name)
+        : undefined,
+    authorAvatarUrl:
+      (r.authorAvatarUrl ?? r.author_avatar_url) != null
+        ? String(r.authorAvatarUrl ?? r.author_avatar_url)
+        : undefined,
+    isPersonal: Boolean(r.isPersonal ?? r.is_personal),
+    title: String(r.title ?? ''),
+    description:
+      r.description != null ? String(r.description) : undefined,
+    kind: String(r.kind ?? 'other'),
+    startsAt:
+      (r.startsAt ?? r.starts_at) != null
+        ? String(r.startsAt ?? r.starts_at)
+        : undefined,
+    endsAt:
+      (r.endsAt ?? r.ends_at) != null
+        ? String(r.endsAt ?? r.ends_at)
+        : undefined,
+    location: r.location != null ? String(r.location) : undefined,
+    maxParticipants:
+      typeof r.maxParticipants === 'number'
+        ? r.maxParticipants
+        : typeof r.max_participants === 'number'
+          ? r.max_participants
+          : undefined,
+  };
+}
+
 export default function EventFeedTab() {
   const { studios } = useAuth();
   const navigation =
@@ -97,24 +154,36 @@ export default function EventFeedTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const [showPersonalForm, setShowPersonalForm] = useState(false);
+  const [pTitle, setPTitle] = useState('');
+  const [pStartsAt, setPStartsAt] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    return d;
+  });
+  const [pEndsAt, setPEndsAt] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  });
+  const [pLocation, setPLocation] = useState('');
+  const [pPublic, setPPublic] = useState(true);
+  const [pCreating, setPCreating] = useState(false);
+  const [pError, setPError] = useState('');
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch<{ events: FeedEvent[] }>(
+      const res = await apiFetch<{ events?: unknown[] }>(
         '/community/feed',
         {},
         tenantId
       );
-      const raw = res.events ?? [];
-      setEvents(
-        raw.map((ev) => ({
-          ...ev,
-          studioLogoUrl:
-            ev.studioLogoUrl ??
-            (ev as { studio_logo_url?: string }).studio_logo_url,
-        }))
-      );
+      const raw = Array.isArray(res.events) ? res.events : [];
+      setEvents(raw.map(normalizeFeedEvent));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load feed.');
     } finally {
@@ -127,6 +196,47 @@ export default function EventFeedTab() {
       void load();
     }, [load])
   );
+
+  async function createPersonalEvent() {
+    setPError('');
+    if (!pTitle.trim()) {
+      setPError('Title is required.');
+      return;
+    }
+    if (pEndsAt <= pStartsAt) {
+      setPError('End time must be after start time.');
+      return;
+    }
+    setPCreating(true);
+    try {
+      await apiFetch(
+        '/community/events',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            title: pTitle.trim(),
+            kind: 'workshop',
+            starts_at: toLocalISOString(pStartsAt),
+            ends_at: toLocalISOString(pEndsAt),
+            location: pLocation.trim() || null,
+            public: pPublic,
+          }),
+        },
+        tenantId
+      );
+      setShowPersonalForm(false);
+      setPTitle('');
+      setPLocation('');
+      setPError('');
+      void load();
+    } catch (e: unknown) {
+      setPError(
+        e instanceof Error ? e.message : 'Could not create event.'
+      );
+    } finally {
+      setPCreating(false);
+    }
+  }
 
   function goStudio(slug: string, studioName: string) {
     navigation
@@ -149,15 +259,6 @@ export default function EventFeedTab() {
         <Text style={styles.errorText}>{error}</Text>
       </View>
     );
-  if (events.length === 0)
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyText}>No upcoming public events.</Text>
-        <Text style={styles.emptyHint}>
-          Studios can publish events from their event screen.
-        </Text>
-      </View>
-    );
 
   return (
     <FlatList
@@ -165,26 +266,146 @@ export default function EventFeedTab() {
       keyExtractor={(e) => e.id}
       style={styles.list}
       ItemSeparatorComponent={() => <View style={styles.sep} />}
-      renderItem={({ item: e }) => (
-        <View style={styles.card}>
-          <TouchableOpacity
-            style={styles.studioRow}
-            onPress={() => goStudio(e.studioSlug ?? '', e.studioName)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.avatar}>
-              <AvatarImage
-                url={e.studioLogoUrl}
-                initials={initials(e.studioName)}
-                size={28}
-                borderRadius={14}
-                bgColor={colors.clayLight}
-                textColor={colors.clay}
+      ListHeaderComponent={
+        <View style={styles.newEventWrap}>
+          {!showPersonalForm ? (
+            <Button
+              label="+ Share your event"
+              variant="ghost"
+              onPress={() => setShowPersonalForm(true)}
+            />
+          ) : (
+            <View style={styles.personalForm}>
+              <Text style={styles.personalFormTitle}>New personal event</Text>
+              <Input
+                label="Title"
+                value={pTitle}
+                onChangeText={setPTitle}
+                placeholder="Workshop, exhibition, open studio..."
+              />
+              <View style={styles.dtRow}>
+                <View style={{ flex: 1 }}>
+                  <DateTimeField
+                    label="Starts"
+                    value={pStartsAt}
+                    onChange={setPStartsAt}
+                    mode="date"
+                    minimumDate={new Date()}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <DateTimeField
+                    label="Ends"
+                    value={pEndsAt}
+                    onChange={setPEndsAt}
+                    mode="date"
+                    minimumDate={new Date()}
+                  />
+                </View>
+              </View>
+              <Input
+                label="Location (optional)"
+                value={pLocation}
+                onChangeText={setPLocation}
+                placeholder="City, address or online"
+              />
+              <TouchableOpacity
+                style={styles.publicToggle}
+                onPress={() => setPPublic((v) => !v)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.publicToggleLabel}>
+                  {pPublic
+                    ? 'Visible in community feed'
+                    : 'Private - only you'}
+                </Text>
+                <View
+                  style={[
+                    styles.toggleTrack,
+                    pPublic && styles.toggleTrackOn,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.toggleThumb,
+                      pPublic && styles.toggleThumbOn,
+                    ]}
+                  />
+                </View>
+              </TouchableOpacity>
+              {pError ? (
+                <Text style={styles.formError}>{pError}</Text>
+              ) : null}
+              <Button
+                label="Publish event"
+                variant="primary"
+                onPress={() => void createPersonalEvent()}
+                loading={pCreating}
+                disabled={pCreating}
+                fullWidth
+              />
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => {
+                  setShowPersonalForm(false);
+                  setPError('');
+                }}
+                fullWidth
               />
             </View>
-            <Text style={styles.studioName}>{e.studioName}</Text>
-            <Text style={styles.dateLabel}>{formatDate(e.startsAt)}</Text>
-          </TouchableOpacity>
+          )}
+        </View>
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>No upcoming public events.</Text>
+          <Text style={styles.emptyHint}>
+            Studios can publish events from their event screen.
+          </Text>
+        </View>
+      }
+      renderItem={({ item: e }) => (
+        <View style={styles.card}>
+          {e.isPersonal ? (
+            <View style={styles.studioRow}>
+              <View style={styles.avatar}>
+                <AvatarImage
+                  url={e.authorAvatarUrl}
+                  initials={initials(e.authorName ?? '?')}
+                  size={28}
+                  borderRadius={14}
+                  bgColor={colors.mossLight}
+                  textColor={colors.moss}
+                />
+              </View>
+              <Text style={styles.studioName}>
+                {e.authorName ?? 'Ceramicist'}
+              </Text>
+              <Text style={styles.dateLabel}>{formatDate(e.startsAt)}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.studioRow}
+              onPress={() =>
+                goStudio(e.studioSlug ?? '', e.studioName ?? '')
+              }
+              activeOpacity={0.7}
+            >
+              <View style={styles.avatar}>
+                <AvatarImage
+                  url={e.studioLogoUrl}
+                  initials={initials(e.studioName ?? '?')}
+                  size={28}
+                  borderRadius={14}
+                  bgColor={colors.clayLight}
+                  textColor={colors.clay}
+                />
+              </View>
+              <Text style={styles.studioName}>{e.studioName ?? ''}</Text>
+              <Text style={styles.dateLabel}>{formatDate(e.startsAt)}</Text>
+            </TouchableOpacity>
+          )}
           <Badge label={kindLabel(e.kind)} variant={kindVariant(e.kind)} />
           <Text style={styles.eventTitle}>{e.title}</Text>
           {e.startsAt ? (
@@ -212,6 +433,12 @@ const styles = StyleSheet.create({
     padding: spacing[4],
     gap: spacing[2],
   },
+  emptyWrap: {
+    padding: spacing[6],
+    paddingTop: spacing[4],
+    alignItems: 'center',
+    gap: spacing[2],
+  },
   errorText: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
@@ -229,6 +456,62 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     textAlign: 'center',
+  },
+  newEventWrap: {
+    padding: spacing[4],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  personalForm: {
+    gap: spacing[3],
+  },
+  personalFormTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  dtRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  publicToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing[2],
+  },
+  publicToggleLabel: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    flex: 1,
+  },
+  toggleTrack: {
+    width: 42,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.border,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleTrackOn: {
+    backgroundColor: colors.moss,
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+  },
+  toggleThumbOn: {
+    alignSelf: 'flex-end',
+  },
+  formError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
   },
   sep: { height: 0.5, backgroundColor: colors.border },
   card: {
