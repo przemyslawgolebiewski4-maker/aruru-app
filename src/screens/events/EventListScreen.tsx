@@ -464,12 +464,21 @@ export default function EventListScreen({ route }: { route: Route }) {
 
       {!loading && events.length === 0 ? (
         <Text style={styles.empty}>
-          No events yet. Tap + New to create one.
+          {isStaff
+            ? 'No events yet. Tap + New to create one.'
+            : 'No events yet. You can share your own events in the Community tab.'}
         </Text>
       ) : null}
 
       {!loading && events.length > 0 ? (
         <EventCalendar events={events} onEventPress={(e) => goDetail(e)} />
+      ) : null}
+
+      {!loading && !isStaff ? (
+        <Text style={styles.memberHint}>
+          Want to share a workshop or exhibition? Go to Community - Events
+          to publish your own event.
+        </Text>
       ) : null}
 
       <View style={{ height: spacing[10] }} />
@@ -636,5 +645,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.inkLight,
     marginTop: spacing[2],
+  },
+  memberHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: spacing[6],
+    paddingVertical: spacing[4],
   },
 });
