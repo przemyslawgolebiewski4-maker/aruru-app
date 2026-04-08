@@ -609,6 +609,10 @@
 <!-- FOOTER -->
 <footer role="contentinfo">
   <div class="container">
+    <div id="foot-sponsors" style="display:none;border-bottom:0.5px solid rgba(247,243,237,.10);padding-bottom:24px;margin-bottom:24px;">
+      <p style="font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:rgba(247,243,237,.30);margin-bottom:14px;">Partners</p>
+      <div id="foot-logos" style="display:flex;flex-wrap:wrap;gap:16px;align-items:center;"></div>
+    </div>
     <div class="foot-inner">
       <span class="foot-wm">Aruru</span>
       <nav class="foot-links" aria-label="Footer navigation">
@@ -634,6 +638,34 @@
       count('sa', Math.max(d.artistCount    ?? 0, 0));
       count('sc', Math.max(d.countriesCount ?? 0, 0));
       count('sp', Math.max(d.sponsorCount   ?? 0, 0));
+
+      const footerSponsors = Array.isArray(d.footerSponsors) ? d.footerSponsors : [];
+      if (footerSponsors.length > 0) {
+        const wrap = document.getElementById('foot-sponsors');
+        const logos = document.getElementById('foot-logos');
+        if (wrap && logos) {
+          footerSponsors.forEach(function(s) {
+            if (!s.logoUrl) return;
+            const a = document.createElement('a');
+            a.href = s.websiteUrl
+              ? (s.websiteUrl.startsWith('http') ? s.websiteUrl : 'https://' + s.websiteUrl)
+              : '#';
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.title = s.name || '';
+            a.style.cssText = 'display:flex;align-items:center;opacity:0.6;transition:opacity .15s;';
+            a.onmouseenter = function(){ this.style.opacity='1'; };
+            a.onmouseleave = function(){ this.style.opacity='0.6'; };
+            const img = document.createElement('img');
+            img.src = s.logoUrl;
+            img.alt = s.name || 'Partner';
+            img.style.cssText = 'height:28px;width:auto;max-width:90px;object-fit:contain;filter:brightness(0) invert(1);';
+            a.appendChild(img);
+            logos.appendChild(a);
+          });
+          wrap.style.display = 'block';
+        }
+      }
     } catch {}
   }
 
