@@ -285,10 +285,11 @@ export default function DashboardScreen() {
             : String(dateStr)
         );
         if (Number.isNaN(d.getTime())) return false;
+        const st = String(f.status ?? '').toLowerCase();
         return (
           d.getMonth() === currentMonth &&
           d.getFullYear() === currentYear &&
-          f.status !== 'cancelled'
+          (st === 'closed' || st === 'complete')
         );
       }).length;
 
@@ -300,7 +301,11 @@ export default function DashboardScreen() {
         return nb - na;
       });
 
-      const topFirings: RecentFiring[] = sortedFirings.slice(0, 3).map((f, idx) => {
+      const completedFirings = sortedFirings.filter((f) => {
+        const st = String(f.status ?? '').toLowerCase();
+        return st === 'closed' || st === 'complete';
+      });
+      const topFirings: RecentFiring[] = completedFirings.slice(0, 3).map((f, idx) => {
         const id = firingId(f);
         const sched = firingScheduledAt(f);
         const rawMembers =
@@ -690,63 +695,6 @@ export default function DashboardScreen() {
         <Text style={styles.studioSub}>{studioLabel.toUpperCase()}</Text>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCardWrap}>
-          <StatCard label="Members" value={membersVal} accent="clay" />
-        </View>
-        <View style={styles.statCardWrap}>
-          <StatCard label="Firings" value={firingsVal} accent="moss" />
-        </View>
-        <View style={styles.statCardWrap}>
-          <StatCard label="Open tasks" value={tasksVal} accent="none" />
-        </View>
-        <View style={styles.statCardWrap}>
-          <TouchableOpacity
-            style={styles.statCardTap}
-            onPress={goCosts}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Open cost summaries"
-          >
-            <StatCard label="Summaries due" value={summariesVal} accent="none" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {ownerTrialDaysLeft !== null && ownerTrialDaysLeft > 0 ? (
-        <TouchableOpacity
-          style={styles.trialBanner}
-          onPress={() => void openCheckout()}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Open subscription checkout"
-        >
-          <Text style={styles.trialBannerText}>
-            {`Trial — ${ownerTrialDaysLeft} day${
-              ownerTrialDaysLeft === 1 ? '' : 's'
-            } remaining · Subscribe`}
-          </Text>
-          <Text style={styles.trialBannerArrow}>→</Text>
-        </TouchableOpacity>
-      ) : null}
-
-      {currentStudio?.role === 'owner' &&
-      currentStudio?.status === 'active' &&
-      currentStudio?.subscriptionStatus === 'past_due' ? (
-        <TouchableOpacity
-          style={[styles.trialBanner, styles.trialBannerDanger]}
-          onPress={() => void openCheckout()}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Update payment method"
-        >
-          <Text style={styles.trialBannerText}>
-            Payment failed — update your payment method
-          </Text>
-          <Text style={styles.trialBannerArrow}>→</Text>
-        </TouchableOpacity>
-      ) : null}
-
       {showFreeBanner ? (
         <View style={styles.communityBanner}>
           <View style={styles.communityBannerRow}>
@@ -803,16 +751,81 @@ export default function DashboardScreen() {
                   See full plan details →
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.communityBannerLink}
+                onPress={() => setShowCommunityBanner(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Hide community features"
+              >
+                <Text style={styles.communityBannerLinkText}>Hide ↑</Text>
+              </TouchableOpacity>
             </View>
           ) : null}
         </View>
       ) : null}
 
+      {ownerTrialDaysLeft !== null && ownerTrialDaysLeft > 0 ? (
+        <TouchableOpacity
+          style={styles.trialBanner}
+          onPress={() => void openCheckout()}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Open subscription checkout"
+        >
+          <Text style={styles.trialBannerText}>
+            {`Trial — ${ownerTrialDaysLeft} day${
+              ownerTrialDaysLeft === 1 ? '' : 's'
+            } remaining · Subscribe`}
+          </Text>
+          <Text style={styles.trialBannerArrow}>→</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {currentStudio?.role === 'owner' &&
+      currentStudio?.status === 'active' &&
+      currentStudio?.subscriptionStatus === 'past_due' ? (
+        <TouchableOpacity
+          style={[styles.trialBanner, styles.trialBannerDanger]}
+          onPress={() => void openCheckout()}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Update payment method"
+        >
+          <Text style={styles.trialBannerText}>
+            Payment failed — update your payment method
+          </Text>
+          <Text style={styles.trialBannerArrow}>→</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      <View style={styles.statsRow}>
+        <View style={styles.statCardWrap}>
+          <StatCard label="Members" value={membersVal} accent="clay" />
+        </View>
+        <View style={styles.statCardWrap}>
+          <StatCard label="Firings" value={firingsVal} accent="moss" />
+        </View>
+        <View style={styles.statCardWrap}>
+          <StatCard label="Open tasks" value={tasksVal} accent="none" />
+        </View>
+        <View style={styles.statCardWrap}>
+          <TouchableOpacity
+            style={styles.statCardTap}
+            onPress={goCosts}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Open cost summaries"
+          >
+            <StatCard label="Pending bills" value={summariesVal} accent="none" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <Divider />
 
       {income?.current ? (
         <>
-          <SectionLabel>INCOME THIS MONTH</SectionLabel>
+          <SectionLabel>REVENUE THIS MONTH</SectionLabel>
           <View style={styles.incomeCards}>
             <View
               style={[styles.incomeCard, { backgroundColor: colors.clayLight }]}
@@ -820,12 +833,6 @@ export default function DashboardScreen() {
               <Text style={styles.incomeCardLabel}>Total</Text>
               <Text style={styles.incomeCardValue}>
                 {formatCurrency(income.current.total, activeCurrency)}
-              </Text>
-            </View>
-            <View style={styles.incomeCard}>
-              <Text style={styles.incomeCardLabel}>Membership</Text>
-              <Text style={styles.incomeCardValue}>
-                {formatCurrency(income.current.membership, activeCurrency)}
               </Text>
             </View>
             <View style={styles.incomeCard}>
@@ -838,6 +845,12 @@ export default function DashboardScreen() {
               <Text style={styles.incomeCardLabel}>Materials</Text>
               <Text style={styles.incomeCardValue}>
                 {formatCurrency(income.current.materials, activeCurrency)}
+              </Text>
+            </View>
+            <View style={styles.incomeCard}>
+              <Text style={styles.incomeCardLabel}>Membership</Text>
+              <Text style={styles.incomeCardValue}>
+                {formatCurrency(income.current.membership, activeCurrency)}
               </Text>
             </View>
             <View style={styles.incomeCard}>
@@ -885,7 +898,7 @@ export default function DashboardScreen() {
           <ActivityIndicator color={colors.clay} />
         </View>
       ) : recentFirings.length === 0 ? (
-        <Text style={styles.emptyList}>No firings yet</Text>
+        <Text style={styles.emptyList}>No completed firings yet</Text>
       ) : (
         recentFirings.map((item, i) => (
           <View key={item.id}>
@@ -949,10 +962,11 @@ export default function DashboardScreen() {
 
       <View style={{ height: spacing[6] }} />
 
+      <SectionLabel>QUICK ACTIONS</SectionLabel>
       <View style={styles.actionsRow}>
         <View style={styles.actionQuarter}>
           <Button
-            label="New firing"
+            label="Firings"
             variant="secondary"
             onPress={goKilnList}
             style={styles.quickActionBtn}
@@ -978,6 +992,14 @@ export default function DashboardScreen() {
         </View>
         <View style={styles.actionQuarter}>
           <Button
+            label="Events"
+            variant="secondary"
+            onPress={goEvents}
+            style={styles.quickActionBtn}
+          />
+        </View>
+        <View style={styles.actionQuarter}>
+          <Button
             label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
             variant="secondary"
             onPress={goCosts}
@@ -994,55 +1016,55 @@ export default function DashboardScreen() {
             />
           </View>
         ) : null}
-        <View style={styles.actionQuarter}>
-          <Button
-            label="Events"
-            variant="secondary"
-            onPress={goEvents}
-            style={styles.quickActionBtn}
-          />
-        </View>
-        {canManageMembers ? (
-          <View style={styles.actionQuarter}>
-            <Button
-              label="Catalog"
-              variant="secondary"
-              onPress={goCatalog}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
-        {canManageMembers ? (
-          <View style={styles.actionQuarter}>
-            <Button
-              label="Assistants"
-              variant="secondary"
-              onPress={goAssistants}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
-        {canManageMembers ? (
-          <View style={styles.actionQuarter}>
-            <Button
-              label="Pricing"
-              variant="secondary"
-              onPress={goPricing}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
-        {canManageMembers ? (
-          <View style={styles.actionQuarter}>
-            <Button
-              label="Studio settings"
-              variant="secondary"
-              onPress={goStudioSettings}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
       </View>
+
+      {canManageMembers ? (
+        <>
+          <SectionLabel>STUDIO</SectionLabel>
+          <View style={styles.actionsRow}>
+            <View style={styles.actionQuarter}>
+              <Button
+                label="Catalog"
+                variant="secondary"
+                onPress={goCatalog}
+                style={styles.quickActionBtn}
+              />
+            </View>
+            <View style={styles.actionQuarter}>
+              <Button
+                label="Attendance"
+                variant="secondary"
+                onPress={goAttendance}
+                style={styles.quickActionBtn}
+              />
+            </View>
+            <View style={styles.actionQuarter}>
+              <Button
+                label="Assistants"
+                variant="secondary"
+                onPress={goAssistants}
+                style={styles.quickActionBtn}
+              />
+            </View>
+            <View style={styles.actionQuarter}>
+              <Button
+                label="Pricing"
+                variant="secondary"
+                onPress={goPricing}
+                style={styles.quickActionBtn}
+              />
+            </View>
+            <View style={styles.actionQuarter}>
+              <Button
+                label="Studio settings"
+                variant="secondary"
+                onPress={goStudioSettings}
+                style={styles.quickActionBtn}
+              />
+            </View>
+          </View>
+        </>
+      ) : null}
 
       <View style={{ height: spacing[10] }} />
       </ScrollView>
