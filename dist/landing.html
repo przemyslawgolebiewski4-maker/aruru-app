@@ -275,8 +275,7 @@
       .stats__inner{flex-direction:column;}
       .stat{padding:14px 0;border-right:none;border-bottom:0.5px solid var(--border);flex-direction:row;justify-content:space-between;align-items:center;}
       .stat__num{font-size:34px;}
-      .free-grid{grid-template-columns:1fr;gap:12px;}
-      .free-item{padding:18px 16px;}
+      .free-cards-grid .free-card{padding:18px 16px;}
       .free-inner{padding:0;}
       .stat:last-child{border-bottom:none;}
       .sec-sub{font-size:16px;}
@@ -286,6 +285,56 @@
     @media(max-width:400px){
       .hero__title{font-size:clamp(24px,8.5vw,32px);}
     }
+
+    /* ── ANCIENT DIVIDER ───────────────────────────────────── */
+    .ancient-divider{display:flex;align-items:center;gap:14px;margin:0 0 8px;opacity:0.45;}
+    .ancient-divider::before,.ancient-divider::after{content:'';flex:1;height:0.5px;background:var(--clay);}
+    .ancient-motif{font-family:var(--mono);font-size:11px;color:var(--clay);letter-spacing:.25em;}
+
+    /* ── HERO AMPHORA ──────────────────────────────────────── */
+    .hero__vis--amphora{display:flex;align-items:center;justify-content:center;}
+    .hero__vis--amphora svg{width:min(200px,42vw);height:auto;}
+    @media(max-width:900px){.hero__vis--amphora{display:none;}}
+
+    /* ── FREE CARDS (new style) ────────────────────────────── */
+    .free-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-md);padding:20px 18px;position:relative;overflow:hidden;}
+    .free-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--clay);opacity:0.4;}
+    .free-card.fc-moss::before{background:var(--moss);}
+    .free-card__t{font-family:var(--serif);font-size:17px;color:var(--ink);margin-bottom:6px;line-height:1.2;}
+    .free-card__d{font-size:13px;color:var(--ink-mid);line-height:1.55;}
+    .free-cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;}
+    @media(max-width:900px){.free-cards-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:600px){.free-cards-grid{grid-template-columns:1fr;}}
+
+    /* ── STUDIO PRICING ────────────────────────────────────── */
+    #pricing{background:var(--cream);padding:88px 0;}
+    .pricing-inner{max-width:900px;margin:0 auto;text-align:center;}
+    .plan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:32px 0 16px;text-align:left;}
+    .plan-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--r-md);padding:24px 18px;position:relative;}
+    .plan-card.plan-featured{background:var(--clay-light);border-color:rgba(196,113,74,.35);padding-top:32px;}
+    .plan-badge{position:absolute;top:0;left:50%;transform:translateX(-50%);background:var(--clay);color:#fff;font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:3px 12px;border-radius:0 0 6px 6px;white-space:nowrap;}
+    .plan-name{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-light);margin-bottom:10px;}
+    .plan-price{font-family:var(--serif);font-size:36px;color:var(--clay);line-height:1;}
+    .plan-per{font-family:var(--sans);font-size:14px;color:var(--ink-light);font-weight:400;}
+    .plan-members{font-family:var(--mono);font-size:11px;color:var(--ink-light);margin:6px 0 16px;}
+    .plan-feats{display:flex;flex-direction:column;gap:7px;}
+    .plan-feat{font-size:13px;color:var(--ink-mid);display:flex;align-items:flex-start;gap:7px;line-height:1.45;}
+    .plan-feat::before{content:'✓';color:var(--moss);flex-shrink:0;font-weight:600;}
+    .pricing-note{font-family:var(--mono);font-size:11px;color:var(--ink-light);text-align:center;margin-top:8px;}
+    @media(max-width:900px){.plan-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:600px){.plan-grid{grid-template-columns:1fr;}}
+
+    /* ── SPONSOR PRICING ───────────────────────────────────── */
+    .sp-plans{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px;}
+    .sp-plan{background:rgba(247,243,237,.07);border:0.5px solid rgba(247,243,237,.15);border-radius:var(--r-md);padding:28px 24px;}
+    .sp-plan.sp-plan-featured{background:rgba(196,113,74,.12);border-color:rgba(196,113,74,.35);}
+    .sp-plan__name{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--clay-light);margin-bottom:10px;}
+    .sp-plan__price{font-family:var(--serif);font-size:38px;color:var(--clay-light);line-height:1;}
+    .sp-plan__per{font-family:var(--sans);font-size:14px;color:rgba(247,243,237,.5);font-weight:400;}
+    .sp-plan__feats{display:flex;flex-direction:column;gap:8px;margin-top:18px;}
+    .sp-plan__feat{font-size:14px;color:rgba(247,243,237,.7);display:flex;align-items:flex-start;gap:8px;line-height:1.5;}
+    .sp-plan__feat::before{content:'✓';color:#8AB06A;flex-shrink:0;}
+    @media(max-width:600px){.sp-plans{grid-template-columns:1fr;}}
   </style>
 </head>
 <body>
@@ -307,6 +356,7 @@
     <ul class="nav__links" role="list">
       <li><a href="#value">For you</a></li>
       <li><a href="#free">Free tier</a></li>
+      <li><a href="#pricing">Pricing</a></li>
       <li><a href="#community">Community</a></li>
       <li><a href="#features">Features</a></li>
       <li><a href="#sponsors">Partners & venues</a></li>
@@ -325,6 +375,7 @@
   <button class="mob-nav__x" onclick="closeNav()" aria-label="Close">✕</button>
   <a href="#value" onclick="closeNav()">For you</a>
   <a href="#free" onclick="closeNav()">Free tier</a>
+  <a href="#pricing" onclick="closeNav()">Pricing</a>
   <a href="#community" onclick="closeNav()">Community</a>
   <a href="#features" onclick="closeNav()">Features</a>
   <a href="#sponsors" onclick="closeNav()">Partners & venues</a>
@@ -362,32 +413,29 @@
         </div>
         <p class="hero__note fu d4">Free to join - no credit card required.</p>
       </div>
-      <div class="hero__vis fi d2" aria-hidden="true">
-        <svg viewBox="0 0 420 280" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:420px;">
-          <defs>
-            <style>@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@1&amp;family=Instrument+Sans:wght@400;500&amp;display=swap');</style>
-          </defs>
-          <circle cx="310" cy="140" r="115" fill="rgba(196,113,74,0.07)"/>
-          <circle cx="310" cy="140" r="85" fill="rgba(196,113,74,0.05)"/>
-          <text x="310" y="128"
-            text-anchor="middle"
-            font-family="'DM Serif Display',Georgia,serif"
-            font-style="italic"
-            font-size="72" letter-spacing="-1.5"
-            fill="#C4714A">Aruru</text>
-          <line x1="188" y1="146" x2="432" y2="146" stroke="#C4714A" stroke-width="0.8" opacity="0.3"/>
-          <text x="310" y="168"
-            text-anchor="middle"
-            font-family="'Instrument Sans',system-ui,sans-serif"
-            font-size="11" font-weight="500" letter-spacing="5"
-            fill="#4A5E3A">CLAY COMMUNITY</text>
-          <circle cx="362" cy="62"  r="5" fill="rgba(196,113,74,0.28)"/>
-          <circle cx="220" cy="98"  r="4" fill="rgba(74,94,58,0.22)"/>
-          <circle cx="388" cy="192" r="3.5" fill="rgba(196,113,74,0.22)"/>
-          <circle cx="208" cy="200" r="3" fill="rgba(74,94,58,0.18)"/>
-          <line x1="362" y1="62"  x2="322" y2="82"  stroke="rgba(196,113,74,0.15)" stroke-width="1" stroke-dasharray="4 3"/>
-          <line x1="220" y1="98"  x2="250" y2="112" stroke="rgba(74,94,58,0.15)"   stroke-width="1" stroke-dasharray="4 3"/>
-          <line x1="388" y1="192" x2="360" y2="178" stroke="rgba(196,113,74,0.12)" stroke-width="1" stroke-dasharray="4 3"/>
+      <div class="hero__vis hero__vis--amphora fi d2" aria-hidden="true">
+        <svg viewBox="0 0 200 260" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:220px;opacity:0.75;">
+          <path d="M78 22 Q66 22 60 33 L48 58 Q38 74 36 95 Q33 126 38 152 Q43 170 49 180 L54 196 Q57 204 62 208 L70 213 Q81 217 100 217 Q119 217 130 213 L138 208 Q143 204 146 196 L151 180 Q157 170 162 152 Q167 126 164 95 Q162 74 152 58 L140 33 Q134 22 122 22 Z" stroke="#C4714A" stroke-width="1.2" opacity="0.7"/>
+          <path d="M80 22 Q78 11 76 6 L74 2" stroke="#C4714A" stroke-width="1" opacity="0.5"/>
+          <path d="M120 22 Q122 11 124 6 L126 2" stroke="#C4714A" stroke-width="1" opacity="0.5"/>
+          <path d="M70 2 Q100 -2 130 2" stroke="#C4714A" stroke-width="1.4" opacity="0.6"/>
+          <path d="M48 58 Q27 58 25 84 Q25 105 48 105" stroke="#C4714A" stroke-width="1" opacity="0.45"/>
+          <path d="M152 58 Q173 58 175 84 Q175 105 152 105" stroke="#C4714A" stroke-width="1" opacity="0.45"/>
+          <line x1="40" y1="112" x2="160" y2="112" stroke="#C4714A" stroke-width="0.5" opacity="0.5"/>
+          <line x1="40" y1="119" x2="160" y2="119" stroke="#C4714A" stroke-width="0.5" opacity="0.5"/>
+          <path d="M46 115 L52 115 L52 116.5 L58 116.5 L58 115 L64 115 L64 116.5 L70 116.5 L70 115 L76 115 L76 116.5 L82 116.5 L82 115 L88 115 L88 116.5 L94 116.5 L94 115 L100 115 L100 116.5 L106 116.5 L106 115 L112 115 L112 116.5 L118 116.5 L118 115 L124 115 L124 116.5 L130 116.5 L130 115 L136 115 L136 116.5 L142 116.5 L142 115 L148 115 L148 116.5 L154 116.5" stroke="#C4714A" stroke-width="0.8" opacity="0.55"/>
+          <circle cx="72" cy="145" r="2" fill="#C4714A" opacity="0.35"/>
+          <circle cx="85" cy="150" r="2" fill="#C4714A" opacity="0.35"/>
+          <circle cx="100" cy="147" r="2" fill="#C4714A" opacity="0.35"/>
+          <circle cx="115" cy="150" r="2" fill="#C4714A" opacity="0.35"/>
+          <circle cx="128" cy="145" r="2" fill="#C4714A" opacity="0.35"/>
+          <line x1="44" y1="172" x2="156" y2="172" stroke="#C4714A" stroke-width="0.5" opacity="0.4"/>
+          <line x1="46" y1="177" x2="154" y2="177" stroke="#C4714A" stroke-width="0.5" opacity="0.4"/>
+          <path d="M60 215 Q80 223 100 223 Q120 223 140 215" stroke="#C4714A" stroke-width="1.1" opacity="0.45"/>
+          <line x1="54" y1="226" x2="146" y2="226" stroke="#C4714A" stroke-width="0.9" opacity="0.35"/>
+          <circle cx="170" cy="30" r="60" stroke="#C4714A" stroke-width="0.4" opacity="0.12"/>
+          <circle cx="170" cy="30" r="40" stroke="#C4714A" stroke-width="0.4" opacity="0.10"/>
+          <circle cx="170" cy="30" r="20" stroke="#C4714A" stroke-width="0.4" opacity="0.08"/>
         </svg>
       </div>
     </div>
@@ -466,33 +514,109 @@
       <h2 id="free-title" class="sec-title">Your studio can start free - community first.</h2>
       <p class="free-lead">We built Aruru so ceramicists have a calm place to meet - not a paywall before the first hello. These features stay free for every studio on the platform, the same ones you use in the app today.</p>
       <span class="free-tag">Always included</span>
-      <div class="free-grid">
-        <div class="free-item fu"><p class="free-item__t">Invite members</p><p class="free-item__d">Owner and member roles - invite as many people as you need.</p></div>
-        <div class="free-item fu d1"><p class="free-item__t">Publish events</p><p class="free-item__d">Public workshops and open studios - visible in the community feed across studios.</p></div>
-        <div class="free-item fu d1">
-          <p class="free-item__t">Share personal events</p>
-          <p class="free-item__d">Ceramicists can publish their own
-          workshops and exhibitions - visible in the community feed
-          under their name.</p>
+      <div class="free-cards-grid">
+        <div class="free-card fu">
+          <p class="free-card__t">Invite members</p>
+          <p class="free-card__d">Owner and member roles - invite as many people as you need.</p>
         </div>
-        <div class="free-item fu d2">
-          <p class="free-item__t">Book studio time</p>
-          <p class="free-item__d">Members reserve a slot and let
-          the studio know what they are working on - straight from
-          the app.</p>
+        <div class="free-card fc-moss fu d1">
+          <p class="free-card__t">Publish events</p>
+          <p class="free-card__d">Workshops and open studios visible in the community feed across studios.</p>
         </div>
-        <div class="free-item fu">
-          <p class="free-item__t">Sign up for events</p>
-          <p class="free-item__d">Members sign up for workshops and
-          open studios directly - no emails, no spreadsheets.</p>
+        <div class="free-card fu d2">
+          <p class="free-card__t">Share personal events</p>
+          <p class="free-card__d">Ceramicists publish their own workshops and exhibitions under their name.</p>
         </div>
-        <div class="free-item fu d2"><p class="free-item__t">Studio profile in the directory</p><p class="free-item__d">Ceramicists can discover you by city and country across Europe.</p></div>
-        <div class="free-item fu"><p class="free-item__t">Community forum</p><p class="free-item__d">Read, post, and reply - technique, kiln, business, and general topics.</p></div>
-        <div class="free-item fu d1"><p class="free-item__t">Artist profiles</p><p class="free-item__d">One account travels with you - find studios, artists, and workshops near you.</p></div>
-        <div class="free-item fu d2"><p class="free-item__t">Invite friends to Aruru</p><p class="free-item__d">Share the community with fellow ceramicists - straight from your profile.</p></div>
+        <div class="free-card fc-moss fu">
+          <p class="free-card__t">Book studio time</p>
+          <p class="free-card__d">Members reserve a slot and let the studio know what they are working on.</p>
+        </div>
+        <div class="free-card fu d1">
+          <p class="free-card__t">Sign up for events</p>
+          <p class="free-card__d">Members sign up for workshops and open studios directly in the app.</p>
+        </div>
+        <div class="free-card fc-moss fu d2">
+          <p class="free-card__t">Studio profile in the directory</p>
+          <p class="free-card__d">Discoverable by ceramicists across Europe by city and country.</p>
+        </div>
+        <div class="free-card fu">
+          <p class="free-card__t">Community forum</p>
+          <p class="free-card__d">Read, post, and reply - technique, kiln, business, and general topics.</p>
+        </div>
+        <div class="free-card fc-moss fu d1">
+          <p class="free-card__t">Artist profiles</p>
+          <p class="free-card__d">One account travels with you - find studios, artists, and workshops near you.</p>
+        </div>
+        <div class="free-card fu d2">
+          <p class="free-card__t">Invite friends to Aruru</p>
+          <p class="free-card__d">Share the community with fellow ceramicists straight from your profile.</p>
+        </div>
       </div>
       <p class="free-subnote">When you need kiln cost splits, task hours, billing summaries, materials, assistants, and data export - you upgrade to a studio plan inside the app. Until then, grow your community without a subscription.</p>
       <a href="/register" class="btn btn-moss btn-lg">Join community</a>
+      <div class="ancient-divider" style="margin-top:40px;">
+        <span class="ancient-motif">· · · ·</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STUDIO PRICING -->
+<section id="pricing" aria-labelledby="pricing-title">
+  <div class="container">
+    <div class="pricing-inner">
+      <p class="sec-label">Studio plans</p>
+      <h2 id="pricing-title" class="sec-title fu">Simple pricing.<br/>Upgrade when you need it.</h2>
+      <p class="sec-sub fu d1" style="margin:0 auto 8px;">Community features are always free. Studio tools - kiln management, costs, billing, materials - unlock with a plan. No per-seat fees, no surprises.</p>
+      <div class="plan-grid fu d2">
+        <div class="plan-card">
+          <p class="plan-name">Solo</p>
+          <p class="plan-price">€15<span class="plan-per">/month</span></p>
+          <p class="plan-members">Up to 5 members</p>
+          <div class="plan-feats">
+            <p class="plan-feat">Kiln firings & cost splits</p>
+            <p class="plan-feat">Tasks & hour logging</p>
+            <p class="plan-feat">Costs & billing</p>
+            <p class="plan-feat">Data export (Excel)</p>
+          </div>
+        </div>
+        <div class="plan-card plan-featured">
+          <span class="plan-badge">Most popular</span>
+          <p class="plan-name">Studio</p>
+          <p class="plan-price">€29<span class="plan-per">/month</span></p>
+          <p class="plan-members">Up to 20 members</p>
+          <div class="plan-feats">
+            <p class="plan-feat">Everything in Solo</p>
+            <p class="plan-feat">Assistant roles</p>
+            <p class="plan-feat">Materials catalogue</p>
+            <p class="plan-feat">Attendance tracking</p>
+          </div>
+        </div>
+        <div class="plan-card">
+          <p class="plan-name">Community</p>
+          <p class="plan-price">€49<span class="plan-per">/month</span></p>
+          <p class="plan-members">Up to 50 members</p>
+          <div class="plan-feats">
+            <p class="plan-feat">Everything in Studio</p>
+            <p class="plan-feat">Priority support</p>
+            <p class="plan-feat">Partner visibility boost</p>
+          </div>
+        </div>
+        <div class="plan-card">
+          <p class="plan-name">Large</p>
+          <p class="plan-price">€79<span class="plan-per">/month</span></p>
+          <p class="plan-members">Unlimited members</p>
+          <div class="plan-feats">
+            <p class="plan-feat">Everything in Community</p>
+            <p class="plan-feat">Multiple assistants</p>
+            <p class="plan-feat">Full export suite</p>
+          </div>
+        </div>
+      </div>
+      <p class="pricing-note fu d3">14-day free trial · No credit card required · Cancel anytime · All plans include community features</p>
+      <div style="margin-top:24px;" class="fu d4">
+        <a href="/register" class="btn btn-primary btn-lg">Start free trial</a>
+      </div>
     </div>
   </div>
 </section>
@@ -568,6 +692,34 @@
           <p>Whether you ship materials, host makers for a month, or hang new work on the wall - you meet ceramicists inside Aruru, then they tap through to your site or booking flow. No dark patterns - just clarity.</p>
           <p class="sp-same-flow">Suppliers, pottery retreats, residencies, and galleries all use the same partner flow - one application, one review, then your profile goes live in the directory.</p>
           <a href="/register?sponsor=true" class="btn btn-primary">Apply as a partner</a>
+        </div>
+        <div style="margin-top:40px;">
+          <p style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--clay-light);margin-bottom:16px;">Partner plans</p>
+          <div class="sp-plans">
+            <div class="sp-plan">
+              <p class="sp-plan__name">Basic</p>
+              <p class="sp-plan__price">€29<span class="sp-plan__per">/month</span></p>
+              <div class="sp-plan__feats">
+                <p class="sp-plan__feat">1 post per month</p>
+                <p class="sp-plan__feat">Partner profile in directory</p>
+                <p class="sp-plan__feat">Logo on your posts</p>
+                <p class="sp-plan__feat">Logo in aruru.xyz footer</p>
+                <p class="sp-plan__feat">Stats - clicks and profile views</p>
+              </div>
+            </div>
+            <div class="sp-plan sp-plan-featured">
+              <p class="sp-plan__name">Standard</p>
+              <p class="sp-plan__price">€59<span class="sp-plan__per">/month</span></p>
+              <div class="sp-plan__feats">
+                <p class="sp-plan__feat">2 posts per month</p>
+                <p class="sp-plan__feat">Partner profile in directory</p>
+                <p class="sp-plan__feat">Logo on your posts</p>
+                <p class="sp-plan__feat">Logo in aruru.xyz footer</p>
+                <p class="sp-plan__feat">Stats - clicks and profile views</p>
+                <p class="sp-plan__feat">Country filter - reach studios you ship to</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="sp-flow fu d1">
