@@ -471,7 +471,11 @@ export default function EventListScreen({ route }: { route: Route }) {
       ) : null}
 
       {!loading && events.length > 0 ? (
-        <EventCalendar events={events} onEventPress={(e) => goDetail(e)} />
+        <EventCalendar
+          events={events}
+          onEventPress={(e) => goDetail(e)}
+          showStaffBookingMeta={isStaff}
+        />
       ) : null}
 
       {!loading && !isStaff ? (

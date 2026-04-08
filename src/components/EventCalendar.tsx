@@ -12,6 +12,8 @@ import { colors, typography, fontSize, spacing, radius } from '../theme/tokens';
 type Props = {
   events: StudioEvent[];
   onEventPress: (e: StudioEvent) => void;
+  /** Owner/assistant: extra line on member_booking cards (studio time). */
+  showStaffBookingMeta?: boolean;
 };
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
@@ -107,7 +109,11 @@ function monthMatrix(year: number, monthIndex: number): (number | null)[][] {
   return rows;
 }
 
-export default function EventCalendar({ events, onEventPress }: Props) {
+export default function EventCalendar({
+  events,
+  onEventPress,
+  showStaffBookingMeta = false,
+}: Props) {
   const today = useMemo(() => startOfDay(new Date()), []);
   const [cursor, setCursor] = useState(() => {
     const n = new Date();
@@ -274,6 +280,12 @@ export default function EventCalendar({ events, onEventPress }: Props) {
                       : '—'}
                     {loc ? ` · ${loc}` : ''}
                   </Text>
+                  {showStaffBookingMeta &&
+                  (e.kind ?? '').toLowerCase() === 'member_booking' ? (
+                    <Text style={styles.bookingMeta}>
+                      Studio time reserved by a member
+                    </Text>
+                  ) : null}
                   {max != null && max > 0 ? (
                     <Text style={styles.eventMax}>Max {max} participants</Text>
                   ) : null}
@@ -395,6 +407,12 @@ const styles = StyleSheet.create({
   eventMeta: {
     fontFamily: typography.mono,
     fontSize: 11,
+    color: colors.inkLight,
+    marginTop: 2,
+  },
+  bookingMeta: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
     color: colors.inkLight,
     marginTop: 2,
   },

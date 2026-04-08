@@ -24,6 +24,15 @@ import {
 
 type Route = RouteProp<AppStackParamList, 'EventDetail'>;
 
+type Booking = {
+  id: string;
+  userId: string;
+  spots: number;
+  note?: string;
+  createdAt?: string;
+  userName?: string;
+};
+
 function parseEventDetail(data: unknown): StudioEvent | null {
   if (!data || typeof data !== 'object') return null;
   const o = data as Record<string, unknown>;
@@ -48,10 +57,13 @@ export default function EventDetailScreen({ route }: { route: Route }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
     setLoading(true);
+    setBookings([]);
     try {
       const data = await apiFetch<unknown>(
         `/studios/${tenantId}/events/${eventId}`,
@@ -64,13 +76,59 @@ export default function EventDetailScreen({ route }: { route: Route }) {
         navigation.setOptions({ title: parsed.title });
       }
       if (!parsed) setError('Event not found.');
+
+      if (isStaff) {
+        setBookingsLoading(true);
+        try {
+          const bRes = await apiFetch<unknown>(
+            `/studios/${tenantId}/bookings`,
+            {},
+            tenantId
+          );
+          const raw = Array.isArray(bRes)
+            ? bRes
+            : (bRes as { bookings?: unknown[] }).bookings ?? [];
+          setBookings(
+            raw
+              .filter((row) => {
+                const bk = row as Record<string, unknown>;
+                const eid = bk.eventId ?? bk.event_id;
+                return String(eid ?? '') === String(eventId);
+              })
+              .map((row) => {
+                const bk = row as Record<string, unknown>;
+                return {
+                  id: String(bk.id ?? bk._id ?? ''),
+                  userId: String(bk.userId ?? bk.user_id ?? ''),
+                  spots: Number(bk.spots ?? 1),
+                  note: bk.note ? String(bk.note) : undefined,
+                  createdAt: bk.createdAt
+                    ? String(bk.createdAt)
+                    : bk.created_at
+                      ? String(bk.created_at)
+                      : undefined,
+                  userName:
+                    bk.userName != null
+                      ? String(bk.userName)
+                      : bk.user_name != null
+                        ? String(bk.user_name)
+                        : undefined,
+                };
+              })
+          );
+        } catch {
+          setBookings([]);
+        } finally {
+          setBookingsLoading(false);
+        }
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load event.');
       setEv(null);
     } finally {
       setLoading(false);
     }
-  }, [tenantId, eventId, navigation]);
+  }, [tenantId, eventId, navigation, isStaff]);
 
   useFocusEffect(
     useCallback(() => {
@@ -161,6 +219,36 @@ export default function EventDetailScreen({ route }: { route: Route }) {
 
       {error ? <Text style={styles.errBanner}>{error}</Text> : null}
 
+      {isStaff && (bookings.length > 0 || bookingsLoading) ? (
+        <>
+          <SectionLabel>STUDIO TIME BOOKINGS</SectionLabel>
+          {bookingsLoading ? (
+            <ActivityIndicator color={colors.clay} />
+          ) : (
+            bookings.map((b) => (
+              <View key={b.id} style={styles.bookingRow}>
+                <View style={styles.bookingInfo}>
+                  <Text style={styles.bookingName}>
+                    {b.note || 'Studio time'}
+                  </Text>
+                  {b.spots > 1 ? (
+                    <Text style={styles.bookingMeta}>{b.spots} spots</Text>
+                  ) : null}
+                </View>
+                {b.createdAt ? (
+                  <Text style={styles.bookingDate}>
+                    {new Date(b.createdAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                    })}
+                  </Text>
+                ) : null}
+              </View>
+            ))
+          )}
+        </>
+      ) : null}
+
       {isStaff && isPublished ? (
         <>
           <SectionLabel>ACTIONS</SectionLabel>
@@ -236,6 +324,31 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
     marginBottom: spacing[2],
+  },
+  bookingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+    gap: spacing[3],
+  },
+  bookingInfo: { flex: 1 },
+  bookingName: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  bookingMeta: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 2,
+  },
+  bookingDate: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
   },
   cancelledCard: {
     backgroundColor: colors.errorLight,
