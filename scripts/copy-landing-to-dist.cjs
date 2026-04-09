@@ -3,6 +3,7 @@
  * Vercel routes / to /landing.html; /privacy and /terms use their own HTML in dist.
  * Expo export copies public/*.html into dist; this copies fresh public/landing.html after export.
  */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,9 +26,18 @@ console.log('copy-landing-to-dist: public/landing.html → dist/landing.html');
 
 // Cache-bust og-image in dist only (source public/landing.html stays unversioned)
 let html = fs.readFileSync(dest, 'utf8');
-const version = Date.now();
+const svgPath = path.join(root, 'public', 'og-image.svg');
+let version = 'v1';
+if (fs.existsSync(svgPath)) {
+  const hash = crypto
+    .createHash('md5')
+    .update(fs.readFileSync(svgPath))
+    .digest('hex')
+    .slice(0, 8);
+  version = hash;
+}
 html = html.replace(
-  /og-image\.jpg(\?v=\d+)?/g,
+  /og-image\.jpg(\?v=[a-z0-9]+)?/g,
   `og-image.jpg?v=${version}`
 );
 fs.writeFileSync(dest, html);
