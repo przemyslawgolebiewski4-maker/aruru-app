@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import {
   useFocusEffect,
@@ -17,7 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { Badge, SectionLabel, Divider, Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import { apiFetch, formatCurrency } from '../../services/api';
+import { apiFetch } from '../../services/api';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 
 type Nav = CompositeNavigationProp<
@@ -26,24 +25,6 @@ type Nav = CompositeNavigationProp<
 >;
 type StackNav = NativeStackNavigationProp<AppStackParamList>;
 
-type CostSummary = {
-  kiln: number;
-  materials: number;
-  events: number;
-  misc: number;
-  total: number;
-};
-
-type Firing = {
-  id: string;
-  kiln_type?: string;
-  firingType?: string;
-  scheduled_at?: string;
-  scheduledAt?: string;
-  status: string;
-  items?: { user_id?: string; userId?: string }[];
-};
-
 type Event = {
   id: string;
   title: string;
@@ -51,20 +32,6 @@ type Event = {
   startsAt?: string;
   kind?: string;
 };
-
-function parseCosts(data: unknown): CostSummary {
-  const d = (data && typeof data === 'object' ? data : {}) as Record<
-    string,
-    unknown
-  >;
-  return {
-    kiln: Number(d.kilnTotal ?? d.kiln_total ?? 0),
-    materials: Number(d.materialsTotal ?? d.materials_total ?? 0),
-    events: Number(d.eventsTotal ?? d.events_total ?? 0),
-    misc: Number(d.miscTotal ?? d.misc_total ?? 0),
-    total: Number(d.grandTotal ?? d.grand_total ?? 0),
-  };
-}
 
 function formatDate(iso: string): string {
   if (!iso) return '';
@@ -79,15 +46,6 @@ function formatDate(iso: string): string {
   }
 }
 
-function firingLabel(f: Firing): string {
-  const t = f.kiln_type ?? f.firingType ?? 'Firing';
-  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
-}
-
-function firingDate(f: Firing): string {
-  return formatDate(f.scheduled_at ?? f.scheduledAt ?? '');
-}
-
 export default function MemberDashboardScreen() {
   const { user, studios } = useAuth();
   const navigation = useNavigation<Nav>();
@@ -96,9 +54,6 @@ export default function MemberDashboardScreen() {
     studios.find((s) => s.status === 'active') ?? studios[0];
   const studioLabel = currentStudio?.studioName?.trim() || 'Studio';
   const tenantId = currentStudio?.tenantId ?? '';
-  const studioCurrency = (
-    currentStudio?.currency ?? 'EUR'
-  ).toUpperCase();
   const studioSubscriptionActive =
     currentStudio?.subscriptionStatus === 'active' ||
     currentStudio?.subscriptionStatus === 'trial';
@@ -107,9 +62,8 @@ export default function MemberDashboardScreen() {
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
 
-  const [costs, setCosts] = useState<CostSummary | null>(null);
-  const [firings, setFirings] = useState<Firing[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [todayBookings, setTodayBookings] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -118,33 +72,25 @@ export default function MemberDashboardScreen() {
       return;
     }
     setLoading(true);
+    setTodayBookings(0);
     try {
-      const [costsRes, firingsRes, eventsRes] = await Promise.allSettled([
-        apiFetch<unknown>(
-          `/studios/${tenantId}/costs/live/mine`,
-          {},
-          tenantId
-        ),
-        apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
+      const [eventsRes, bookingsRes] = await Promise.allSettled([
         apiFetch<unknown>(`/studios/${tenantId}/events`, {}, tenantId),
+        apiFetch<unknown>(`/studios/${tenantId}/bookings`, {}, tenantId),
       ]);
 
-      if (costsRes.status === 'fulfilled') setCosts(parseCosts(costsRes.value));
-
-      if (firingsRes.status === 'fulfilled') {
-        const all = Array.isArray(firingsRes.value)
-          ? (firingsRes.value as Firing[])
-          : (((firingsRes.value as Record<string, unknown>)?.firings as
-              | Firing[]
-              | undefined) ?? []);
-        const mine = all.filter(
-          (f) =>
-            Array.isArray(f.items) &&
-            f.items.some(
-              (i) => (i.user_id ?? i.userId) === user.id
-            )
-        );
-        setFirings(mine.slice(0, 5));
+      if (bookingsRes.status === 'fulfilled') {
+        const raw = bookingsRes.value;
+        const all = Array.isArray(raw)
+          ? raw
+          : ((raw as { bookings?: unknown[] }).bookings ?? []);
+        const today = new Date();
+        const todayStr = today.toDateString();
+        const count = (all as Record<string, unknown>[]).filter((b) => {
+          const d = b.createdAt ?? b.created_at ?? '';
+          return d && new Date(String(d)).toDateString() === todayStr;
+        }).length;
+        setTodayBookings(count);
       }
 
       if (eventsRes.status === 'fulfilled') {
@@ -175,10 +121,6 @@ export default function MemberDashboardScreen() {
       year,
       month,
     });
-  }
-
-  function goKilnDetail(firingId: string) {
-    stackNav?.navigate('KilnDetail', { tenantId, firingId });
   }
 
   function goEvents() {
@@ -215,65 +157,20 @@ export default function MemberDashboardScreen() {
         <Badge label="Member" variant="moss" />
       </View>
 
-      {studioSubscriptionActive ? (
-        <>
-          <Divider />
-          <SectionLabel>{`My costs — ${month}/${year}`}</SectionLabel>
-          <TouchableOpacity
-            style={styles.costsCard}
-            onPress={goCosts}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.costsTotal}>
-              {costs ? formatCurrency(costs.total, studioCurrency) : '—'}
-            </Text>
-            <View style={styles.costsRow}>
-              <Text style={styles.costItem}>
-                Kiln:{' '}
-                {costs ? formatCurrency(costs.kiln, studioCurrency) : '—'}
-              </Text>
-              <Text style={styles.costItem}>
-                Materials:{' '}
-                {costs ? formatCurrency(costs.materials, studioCurrency) : '—'}
-              </Text>
-              <Text style={styles.costItem}>
-                Events:{' '}
-                {costs ? formatCurrency(costs.events, studioCurrency) : '—'}
-              </Text>
-            </View>
-            <Text style={styles.costsLink}>View full summary →</Text>
-          </TouchableOpacity>
-
-          <Divider />
-
-          <SectionLabel>My firings</SectionLabel>
-          {firings.length === 0 ? (
-            <Text style={styles.empty}>No firings yet.</Text>
-          ) : (
-            firings.map((f) => (
-              <TouchableOpacity
-                key={f.id}
-                style={styles.row}
-                onPress={() => goKilnDetail(f.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.rowMain}>
-                  <Text style={styles.rowTitle}>{firingLabel(f)}</Text>
-                  <Text style={styles.rowMeta}>{firingDate(f)}</Text>
-                </View>
-                <Badge
-                  label={f.status}
-                  variant={f.status === 'closed' ? 'moss' : 'clay'}
-                />
-              </TouchableOpacity>
-            ))
-          )}
-        </>
-      ) : null}
-
       <Divider />
 
-      <SectionLabel>Upcoming events</SectionLabel>
+      <SectionLabel>UPCOMING EVENTS & BOOKINGS</SectionLabel>
+
+      {todayBookings > 0 ? (
+        <View style={styles.bookingsTodayRow}>
+          <Text style={styles.bookingsTodayText}>
+            {todayBookings}{' '}
+            {todayBookings === 1 ? 'member has' : 'members have'} booked studio
+            time today
+          </Text>
+        </View>
+      ) : null}
+
       {events.length === 0 ? (
         <Text style={styles.empty}>No upcoming events.</Text>
       ) : (
@@ -293,32 +190,32 @@ export default function MemberDashboardScreen() {
 
       <View style={styles.actions}>
         <Button
-          label="Events"
-          variant="secondary"
-          onPress={goEvents}
-          style={styles.actionBtn}
-        />
-        <Button
           label="Book studio time"
           variant="secondary"
           onPress={goBookStudio}
           style={styles.actionBtn}
         />
         {studioSubscriptionActive ? (
-          <>
-            <Button
-              label="My costs"
-              variant="secondary"
-              onPress={goCosts}
-              style={styles.actionBtn}
-            />
-            <Button
-              label="Buy materials"
-              variant="secondary"
-              onPress={goShop}
-              style={styles.actionBtn}
-            />
-          </>
+          <Button
+            label="Buy materials"
+            variant="secondary"
+            onPress={goShop}
+            style={styles.actionBtn}
+          />
+        ) : null}
+        <Button
+          label="Events"
+          variant="secondary"
+          onPress={goEvents}
+          style={styles.actionBtn}
+        />
+        {studioSubscriptionActive ? (
+          <Button
+            label="My costs"
+            variant="secondary"
+            onPress={goCosts}
+            style={styles.actionBtn}
+          />
         ) : null}
       </View>
       {!studioSubscriptionActive ? (
@@ -359,32 +256,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize['2xl'],
     color: colors.ink,
   },
-  costsCard: {
-    backgroundColor: colors.clayLight,
-    borderRadius: radius.lg,
-    padding: spacing[4],
-    gap: spacing[1],
+  bookingsTodayRow: {
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    marginBottom: spacing[2],
   },
-  costsTotal: {
-    fontFamily: typography.bodySemiBold,
-    fontSize: 28,
-    color: colors.clay,
-  },
-  costsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-  },
-  costItem: {
+  bookingsTodayText: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
-    color: colors.inkLight,
-  },
-  costsLink: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.clay,
-    marginTop: spacing[1],
+    color: colors.moss,
   },
   row: {
     flexDirection: 'row',

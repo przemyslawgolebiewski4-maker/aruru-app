@@ -181,6 +181,7 @@ export default function DashboardScreen() {
   const [income, setIncome] = useState<IncomeData | null>(null);
   const [summariesDue, setSummariesDue] = useState(0);
   const [showCommunityBanner, setShowCommunityBanner] = useState(false);
+  const [trialPromptDismissed, setTrialPromptDismissed] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
@@ -555,10 +556,14 @@ export default function DashboardScreen() {
       ? trialDaysLeft(currentStudio.trialEndsAt)
       : null;
 
+  const hasSubscription =
+    currentStudio?.subscriptionStatus === 'active' ||
+    currentStudio?.subscriptionStatus === 'trial';
+
   const showFreeBanner =
     currentStudio?.role === 'owner' &&
     currentStudio?.status === 'active' &&
-    currentStudio?.subscriptionStatus !== 'active';
+    !hasSubscription;
 
   if (studios.length === 0) {
     return (
@@ -695,7 +700,31 @@ export default function DashboardScreen() {
         <Text style={styles.studioSub}>{studioLabel.toUpperCase()}</Text>
       </View>
 
-      {showFreeBanner ? (
+      {showFreeBanner && !trialPromptDismissed ? (
+        <View style={styles.trialPromptCard}>
+          <Text style={styles.trialPromptTitle}>
+            Try all studio tools free for 14 days
+          </Text>
+          <Text style={styles.trialPromptSub}>
+            Kiln management, cost splits, billing, tasks, materials and more -
+            free for 14 days, no credit card required.
+          </Text>
+          <View style={styles.trialPromptActions}>
+            <Button
+              label="Start free trial"
+              variant="primary"
+              onPress={() => void openCheckout()}
+              style={styles.trialPromptBtn}
+            />
+            <Button
+              label="Continue with free plan"
+              variant="ghost"
+              onPress={() => setTrialPromptDismissed(true)}
+              style={styles.trialPromptBtn}
+            />
+          </View>
+        </View>
+      ) : showFreeBanner && trialPromptDismissed ? (
         <View style={styles.communityBanner}>
           <View style={styles.communityBannerRow}>
             <View style={styles.communityBannerText}>
@@ -718,7 +747,6 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
-
           {showCommunityBanner ? (
             <View style={styles.communityBannerExpanded}>
               {[
@@ -964,14 +992,16 @@ export default function DashboardScreen() {
 
       <SectionLabel>QUICK ACTIONS</SectionLabel>
       <View style={styles.actionsRow}>
-        <View style={styles.actionQuarter}>
-          <Button
-            label="Firings"
-            variant="secondary"
-            onPress={goKilnList}
-            style={styles.quickActionBtn}
-          />
-        </View>
+        {hasSubscription ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Firings"
+              variant="secondary"
+              onPress={goKilnList}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
         {currentStudio?.role !== 'assistant' ? (
           <View style={styles.actionQuarter}>
             <Button
@@ -982,14 +1012,16 @@ export default function DashboardScreen() {
             />
           </View>
         ) : null}
-        <View style={styles.actionQuarter}>
-          <Button
-            label="Tasks"
-            variant="secondary"
-            onPress={goTasks}
-            style={styles.quickActionBtn}
-          />
-        </View>
+        {hasSubscription ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label="Tasks"
+              variant="secondary"
+              onPress={goTasks}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
         <View style={styles.actionQuarter}>
           <Button
             label="Events"
@@ -998,15 +1030,17 @@ export default function DashboardScreen() {
             style={styles.quickActionBtn}
           />
         </View>
-        <View style={styles.actionQuarter}>
-          <Button
-            label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
-            variant="secondary"
-            onPress={goCosts}
-            style={styles.quickActionBtn}
-          />
-        </View>
-        {currentStudio?.role === 'assistant' ? (
+        {hasSubscription ? (
+          <View style={styles.actionQuarter}>
+            <Button
+              label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
+              variant="secondary"
+              onPress={goCosts}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
+        {currentStudio?.role === 'assistant' && hasSubscription ? (
           <View style={styles.actionQuarter}>
             <Button
               label="Attendance"
@@ -1022,38 +1056,46 @@ export default function DashboardScreen() {
         <>
           <SectionLabel>STUDIO</SectionLabel>
           <View style={styles.actionsRow}>
-            <View style={styles.actionQuarter}>
-              <Button
-                label="Catalog"
-                variant="secondary"
-                onPress={goCatalog}
-                style={styles.quickActionBtn}
-              />
-            </View>
-            <View style={styles.actionQuarter}>
-              <Button
-                label="Attendance"
-                variant="secondary"
-                onPress={goAttendance}
-                style={styles.quickActionBtn}
-              />
-            </View>
-            <View style={styles.actionQuarter}>
-              <Button
-                label="Assistants"
-                variant="secondary"
-                onPress={goAssistants}
-                style={styles.quickActionBtn}
-              />
-            </View>
-            <View style={styles.actionQuarter}>
-              <Button
-                label="Pricing"
-                variant="secondary"
-                onPress={goPricing}
-                style={styles.quickActionBtn}
-              />
-            </View>
+            {hasSubscription ? (
+              <View style={styles.actionQuarter}>
+                <Button
+                  label="Catalog"
+                  variant="secondary"
+                  onPress={goCatalog}
+                  style={styles.quickActionBtn}
+                />
+              </View>
+            ) : null}
+            {hasSubscription ? (
+              <View style={styles.actionQuarter}>
+                <Button
+                  label="Attendance"
+                  variant="secondary"
+                  onPress={goAttendance}
+                  style={styles.quickActionBtn}
+                />
+              </View>
+            ) : null}
+            {hasSubscription ? (
+              <View style={styles.actionQuarter}>
+                <Button
+                  label="Assistants"
+                  variant="secondary"
+                  onPress={goAssistants}
+                  style={styles.quickActionBtn}
+                />
+              </View>
+            ) : null}
+            {hasSubscription ? (
+              <View style={styles.actionQuarter}>
+                <Button
+                  label="Pricing"
+                  variant="secondary"
+                  onPress={goPricing}
+                  style={styles.quickActionBtn}
+                />
+              </View>
+            ) : null}
             <View style={styles.actionQuarter}>
               <Button
                 label="Studio settings"
@@ -1416,6 +1458,33 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.sm,
     color: colors.clay,
+  },
+  trialPromptCard: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.lg,
+    padding: spacing[5],
+    gap: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.clay,
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+  },
+  trialPromptTitle: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.lg,
+    color: colors.ink,
+  },
+  trialPromptSub: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    lineHeight: 20,
+  },
+  trialPromptActions: {
+    gap: spacing[2],
+  },
+  trialPromptBtn: {
+    width: '100%',
   },
   communityBanner: {
     backgroundColor: colors.mossLight,
