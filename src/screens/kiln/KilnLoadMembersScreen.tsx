@@ -6,11 +6,12 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Button, SectionLabel } from '../../components/ui';
+import { Avatar, Button, Input, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -85,6 +86,13 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
   const [externalWeight, setExternalWeight] = useState('');
   const [externalSaving, setExternalSaving] = useState(false);
   const [externalError, setExternalError] = useState('');
+  const [showDamage, setShowDamage] = useState(false);
+  const [damageUserId, setDamageUserId] = useState('');
+  const [damageDesc, setDamageDesc] = useState('');
+  const [damageAmount, setDamageAmount] = useState('');
+  const [damageSaving, setDamageSaving] = useState(false);
+  const [damageError, setDamageError] = useState('');
+  const [damageSaved, setDamageSaved] = useState(false);
 
   const load = useCallback(async () => {
     setLoadError('');
@@ -312,7 +320,61 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
     }
   }
 
-  async function handleCloseSession() {
+  async function onLeaveOpen() {
+    const ok =
+      typeof window !== 'undefined'
+        ? window.confirm(
+            'Leave this firing open? It will stay active until you close it after unloading.'
+          )
+        : true;
+    if (!ok) return;
+    navigation.goBack();
+  }
+
+  async function saveDamage() {
+    setDamageError('');
+    if (!damageUserId) {
+      setDamageError('Select a member.');
+      return;
+    }
+    if (!damageDesc.trim()) {
+      setDamageError('Add a description.');
+      return;
+    }
+    const amount = parseFloat(damageAmount.replace(',', '.'));
+    if (isNaN(amount) || amount <= 0) {
+      setDamageError('Enter a valid amount.');
+      return;
+    }
+    setDamageSaving(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/costs/misc`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            userId: damageUserId,
+            description: `Kiln damage: ${damageDesc.trim()}`,
+            amount,
+          }),
+        },
+        tenantId
+      );
+      setDamageSaved(true);
+      setShowDamage(false);
+      setDamageDesc('');
+      setDamageAmount('');
+      setDamageUserId('');
+    } catch (e: unknown) {
+      setDamageError(
+        e instanceof Error ? e.message : 'Could not save damage report.'
+      );
+    } finally {
+      setDamageSaving(false);
+    }
+  }
+
+  async function onCloseSession() {
     const ok = await confirmDestructive(
       'Close session',
       'Close this kiln session? Members will no longer be able to add pieces.',
@@ -447,6 +509,89 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
         style={styles.saveButton}
       />
 
+      <View style={styles.damageSection}>
+        {damageSaved && !showDamage ? (
+          <Text style={styles.damageSaved}>Damage report saved.</Text>
+        ) : null}
+        {!showDamage ? (
+          <Button
+            label="+ Report kiln damage"
+            variant="ghost"
+            onPress={() => {
+              setShowDamage(true);
+              setDamageSaved(false);
+            }}
+            fullWidth
+          />
+        ) : (
+          <View style={styles.damageForm}>
+            <Text style={styles.damageTitle}>Kiln damage report</Text>
+            <Text style={styles.damageSub}>
+              Select the member whose work caused damage, add a description and
+              the cost to repair.
+            </Text>
+
+            <Text style={styles.damageLabel}>Member</Text>
+            {members.map((m) => (
+              <TouchableOpacity
+                key={m.userId}
+                style={[
+                  styles.damageMemberRow,
+                  damageUserId === m.userId && styles.damageMemberSelected,
+                ]}
+                onPress={() => setDamageUserId(m.userId)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.damageMemberName}>
+                  {memberDisplayLabel(m) || m.email || 'Member'}
+                </Text>
+                {damageUserId === m.userId ? (
+                  <Text style={styles.damageMemberCheck}>✓</Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+
+            <Text style={styles.damageLabel}>Description</Text>
+            <Input
+              value={damageDesc}
+              onChangeText={setDamageDesc}
+              placeholder="e.g. shelf broken by overloaded piece"
+              multiline
+              numberOfLines={2}
+            />
+
+            <Text style={styles.damageLabel}>Amount (EUR)</Text>
+            <Input
+              value={damageAmount}
+              onChangeText={setDamageAmount}
+              placeholder="0.00"
+              keyboardType="decimal-pad"
+            />
+
+            {damageError ? (
+              <Text style={styles.damageError}>{damageError}</Text>
+            ) : null}
+
+            <Button
+              label="Save damage report"
+              variant="secondary"
+              onPress={() => void saveDamage()}
+              loading={damageSaving}
+              fullWidth
+            />
+            <Button
+              label="Cancel"
+              variant="ghost"
+              onPress={() => {
+                setShowDamage(false);
+                setDamageError('');
+              }}
+              fullWidth
+            />
+          </View>
+        )}
+      </View>
+
       {items.length > 0 ? (
         <>
           <View style={styles.sectionSpacer} />
@@ -482,9 +627,16 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
       ) : null}
 
       <Button
+        label="Leave open"
+        variant="ghost"
+        onPress={() => void onLeaveOpen()}
+        fullWidth
+        style={{ marginBottom: spacing[2], marginTop: spacing[6] }}
+      />
+      <Button
         label="Close session"
-        variant="secondary"
-        onPress={() => void handleCloseSession()}
+        variant="danger"
+        onPress={() => void onCloseSession()}
         disabled={closing}
         loading={closing}
         fullWidth
@@ -615,8 +767,72 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeSessionBtn: {
-    marginTop: spacing[6],
+    marginTop: 0,
     borderColor: colors.moss,
+  },
+  damageSection: {
+    marginTop: spacing[4],
+    gap: spacing[2],
+  },
+  damageForm: {
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  damageTitle: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  damageSub: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+  },
+  damageLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  damageMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing[3],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.cream,
+  },
+  damageMemberSelected: {
+    borderColor: colors.clay,
+    backgroundColor: colors.clayLight,
+  },
+  damageMemberName: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  damageMemberCheck: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+  },
+  damageError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+  },
+  damageSaved: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
   },
   externalSection: {
     marginTop: spacing[6],
