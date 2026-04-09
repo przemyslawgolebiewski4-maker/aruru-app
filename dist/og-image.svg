@@ -1,0 +1,60 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+
+<rect width="1200" height="630" fill="#F7F3ED"/>
+
+<circle cx="920" cy="315" r="320" fill="#F2E4D8" opacity="0.45"/>
+<circle cx="920" cy="315" r="240" fill="#F2E4D8" opacity="0.3"/>
+<circle cx="920" cy="315" r="160" fill="#F2E4D8" opacity="0.2"/>
+<circle cx="920" cy="315" r="80" fill="#F2E4D8" opacity="0.15"/>
+<circle cx="920" cy="315" r="320" fill="none" stroke="#C4714A" stroke-width="0.5" opacity="0.18"/>
+<circle cx="920" cy="315" r="240" fill="none" stroke="#C4714A" stroke-width="0.5" opacity="0.18"/>
+<circle cx="920" cy="315" r="160" fill="none" stroke="#C4714A" stroke-width="0.5" opacity="0.18"/>
+<circle cx="920" cy="315" r="80" fill="none" stroke="#C4714A" stroke-width="0.5" opacity="0.18"/>
+<line x1="600" y1="315" x2="1200" y2="315" stroke="#C4714A" stroke-width="0.4" opacity="0.12"/>
+<line x1="920" y1="0" x2="920" y2="630" stroke="#C4714A" stroke-width="0.4" opacity="0.12"/>
+<line x1="694" y1="89" x2="1146" y2="541" stroke="#C4714A" stroke-width="0.4" opacity="0.10"/>
+<line x1="1146" y1="89" x2="694" y2="541" stroke="#C4714A" stroke-width="0.4" opacity="0.10"/>
+
+<g transform="translate(700, 20) scale(2.2)" opacity="0.65">
+  <path d="M55 18 Q46 18 42 26 L33 46 Q26 57 24 72 Q22 92 26 108 Q29 120 33 127 L36 137 Q38 142 41 144 L46 147 Q53 150 65 150 Q77 150 84 147 L89 144 Q92 142 94 137 L97 127 Q101 120 105 108 Q109 92 107 72 Q105 57 97 46 L88 26 Q84 18 75 18 Z" fill="none" stroke="#C4714A" stroke-width="1.0"/>
+  <path d="M56 18 Q55 10 54 6 L53 2" fill="none" stroke="#C4714A" stroke-width="0.9" opacity="0.7"/>
+  <path d="M74 18 Q75 10 76 6 L77 2" fill="none" stroke="#C4714A" stroke-width="0.9" opacity="0.7"/>
+  <path d="M50 2 Q65 -1 80 2" fill="none" stroke="#C4714A" stroke-width="1.1" opacity="0.8"/>
+  <path d="M33 46 Q18 46 17 62 Q17 74 33 74" fill="none" stroke="#C4714A" stroke-width="0.9" opacity="0.5"/>
+  <path d="M97 46 Q112 46 113 62 Q113 74 97 74" fill="none" stroke="#C4714A" stroke-width="0.9" opacity="0.5"/>
+  <line x1="27" y1="79" x2="103" y2="79" stroke="#C4714A" stroke-width="0.55" opacity="0.6"/>
+  <line x1="27" y1="84" x2="103" y2="84" stroke="#C4714A" stroke-width="0.55" opacity="0.6"/>
+  <path d="M30 81 L34 81 L34 82.5 L38 82.5 L38 81 L42 81 L42 82.5 L46 82.5 L46 81 L50 81 L50 82.5 L54 82.5 L54 81 L58 81 L58 82.5 L62 82.5 L62 81 L66 81 L66 82.5 L70 82.5 L70 81 L74 81 L74 82.5 L78 82.5 L78 81 L82 81 L82 82.5 L86 82.5 L86 81 L90 81 L90 82.5 L94 82.5 L94 81 L98 81 L98 82.5 L100 82.5" fill="none" stroke="#C4714A" stroke-width="0.75" opacity="0.55"/>
+  <line x1="29" y1="100" x2="101" y2="100" stroke="#C4714A" stroke-width="0.5" opacity="0.4"/>
+  <line x1="29" y1="104" x2="101" y2="104" stroke="#C4714A" stroke-width="0.5" opacity="0.4"/>
+  <path d="M32 102 L36 102 L36 103 L40 103 L40 102 L44 102 L44 103 L48 103 L48 102 L52 102 L52 103 L56 103 L56 102 L60 102 L60 103 L64 103 L64 102 L68 102 L68 103 L72 103 L72 102 L76 102 L76 103 L80 103 L80 102 L84 102 L84 103 L88 103 L88 102 L92 102 L92 103 L96 103 L96 102 L98 102" fill="none" stroke="#C4714A" stroke-width="0.65" opacity="0.45"/>
+  <circle cx="46" cy="118" r="1.6" fill="#C4714A" opacity="0.4"/>
+  <circle cx="56" cy="122" r="1.6" fill="#C4714A" opacity="0.4"/>
+  <circle cx="65" cy="120" r="1.6" fill="#C4714A" opacity="0.4"/>
+  <circle cx="74" cy="123" r="1.6" fill="#C4714A" opacity="0.4"/>
+  <circle cx="84" cy="118" r="1.6" fill="#C4714A" opacity="0.4"/>
+  <circle cx="50" cy="90" r="1.2" fill="#4A5E3A" opacity="0.3"/>
+  <circle cx="65" cy="93" r="1.2" fill="#4A5E3A" opacity="0.3"/>
+  <circle cx="80" cy="90" r="1.2" fill="#4A5E3A" opacity="0.3"/>
+  <line x1="27" y1="134" x2="103" y2="134" stroke="#C4714A" stroke-width="0.5" opacity="0.4"/>
+  <line x1="29" y1="138" x2="101" y2="138" stroke="#C4714A" stroke-width="0.5" opacity="0.4"/>
+  <path d="M40 149 Q55 154 65 154 Q75 154 90 149" fill="none" stroke="#C4714A" stroke-width="0.95" opacity="0.45"/>
+  <line x1="34" y1="158" x2="96" y2="158" stroke="#C4714A" stroke-width="0.85" opacity="0.35"/>
+  <line x1="36" y1="162" x2="94" y2="162" stroke="#C4714A" stroke-width="0.6" opacity="0.25"/>
+</g>
+
+<text x="72" y="195" font-family="Georgia, 'Times New Roman', serif" font-size="116" font-style="italic" fill="#C4714A" letter-spacing="-2" opacity="0.96">Aruru</text>
+<line x1="72" y1="222" x2="580" y2="222" stroke="#C4714A" stroke-width="0.8" opacity="0.28"/>
+<text x="74" y="248" font-family="'Courier New', monospace" font-size="13" fill="#4A5E3A" letter-spacing="5.5" opacity="0.85">CLAY COMMUNITY</text>
+<text x="72" y="328" font-family="Georgia, 'Times New Roman', serif" font-size="44" fill="#1E1A16" letter-spacing="-0.5">The ceramics community.</text>
+<text x="72" y="396" font-family="'Helvetica Neue', Arial, sans-serif" font-size="21" fill="#5C5248" letter-spacing="0.1">Find studios. Share your work.</text>
+<text x="72" y="426" font-family="'Helvetica Neue', Arial, sans-serif" font-size="21" fill="#5C5248" letter-spacing="0.1">Connect with people who love clay.</text>
+<text x="72" y="476" font-family="'Helvetica Neue', Arial, sans-serif" font-size="17" fill="#9C8E82" letter-spacing="0.2">Free to join - no credit card needed.</text>
+<line x1="72" y1="520" x2="440" y2="520" stroke="#C4714A" stroke-width="0.6" opacity="0.22"/>
+<text x="72" y="546" font-family="'Courier New', monospace" font-size="14" fill="#9C8E82" letter-spacing="2.5">aruru.xyz</text>
+<circle cx="72" cy="590" r="2.5" fill="#C4714A" opacity="0.25"/>
+<circle cx="90" cy="590" r="2.5" fill="#C4714A" opacity="0.25"/>
+<circle cx="108" cy="590" r="2.5" fill="#C4714A" opacity="0.25"/>
+<circle cx="126" cy="590" r="2.5" fill="#C4714A" opacity="0.25"/>
+
+</svg>

@@ -31,6 +31,13 @@ if (fs.existsSync(ogSrc)) {
   console.log('copy-landing-to-dist: public/og-image.jpg → dist/og-image.jpg');
 }
 
+const ogSvgSrc = path.join(root, 'public', 'og-image.svg');
+const ogSvgDest = path.join(root, 'dist', 'og-image.svg');
+if (fs.existsSync(ogSvgSrc)) {
+  fs.copyFileSync(ogSvgSrc, ogSvgDest);
+  console.log('copy-landing-to-dist: public/og-image.svg → dist/og-image.svg');
+}
+
 const sitemapSrc = path.join(root, 'public', 'sitemap.xml');
 const sitemapDest = path.join(root, 'dist', 'sitemap.xml');
 if (fs.existsSync(sitemapSrc)) {
