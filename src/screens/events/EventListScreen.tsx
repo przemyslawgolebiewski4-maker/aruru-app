@@ -33,6 +33,7 @@ export type StudioEvent = {
   id?: string;
   title?: string;
   description?: string;
+  websiteUrl?: string;
   startsAt?: string;
   endsAt?: string;
   kind?: string;
@@ -82,6 +83,10 @@ export function parseEvents(data: unknown): StudioEvent[] {
       title: r.title != null ? String(r.title) : undefined,
       description:
         r.description != null ? String(r.description) : undefined,
+      websiteUrl:
+        (r.websiteUrl ?? r.website_url) != null
+          ? String(r.websiteUrl ?? r.website_url)
+          : undefined,
       startsAt: (r.startsAt ?? r.starts_at) as string | undefined,
       endsAt: (r.endsAt ?? r.ends_at) as string | undefined,
       kind: r.kind != null ? String(r.kind) : undefined,
@@ -163,6 +168,7 @@ export default function EventListScreen({ route }: { route: Route }) {
   const [location, setLocation] = useState('');
   const [maxP, setMaxP] = useState('');
   const [description, setDescription] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [isPublic, setIsPublic] = useState(false);
@@ -237,6 +243,7 @@ export default function EventListScreen({ route }: { route: Route }) {
     setLocation('');
     setMaxP('');
     setDescription('');
+    setWebsiteUrl('');
     setCreateError('');
     setIsPublic(false);
     setShowForm(false);
@@ -277,6 +284,7 @@ export default function EventListScreen({ route }: { route: Route }) {
             location: location.trim() || null,
             maxParticipants: parseInt(maxP, 10) || null,
             description: description.trim() || null,
+            websiteUrl: websiteUrl.trim() || null,
             public: isPublic,
           }),
         },
@@ -427,6 +435,15 @@ export default function EventListScreen({ route }: { route: Route }) {
             placeholderTextColor={colors.inkFaint}
             multiline
             style={styles.descInput}
+          />
+          <Input
+            label="Website or link (optional)"
+            value={websiteUrl}
+            onChangeText={setWebsiteUrl}
+            placeholder="https://..."
+            keyboardType="url"
+            autoCapitalize="none"
+            containerStyle={styles.inputSpaced}
           />
           {createError ? (
             <Text style={styles.createErr}>{createError}</Text>

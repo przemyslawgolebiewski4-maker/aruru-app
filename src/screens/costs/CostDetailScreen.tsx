@@ -10,7 +10,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Button, SectionLabel } from '../../components/ui';
+import { Avatar, Button, Input, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -349,8 +349,18 @@ export default function CostDetailScreen({ route }: { route: Route }) {
   const [currentMonthPurchases, setCurrentMonthPurchases] = useState<
     Array<{ itemName?: string; qty?: number; unit?: string; cost?: number }>
   >([]);
+  const [firingNotes, setFiringNotes] = useState<Record<string, string>>({});
+  const [savingNote, setSavingNote] = useState<string | null>(null);
+  const [savedNotes, setSavedNotes] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const displayName = routeMemberName || data?.memberName || 'Member';
+
+  useEffect(() => {
+    setFiringNotes({});
+    setSavedNotes(new Set());
+  }, [selectedYear, selectedMonth]);
 
   useLayoutEffect(() => {
     if (!isOwner && user?.id !== userId) {
@@ -639,6 +649,31 @@ export default function CostDetailScreen({ route }: { route: Route }) {
     }
   }
 
+  async function saveFiringNote(firingKey: string, note: string) {
+    if (!note.trim()) return;
+    setSavingNote(firingKey);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/costs/misc`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            userId,
+            description: `Firing note: ${note.trim()}`,
+            amount: 0,
+          }),
+        },
+        tenantId
+      );
+      setSavedNotes((prev) => new Set([...prev, firingKey]));
+      setFiringNotes((prev) => ({ ...prev, [firingKey]: '' }));
+    } catch {
+      /* non-critical */
+    } finally {
+      setSavingNote(null);
+    }
+  }
+
   const d = data;
   const grand = d?.grandTotal ?? 0;
 
@@ -765,6 +800,54 @@ export default function CostDetailScreen({ route }: { route: Route }) {
               <View style={styles.totalBand}>
                 <Text style={styles.totalBandLeft}>Kiln total</Text>
                 <Text style={styles.totalBandRight}>{formatEuro(d.kilnTotal)}</Text>
+              </View>
+              <View style={styles.reportSection}>
+                <SectionLabel>REPORT AFTER FIRING</SectionLabel>
+                <Text style={styles.reportHint}>
+                  Leave a note about your firing session — what worked, what
+                  to adjust next time.
+                </Text>
+                {d.breakdown.kilnItems.map((item, i) => {
+                  const key = `firing-note-${i}`;
+                  return (
+                    <View key={key} style={styles.reportRow}>
+                      <Text style={styles.reportFiringLabel}>
+                        {formatDate(item.date ?? '')}{' '}
+                        {capitalizeWords(item.type ?? '')}
+                        {item.kg != null && item.kg > 0
+                          ? ` · ${item.kg} kg`
+                          : ''}
+                      </Text>
+                      {savedNotes.has(key) ? (
+                        <Text style={styles.reportSaved}>Note saved ✓</Text>
+                      ) : (
+                        <>
+                          <Input
+                            value={firingNotes[key] ?? ''}
+                            onChangeText={(v) =>
+                              setFiringNotes((prev) => ({
+                                ...prev,
+                                [key]: v,
+                              }))
+                            }
+                            placeholder="e.g. great results, reduce temp next time..."
+                            multiline
+                            numberOfLines={2}
+                          />
+                          <Button
+                            label="Save note"
+                            variant="ghost"
+                            onPress={() =>
+                              void saveFiringNote(key, firingNotes[key] ?? '')
+                            }
+                            loading={savingNote === key}
+                            fullWidth
+                          />
+                        </>
+                      )}
+                    </View>
+                  );
+                })}
               </View>
             </View>
           ) : null}
@@ -1044,6 +1127,34 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: 12,
     color: colors.clayDark,
+  },
+  reportSection: {
+    marginTop: spacing[4],
+    gap: spacing[3],
+  },
+  reportHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+  },
+  reportRow: {
+    gap: spacing[2],
+    paddingVertical: spacing[3],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  reportFiringLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  reportSaved: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
   },
   totalBand: {
     flexDirection: 'row',

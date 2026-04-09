@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import DateTimeField, { toLocalISOString } from '../../components/DateTimeField';
 import EventCalendar from '../../components/EventCalendar';
 import { Button, Input } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import { apiFetch } from '../../services/api';
 import type { AppStackParamList } from '../../navigation/types';
 import { parseEvents, type StudioEvent } from '../events/EventListScreen';
@@ -39,18 +39,36 @@ export default function BookStudioScreen({ route, navigation }: Props) {
   const [error, setError] = useState('');
   const [events, setEvents] = useState<StudioEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
+  const [todayCount, setTodayCount] = useState<number | null>(null);
 
   const loadEvents = useCallback(async () => {
     setEventsLoading(true);
     try {
-      const res = await apiFetch<unknown>(
-        `/studios/${tenantId}/events`,
-        {},
-        tenantId
-      );
-      setEvents(parseEvents(res));
+      const [evRes, countRes] = await Promise.allSettled([
+        apiFetch<unknown>(`/studios/${tenantId}/events`, {}, tenantId),
+        apiFetch<{ count?: number }>(
+          `/studios/${tenantId}/events/bookings-today-count`,
+          {},
+          tenantId
+        ),
+      ]);
+
+      if (evRes.status === 'fulfilled') {
+        setEvents(parseEvents(evRes.value));
+      } else {
+        setEvents([]);
+      }
+
+      if (countRes.status === 'fulfilled' && countRes.value) {
+        setTodayCount(
+          (countRes.value as { count?: number }).count ?? 0
+        );
+      } else {
+        setTodayCount(null);
+      }
     } catch {
       setEvents([]);
+      setTodayCount(null);
     } finally {
       setEventsLoading(false);
     }
@@ -121,6 +139,16 @@ export default function BookStudioScreen({ route, navigation }: Props) {
           />
         )}
       </View>
+
+      {todayCount !== null && todayCount > 0 ? (
+        <View style={styles.todayCountRow}>
+          <Text style={styles.todayCountText}>
+            {todayCount}{' '}
+            {todayCount === 1 ? 'member has' : 'members have'} already booked
+            studio time today
+          </Text>
+        </View>
+      ) : null}
 
       <Text style={styles.heading}>Book studio time</Text>
       <Text style={styles.sub}>
@@ -204,6 +232,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkLight,
     marginBottom: spacing[3],
+  },
+  todayCountRow: {
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    marginBottom: spacing[2],
+  },
+  todayCountText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.moss,
   },
   heading: {
     fontFamily: typography.bodySemiBold,
