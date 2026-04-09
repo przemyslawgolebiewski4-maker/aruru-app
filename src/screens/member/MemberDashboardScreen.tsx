@@ -58,10 +58,6 @@ export default function MemberDashboardScreen() {
     currentStudio?.subscriptionStatus === 'active' ||
     currentStudio?.subscriptionStatus === 'trial';
 
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-
   const [events, setEvents] = useState<Event[]>([]);
   const [todayBookings, setTodayBookings] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -113,13 +109,20 @@ export default function MemberDashboardScreen() {
 
   function goCosts() {
     if (!tenantId || !user?.id) return;
+    const now = new Date();
+    let prevMonth = now.getMonth();
+    let prevYear = now.getFullYear();
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear -= 1;
+    }
     stackNav?.navigate('CostDetail', {
       tenantId,
       userId: user.id,
       memberName: user.name?.trim() || user.email || 'You',
       memberEmail: user.email,
-      year,
-      month,
+      year: prevYear,
+      month: prevMonth,
     });
   }
 

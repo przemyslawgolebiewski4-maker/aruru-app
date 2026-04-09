@@ -346,6 +346,9 @@ export default function CostDetailScreen({ route }: { route: Route }) {
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [pdfReadyUrl, setPdfReadyUrl] = useState<string | null>(null);
+  const [currentMonthPurchases, setCurrentMonthPurchases] = useState<
+    Array<{ itemName?: string; qty?: number; unit?: string; cost?: number }>
+  >([]);
 
   const displayName = routeMemberName || data?.memberName || 'Member';
 
@@ -485,9 +488,35 @@ export default function CostDetailScreen({ route }: { route: Route }) {
         const sid = extractSummaryId(o);
         setSummaryId(sid || null);
       }
+      try {
+        const liveRes = await apiFetch<unknown>(
+          `/studios/${tenantId}/costs/live/${userId}`,
+          {},
+          tenantId
+        );
+        const liveData = liveRes as Record<string, unknown>;
+        const breakdown = (liveData.breakdown ?? liveData) as Record<
+          string,
+          unknown
+        >;
+        const matRaw =
+          breakdown.materialItems ?? breakdown.material_items;
+        const mats = Array.isArray(matRaw) ? matRaw : [];
+        setCurrentMonthPurchases(
+          mats.map((m: Record<string, unknown>) => ({
+            itemName: str(m.itemName ?? m.item_name),
+            qty: num(m.qty ?? m.quantity),
+            unit: str(m.unit),
+            cost: num(m.cost),
+          }))
+        );
+      } catch {
+        setCurrentMonthPurchases([]);
+      }
     } catch {
       setData(null);
       setSummaryId(null);
+      setCurrentMonthPurchases([]);
     } finally {
       setLoading(false);
     }
@@ -676,6 +705,29 @@ export default function CostDetailScreen({ route }: { route: Route }) {
             </Text>
             <Text style={styles.headerTotal}>{formatEuro(grand)}</Text>
           </View>
+
+          {currentMonthPurchases.length > 0 ? (
+            <>
+              <SectionLabel>YOU BOUGHT FROM STUDIO THIS MONTH</SectionLabel>
+              {currentMonthPurchases.map((item, i) => (
+                <View key={i} style={styles.breakdownRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.breakdownTitle}>
+                      {item.itemName || 'Item'}
+                    </Text>
+                    {item.qty != null && item.qty > 0 ? (
+                      <Text style={styles.breakdownMeta}>
+                        {item.qty} {item.unit || 'unit'}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.breakdownCost}>
+                    {formatEuro(item.cost ?? 0)}
+                  </Text>
+                </View>
+              ))}
+            </>
+          ) : null}
 
           {d && d.membershipFee > 0 ? (
             <View style={styles.section}>
@@ -921,6 +973,31 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: colors.clayDark,
     marginTop: 8,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    gap: spacing[2],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  breakdownTitle: {
+    fontFamily: typography.body,
+    fontSize: fontSize.base,
+    color: colors.ink,
+  },
+  breakdownMeta: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 2,
+  },
+  breakdownCost: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clayDark,
   },
   section: { marginBottom: spacing[4] },
   lineRow: {

@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +30,7 @@ type FeedEvent = {
   isPersonal?: boolean;
   title: string;
   description?: string;
+  websiteUrl?: string;
   kind: string;
   startsAt?: string;
   endsAt?: string;
@@ -125,6 +127,10 @@ function normalizeFeedEvent(ev: unknown): FeedEvent {
     title: String(r.title ?? ''),
     description:
       r.description != null ? String(r.description) : undefined,
+    websiteUrl:
+      (r.websiteUrl ?? r.website_url) != null
+        ? String(r.websiteUrl ?? r.website_url)
+        : undefined,
     kind: String(r.kind ?? 'other'),
     startsAt:
       (r.startsAt ?? r.starts_at) != null
@@ -169,6 +175,8 @@ export default function EventFeedTab() {
     return d;
   });
   const [pLocation, setPLocation] = useState('');
+  const [pDescription, setPDescription] = useState('');
+  const [pWebsite, setPWebsite] = useState('');
   const [pPublic, setPPublic] = useState(true);
   const [pCreating, setPCreating] = useState(false);
   const [pError, setPError] = useState('');
@@ -219,6 +227,8 @@ export default function EventFeedTab() {
             starts_at: toLocalISOString(pStartsAt),
             ends_at: toLocalISOString(pEndsAt),
             location: pLocation.trim() || null,
+            description: pDescription.trim() || null,
+            website_url: pWebsite.trim() || null,
             public: pPublic,
           }),
         },
@@ -227,6 +237,8 @@ export default function EventFeedTab() {
       setShowPersonalForm(false);
       setPTitle('');
       setPLocation('');
+      setPDescription('');
+      setPWebsite('');
       setPError('');
       void load();
     } catch (e: unknown) {
@@ -309,6 +321,22 @@ export default function EventFeedTab() {
                 onChangeText={setPLocation}
                 placeholder="City, address or online"
               />
+              <Input
+                label="Description (optional)"
+                value={pDescription}
+                onChangeText={setPDescription}
+                placeholder="Tell people what to expect..."
+                multiline
+                numberOfLines={3}
+              />
+              <Input
+                label="Website or link (optional)"
+                value={pWebsite}
+                onChangeText={setPWebsite}
+                placeholder="https://..."
+                keyboardType="url"
+                autoCapitalize="none"
+              />
               <TouchableOpacity
                 style={styles.publicToggle}
                 onPress={() => setPPublic((v) => !v)}
@@ -350,6 +378,8 @@ export default function EventFeedTab() {
                 onPress={() => {
                   setShowPersonalForm(false);
                   setPError('');
+                  setPDescription('');
+                  setPWebsite('');
                 }}
                 fullWidth
               />
@@ -408,6 +438,25 @@ export default function EventFeedTab() {
           )}
           <Badge label={kindLabel(e.kind)} variant={kindVariant(e.kind)} />
           <Text style={styles.eventTitle}>{e.title}</Text>
+          {e.isPersonal && e.description ? (
+            <Text style={styles.eventDesc} numberOfLines={3}>
+              {e.description}
+            </Text>
+          ) : null}
+          {e.isPersonal && e.websiteUrl?.trim() ? (
+            <TouchableOpacity
+              onPress={() => {
+                const t = e.websiteUrl!.trim();
+                const url = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+                void Linking.openURL(url);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.eventLink} numberOfLines={1}>
+                {e.websiteUrl.trim()}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
           {e.startsAt ? (
             <Text style={styles.eventMeta}>
               {formatTime(e.startsAt)}
@@ -550,6 +599,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.ink,
     fontWeight: '500',
+  },
+  eventDesc: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  eventLink: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    textDecorationLine: 'underline',
+    marginTop: 2,
   },
   eventMeta: {
     fontFamily: typography.mono,
