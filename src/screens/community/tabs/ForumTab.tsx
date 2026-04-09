@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { createElement, useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -68,6 +68,339 @@ function authorInitials(name: string): string {
       .toUpperCase() || '?'
   );
 }
+
+type WebEditorProps = {
+  title: string;
+  content: string;
+  category: string;
+  categories: { key: string; label: string }[];
+  onTitleChange: (v: string) => void;
+  onContentChange: (v: string) => void;
+  onCategoryChange: (v: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  posting: boolean;
+  error: string;
+};
+
+function WebForumEditor({
+  title,
+  content,
+  category,
+  categories,
+  onTitleChange,
+  onContentChange,
+  onCategoryChange,
+  onSubmit,
+  onCancel,
+  posting,
+  error,
+}: WebEditorProps) {
+  if (typeof document === 'undefined') return null;
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px 12px',
+    fontSize: '16px',
+    fontFamily: 'inherit',
+    border: '0.5px solid rgba(90,70,50,0.2)',
+    borderRadius: '6px',
+    backgroundColor: '#F7F3ED',
+    color: '#1E1A16',
+    outline: 'none',
+    boxSizing: 'border-box',
+    marginBottom: '8px',
+  };
+
+  const textareaStyle: React.CSSProperties = {
+    width: '100%',
+    minHeight: '260px',
+    maxHeight: '400px',
+    padding: '12px',
+    fontSize: '15px',
+    fontFamily: 'inherit',
+    lineHeight: '1.65',
+    border: '0.5px solid rgba(90,70,50,0.2)',
+    borderRadius: '6px',
+    backgroundColor: '#F7F3ED',
+    color: '#1E1A16',
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+    overflowY: 'auto',
+  };
+
+  return (
+    <View style={webEditorStyles.overlay}>
+      <View style={webEditorStyles.container}>
+        <View style={webEditorStyles.header}>
+          <Text style={webEditorStyles.heading}>New discussion</Text>
+          <TouchableOpacity onPress={onCancel} hitSlop={8}>
+            <Text style={webEditorStyles.closeBtn}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={webEditorStyles.label}>TITLE</Text>
+        {createElement('input', {
+          style: inputStyle,
+          value: title,
+          onChange: (e: { target: { value: string } }) =>
+            onTitleChange(e.target.value),
+          placeholder: 'What would you like to discuss?',
+        })}
+
+        <Text style={webEditorStyles.label}>CATEGORY</Text>
+        <View style={webEditorStyles.catRow}>
+          {categories.filter((c) => c.key).map((c) => (
+            <TouchableOpacity
+              key={c.key}
+              style={[
+                webEditorStyles.chip,
+                category === c.key && webEditorStyles.chipActive,
+              ]}
+              onPress={() => onCategoryChange(c.key)}
+            >
+              <Text
+                style={[
+                  webEditorStyles.chipLabel,
+                  category === c.key && webEditorStyles.chipLabelActive,
+                ]}
+              >
+                {c.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={webEditorStyles.label}>CONTENT</Text>
+        <View style={webEditorStyles.toolbar}>
+          {(
+            [
+              {
+                label: 'B',
+                title: 'Bold',
+                wrap: ['**', '**'] as const,
+                style: { fontWeight: '700' as const },
+              },
+              {
+                label: 'I',
+                title: 'Italic',
+                wrap: ['_', '_'] as const,
+                style: { fontStyle: 'italic' as const },
+              },
+            ] as const
+          ).map((btn) => (
+            <TouchableOpacity
+              key={btn.label}
+              style={webEditorStyles.toolbarBtn}
+              accessibilityLabel={btn.title}
+              onPress={() => {
+                const el = document.getElementById(
+                  'forum-content'
+                ) as HTMLTextAreaElement | null;
+                if (!el) return;
+                const start = el.selectionStart ?? 0;
+                const end = el.selectionEnd ?? 0;
+                const selected = content.slice(start, end) || 'text';
+                const next =
+                  content.slice(0, start) +
+                  btn.wrap[0] +
+                  selected +
+                  btn.wrap[1] +
+                  content.slice(end);
+                onContentChange(next);
+                setTimeout(() => {
+                  el.focus();
+                }, 0);
+              }}
+            >
+              <Text style={[webEditorStyles.toolbarBtnText, btn.style]}>
+                {btn.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={webEditorStyles.toolbarBtn}
+            accessibilityLabel="Link"
+            onPress={() => {
+              if (typeof window === 'undefined') return;
+              const url = window.prompt('URL:', 'https://');
+              if (!url) return;
+              const el = document.getElementById(
+                'forum-content'
+              ) as HTMLTextAreaElement | null;
+              const start = el?.selectionStart ?? content.length;
+              const end = el?.selectionEnd ?? content.length;
+              const selected = content.slice(start, end) || 'link text';
+              const next =
+                content.slice(0, start) +
+                `[${selected}](${url})` +
+                content.slice(end);
+              onContentChange(next);
+              setTimeout(() => el?.focus(), 0);
+            }}
+          >
+            <Text style={webEditorStyles.toolbarBtnText}>Link</Text>
+          </TouchableOpacity>
+        </View>
+
+        {createElement('textarea', {
+          id: 'forum-content',
+          style: textareaStyle,
+          value: content,
+          onChange: (e: { target: { value: string } }) =>
+            onContentChange(e.target.value),
+          placeholder:
+            "What's on your mind? Share a technique, ask a question, start a conversation...",
+        })}
+
+        {error ? <Text style={webEditorStyles.error}>{error}</Text> : null}
+
+        <View style={webEditorStyles.actions}>
+          <TouchableOpacity
+            style={webEditorStyles.cancelBtn}
+            onPress={onCancel}
+          >
+            <Text style={webEditorStyles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[webEditorStyles.postBtn, posting && { opacity: 0.6 }]}
+            onPress={onSubmit}
+            disabled={posting}
+          >
+            <Text style={webEditorStyles.postBtnText}>
+              {posting ? 'Posting...' : 'Post'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const webEditorStyles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(30,26,22,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    padding: spacing[4],
+  },
+  container: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing[5],
+    width: '100%',
+    maxWidth: 680,
+    gap: spacing[3],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heading: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.lg,
+    color: colors.ink,
+  },
+  closeBtn: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkLight,
+    padding: spacing[2],
+  },
+  label: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    letterSpacing: 0.5,
+    marginBottom: -spacing[1],
+  },
+  catRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+  },
+  chip: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.cream,
+  },
+  chipActive: {
+    backgroundColor: colors.clay,
+    borderColor: colors.clay,
+  },
+  chipLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  chipLabelActive: {
+    color: '#fff',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    gap: spacing[1],
+  },
+  toolbarBtn: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.cream,
+  },
+  toolbarBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  error: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing[3],
+    marginTop: spacing[2],
+  },
+  cancelBtn: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    borderRadius: radius.sm,
+  },
+  cancelBtnText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkLight,
+  },
+  postBtn: {
+    backgroundColor: colors.clay,
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[3],
+    borderRadius: radius.sm,
+  },
+  postBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.md,
+    color: '#fff',
+  },
+});
 
 export default function ForumTab() {
   const { studios } = useAuth();
@@ -325,110 +658,137 @@ export default function ForumTab() {
       </TouchableOpacity>
 
       {showNewPost ? (
-        <View style={styles.modalOverlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.modalKav}
-          >
-            <ScrollView
-              style={styles.modal}
-              contentContainerStyle={styles.modalScrollContent}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled
-              scrollEnabled
+        Platform.OS === 'web' ? (
+          <WebForumEditor
+            title={newTitle}
+            content={newContent}
+            category={newCategory}
+            categories={CATEGORIES}
+            onTitleChange={setNewTitle}
+            onContentChange={setNewContent}
+            onCategoryChange={setNewCategory}
+            onSubmit={() => void onSubmitPost()}
+            onCancel={() => {
+              setShowNewPost(false);
+              setNewTitle('');
+              setNewContent('');
+              setNewCategory('general');
+              setPostError('');
+              setSelectionStart(0);
+              setSelectionEnd(0);
+            }}
+            posting={posting}
+            error={postError}
+          />
+        ) : (
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.modalKav}
             >
-              <Text style={styles.modalTitle}>New discussion</Text>
-              <TextInput
-                style={styles.input}
-                value={newTitle}
-                onChangeText={setNewTitle}
-                placeholder="Title"
-                placeholderTextColor={colors.inkLight}
-              />
-              <View style={styles.catRow}>
-                {CATEGORIES.filter((c) => c.key).map((c) => (
+              <ScrollView
+                style={styles.modal}
+                contentContainerStyle={styles.modalScrollContent}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+                scrollEnabled
+              >
+                <Text style={styles.modalTitle}>New discussion</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newTitle}
+                  onChangeText={setNewTitle}
+                  placeholder="Title"
+                  placeholderTextColor={colors.inkLight}
+                />
+                <View style={styles.catRow}>
+                  {CATEGORIES.filter((c) => c.key).map((c) => (
+                    <TouchableOpacity
+                      key={c.key}
+                      style={[
+                        styles.chip,
+                        newCategory === c.key && styles.chipActive,
+                      ]}
+                      onPress={() => setNewCategory(c.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipLabel,
+                          newCategory === c.key && styles.chipLabelActive,
+                        ]}
+                      >
+                        {c.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={styles.toolbar}>
                   <TouchableOpacity
-                    key={c.key}
-                    style={[
-                      styles.chip,
-                      newCategory === c.key && styles.chipActive,
-                    ]}
-                    onPress={() => setNewCategory(c.key)}
+                    style={styles.toolbarBtn}
+                    onPress={() => wrapSelection('**', '**')}
+                    accessibilityLabel="Bold"
+                  >
+                    <Text style={styles.toolbarBtnText}>B</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.toolbarBtn}
+                    onPress={() => wrapSelection('_', '_')}
+                    accessibilityLabel="Italic"
                   >
                     <Text
                       style={[
-                        styles.chipLabel,
-                        newCategory === c.key && styles.chipLabelActive,
+                        styles.toolbarBtnText,
+                        { fontStyle: 'italic' },
                       ]}
                     >
-                      {c.label}
+                      I
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.toolbar}>
-                <TouchableOpacity
-                  style={styles.toolbarBtn}
-                  onPress={() => wrapSelection('**', '**')}
-                  accessibilityLabel="Bold"
-                >
-                  <Text style={styles.toolbarBtnText}>B</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.toolbarBtn}
-                  onPress={() => wrapSelection('_', '_')}
-                  accessibilityLabel="Italic"
-                >
-                  <Text
-                    style={[styles.toolbarBtnText, { fontStyle: 'italic' }]}
+                  <TouchableOpacity
+                    style={styles.toolbarBtn}
+                    onPress={insertLink}
+                    accessibilityLabel="Link"
                   >
-                    I
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.toolbarBtn}
-                  onPress={insertLink}
-                  accessibilityLabel="Link"
-                >
-                  <Text style={styles.toolbarBtnText}>🔗</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                ref={contentInputRef}
-                style={[styles.input, styles.textarea]}
-                value={newContent}
-                onChangeText={setNewContent}
-                placeholder="What's on your mind?"
-                placeholderTextColor={colors.inkLight}
-                multiline
-                numberOfLines={8}
-                onSelectionChange={(e) => {
-                  setSelectionStart(e.nativeEvent.selection.start);
-                  setSelectionEnd(e.nativeEvent.selection.end);
-                }}
-              />
-              {postError ? (
-                <Text style={styles.errorText}>{postError}</Text>
-              ) : null}
-              <View style={styles.modalBtns}>
-                <Button
-                  label="Cancel"
-                  variant="ghost"
-                  onPress={() => {
-                    setShowNewPost(false);
-                    setSelectionStart(0);
-                    setSelectionEnd(0);
+                    <Text style={styles.toolbarBtnText}>🔗</Text>
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  ref={contentInputRef}
+                  style={[styles.input, styles.textarea]}
+                  value={newContent}
+                  onChangeText={setNewContent}
+                  placeholder="What's on your mind?"
+                  placeholderTextColor={colors.inkLight}
+                  multiline
+                  numberOfLines={8}
+                  onSelectionChange={(e) => {
+                    setSelectionStart(e.nativeEvent.selection.start);
+                    setSelectionEnd(e.nativeEvent.selection.end);
                   }}
                 />
-                <Button
-                  label="Post"
-                  onPress={() => void onSubmitPost()}
-                  loading={posting}
-                />
-              </View>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </View>
+                {postError ? (
+                  <Text style={styles.errorText}>{postError}</Text>
+                ) : null}
+                <View style={styles.modalBtns}>
+                  <Button
+                    label="Cancel"
+                    variant="ghost"
+                    onPress={() => {
+                      setShowNewPost(false);
+                      setSelectionStart(0);
+                      setSelectionEnd(0);
+                    }}
+                  />
+                  <Button
+                    label="Post"
+                    onPress={() => void onSubmitPost()}
+                    loading={posting}
+                  />
+                </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </View>
+        )
       ) : null}
     </View>
   );

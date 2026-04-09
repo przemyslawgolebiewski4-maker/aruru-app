@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { createElement, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TextInput,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -341,16 +342,39 @@ export default function ForumPostScreen({ route, navigation }: Props) {
               placeholder="Title"
               placeholderTextColor={colors.inkLight}
             />
-            <TextInput
-              style={[styles.editInput, styles.editTextarea]}
-              value={editContent}
-              onChangeText={setEditContent}
-              placeholder="Content"
-              placeholderTextColor={colors.inkLight}
-              multiline
-              numberOfLines={8}
-              textAlignVertical="top"
-            />
+            {Platform.OS === 'web'
+              ? createElement('textarea', {
+                  style: {
+                    width: '100%',
+                    minHeight: '200px',
+                    padding: '12px',
+                    fontSize: '15px',
+                    fontFamily: 'inherit',
+                    lineHeight: '1.65',
+                    border: '0.5px solid rgba(90,70,50,0.2)',
+                    borderRadius: '6px',
+                    backgroundColor: '#F7F3ED',
+                    color: '#1E1A16',
+                    resize: 'vertical',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  },
+                  value: editContent,
+                  onChange: (e: { target: { value: string } }) =>
+                    setEditContent(e.target.value),
+                })
+              : (
+                <TextInput
+                  style={[styles.editInput, styles.editTextarea]}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  placeholder="Content"
+                  placeholderTextColor={colors.inkLight}
+                  multiline
+                  numberOfLines={8}
+                  textAlignVertical="top"
+                />
+              )}
             {editError ? (
               <Text style={styles.editError}>{editError}</Text>
             ) : null}
