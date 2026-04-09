@@ -461,7 +461,7 @@ export default function SponsorsTab() {
                 <Text style={styles.statSub}>This month</Text>
               </View>
               <View style={styles.statCard}>
-                <Text style={styles.statLabel}>Posts</Text>
+                <Text style={styles.statLabel}>Partner updates</Text>
                 <Text style={styles.statValue}>
                   {sponsorStats.postsThisMonth}/{sponsorStats.postsPerMonth || '—'}
                 </Text>
@@ -478,7 +478,7 @@ export default function SponsorsTab() {
               style={styles.panelActionBtn}
             />
             <Button
-              label="+ New post"
+              label="+ New partner update"
               variant="primary"
               disabled={sponsorStats ? !sponsorStats.canPostThisMonth : false}
               onPress={() => {
@@ -491,8 +491,8 @@ export default function SponsorsTab() {
           {sponsorStats && !sponsorStats.canPostThisMonth ? (
             <Text style={styles.nextPostHint}>
               {sponsorStats.nextPostDate
-                ? `Next post available: ${sponsorStats.nextPostDate}`
-                : 'Post limit reached for this month.'}
+                ? `Next partner update available: ${sponsorStats.nextPostDate}`
+                : 'Partner update limit reached for this month.'}
             </Text>
           ) : null}
         </View>
@@ -500,7 +500,12 @@ export default function SponsorsTab() {
 
       {isActiveSponsor && showPostForm ? (
         <View style={styles.inlinePostForm}>
-          <Text style={styles.inlinePostTitle}>New post</Text>
+          <Text style={styles.inlinePostTitle}>New partner update</Text>
+          <Text style={styles.partnerUpdateHint}>
+            Partner updates appear in a dedicated section of the community -
+            separate from the forum. Use them to share new products,
+            promotions, or news from your brand.
+          </Text>
           <Input
             label="Title"
             value={postTitle}
@@ -524,7 +529,7 @@ export default function SponsorsTab() {
             <Text style={styles.formError}>{postFormError}</Text>
           ) : null}
           <Button
-            label="Publish"
+            label="Publish partner update"
             onPress={() => void handlePublishPost()}
             loading={postSubmitting}
             fullWidth
@@ -543,7 +548,7 @@ export default function SponsorsTab() {
 
       {isActiveSponsor && myPosts.length > 0 ? (
         <View style={styles.myPostsSection}>
-          <Text style={styles.sectionHeading}>Your posts</Text>
+          <Text style={styles.sectionHeading}>Your partner updates</Text>
           {myPosts.map((p) => (
             <View key={p.id} style={styles.postCard}>
               <Text style={styles.postTitle}>{p.title}</Text>
@@ -833,6 +838,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.md,
     color: colors.ink,
+  },
+  partnerUpdateHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
   },
   myPostsSection: { marginBottom: spacing[4], gap: spacing[2] },
   sectionHeading: {
