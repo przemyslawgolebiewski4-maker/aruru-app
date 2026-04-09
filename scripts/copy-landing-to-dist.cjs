@@ -23,6 +23,16 @@ if (!fs.existsSync(path.join(root, 'dist'))) {
 fs.copyFileSync(src, dest);
 console.log('copy-landing-to-dist: public/landing.html → dist/landing.html');
 
+// Cache-bust og-image in dist only (source public/landing.html stays unversioned)
+let html = fs.readFileSync(dest, 'utf8');
+const version = Date.now();
+html = html.replace(
+  /og-image\.jpg(\?v=\d+)?/g,
+  `og-image.jpg?v=${version}`
+);
+fs.writeFileSync(dest, html);
+console.log(`copy-landing-to-dist: og-image cache-busted with v=${version}`);
+
 // Open Graph asset (canonical name: og-image.jpg — not aruru_og_image.jpg / .png)
 const ogSrc = path.join(root, 'public', 'og-image.jpg');
 const ogDest = path.join(root, 'dist', 'og-image.jpg');
