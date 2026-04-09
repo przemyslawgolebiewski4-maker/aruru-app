@@ -43,6 +43,15 @@ type RecentTask = {
   dot: 'clay' | 'moss' | 'inkLight';
 };
 
+type KilnRequest = {
+  id: string;
+  requestedByName: string;
+  privateKilnName: string;
+  privateKilnPrice: number;
+  startsAt?: string;
+  notes?: string;
+};
+
 type IncomeData = {
   current: {
     membership: number;
@@ -183,6 +192,7 @@ export default function DashboardScreen() {
   const [showCommunityBanner, setShowCommunityBanner] = useState(false);
   const [trialPromptDismissed, setTrialPromptDismissed] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const [kilnRequests, setKilnRequests] = useState<KilnRequest[]>([]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -221,13 +231,22 @@ export default function DashboardScreen() {
       setRecentFirings([]);
       setRecentTasks([]);
       setIncome(null);
+      setKilnRequests([]);
       setLoading(false);
       return;
     }
 
+    const staffStudio =
+      studios.find((s) => s.tenantId === tenantId) ??
+      studios.find((s) => s.status === 'active') ??
+      studios[0];
+    const shouldFetchKilnReqs =
+      (staffStudio?.role === 'owner' || staffStudio?.role === 'assistant') &&
+      staffStudio?.status === 'active';
+
     setLoading(true);
     try {
-      const [memRes, firRes, taskRes, incomeRes, summariesRes] =
+      const [memRes, firRes, taskRes, incomeRes, summariesRes, kilnReqRes] =
         await Promise.allSettled([
           apiFetch<unknown>(`/studios/${tenantId}/members`, {}, tenantId),
           apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
@@ -238,6 +257,13 @@ export default function DashboardScreen() {
             {},
             tenantId
           ),
+          shouldFetchKilnReqs
+            ? apiFetch<{ requests?: KilnRequest[] }>(
+                `/studios/${tenantId}/private-kiln-requests`,
+                {},
+                tenantId
+              )
+            : Promise.resolve({ requests: [] }),
         ]);
 
       const membersList =
@@ -272,6 +298,45 @@ export default function DashboardScreen() {
       } else {
         setSummariesDue(0);
       }
+
+      if (kilnReqRes.status === 'fulfilled' && kilnReqRes.value) {
+        const raw = (
+          kilnReqRes.value as { requests?: unknown[] }
+        ).requests ?? [];
+        const parsed: KilnRequest[] = [];
+        for (const item of raw) {
+          if (!item || typeof item !== 'object') continue;
+          const o = item as Record<string, unknown>;
+          const id = String(o.id ?? o._id ?? '').trim();
+          if (!id) continue;
+          const priceRaw = o.privateKilnPrice ?? o.private_kiln_price;
+          const price =
+            typeof priceRaw === 'number' && Number.isFinite(priceRaw)
+              ? priceRaw
+              : Number(priceRaw);
+          parsed.push({
+            id,
+            requestedByName: String(
+              o.requestedByName ?? o.requested_by_name ?? ''
+            ),
+            privateKilnName: String(
+              o.privateKilnName ?? o.private_kiln_name ?? ''
+            ),
+            privateKilnPrice: Number.isFinite(price) ? price : 0,
+            startsAt:
+              o.startsAt != null
+                ? String(o.startsAt)
+                : o.starts_at != null
+                  ? String(o.starts_at)
+                  : undefined,
+            notes: o.notes != null ? String(o.notes) : undefined,
+          });
+        }
+        setKilnRequests(parsed);
+      } else {
+        setKilnRequests([]);
+      }
+
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
@@ -387,10 +452,31 @@ export default function DashboardScreen() {
       setRecentFirings([]);
       setRecentTasks([]);
       setIncome(null);
+      setKilnRequests([]);
     } finally {
       setLoading(false);
     }
   }, [tenantId, studios.length]);
+
+  async function handleKilnRequest(id: string, action: 'approve' | 'reject') {
+    if (!tenantId) return;
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/private-kiln-requests/${id}`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ action }),
+        },
+        tenantId
+      );
+      setKilnRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch (e: unknown) {
+      alertMessage(
+        'Error',
+        e instanceof Error ? e.message : 'Could not process request.'
+      );
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -848,6 +934,61 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {kilnRequests.length > 0 ? (
+        <View style={styles.kilnRequestsWrap}>
+          <Text style={styles.kilnRequestsLabel}>
+            PRIVATE KILN REQUESTS
+          </Text>
+          {kilnRequests.map((req) => (
+            <View key={req.id} style={styles.kilnRequestCard}>
+              <View style={styles.kilnRequestInfo}>
+                <Text style={styles.kilnRequestName}>
+                  {req.requestedByName}
+                </Text>
+                <Text style={styles.kilnRequestMeta}>
+                  {req.privateKilnName}
+                  {req.privateKilnPrice > 0
+                    ? ` · €${req.privateKilnPrice.toFixed(2)}`
+                    : ''}
+                </Text>
+                {req.startsAt ? (
+                  <Text style={styles.kilnRequestMeta}>
+                    {new Date(req.startsAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                ) : null}
+                {req.notes ? (
+                  <Text style={styles.kilnRequestNotes} numberOfLines={2}>
+                    {req.notes}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={styles.kilnRequestActions}>
+                <TouchableOpacity
+                  style={styles.kilnApproveBtn}
+                  onPress={() => void handleKilnRequest(req.id, 'approve')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Approve kiln request"
+                >
+                  <Text style={styles.kilnApproveBtnText}>Approve</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.kilnRejectBtn}
+                  onPress={() => void handleKilnRequest(req.id, 'reject')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reject kiln request"
+                >
+                  <Text style={styles.kilnRejectBtnText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <Divider />
 
@@ -1434,6 +1575,72 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing[2],
     marginBottom: spacing[6],
+  },
+  kilnRequestsWrap: {
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  kilnRequestsLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing[1],
+  },
+  kilnRequestCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    borderColor: colors.clay,
+    padding: spacing[4],
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[3],
+  },
+  kilnRequestInfo: { flex: 1, gap: spacing[1] },
+  kilnRequestName: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  kilnRequestMeta: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  kilnRequestNotes: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+  },
+  kilnRequestActions: {
+    gap: spacing[2],
+    alignItems: 'flex-end',
+  },
+  kilnApproveBtn: {
+    backgroundColor: colors.moss,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+  },
+  kilnApproveBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: '#fff',
+  },
+  kilnRejectBtn: {
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  kilnRejectBtnText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
   },
   trialBanner: {
     backgroundColor: colors.clayLight,

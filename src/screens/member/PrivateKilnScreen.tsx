@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button } from '../../components/ui';
+import { Button, Input } from '../../components/ui';
 import {
   colors,
   typography,
@@ -50,6 +50,7 @@ export default function PrivateKilnScreen({ route, navigation }: Props) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [notes, setNotes] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,19 +86,15 @@ export default function PrivateKilnScreen({ route, navigation }: Props) {
     setError('');
     setSubmitting(true);
     try {
-      const title = `Private kiln · ${selected.name}`;
       await apiFetch(
-        `/studios/${tenantId}/events/book`,
+        `/studios/${tenantId}/events/book-private-kiln`,
         {
           method: 'POST',
           body: JSON.stringify({
+            privateKilnId: selected.id,
             startsAt: toLocalISOString(startsAt),
             endsAt: toLocalISOString(endsAt),
-            kind: 'member_booking',
-            title,
-            notes: selected.description?.trim()
-              ? `Private kiln request: ${selected.name} — ${selected.description.trim()}`
-              : `Private kiln request: ${selected.name}`,
+            notes: notes.trim() || null,
           }),
         },
         tenantId
@@ -196,6 +193,15 @@ export default function PrivateKilnScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      <Input
+        label="Notes (optional)"
+        value={notes}
+        onChangeText={setNotes}
+        placeholder="Any details for the studio..."
+        multiline
+        numberOfLines={2}
+      />
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Button
@@ -205,6 +211,10 @@ export default function PrivateKilnScreen({ route, navigation }: Props) {
         fullWidth
         style={styles.btn}
       />
+      <Text style={[styles.sub, styles.requestFooterSub]}>
+        Your request will be sent to the studio for approval. You&apos;ll see
+        it in your events once confirmed.
+      </Text>
     </ScrollView>
   );
 }
@@ -294,4 +304,7 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   btn: { marginTop: spacing[2] },
+  requestFooterSub: {
+    marginTop: spacing[2],
+  },
 });
