@@ -50,6 +50,7 @@ import EventDetailScreen from '../screens/events/EventDetailScreen';
 import BookStudioScreen from '../screens/member/BookStudioScreen';
 import CatalogManageScreen from '../screens/materials/CatalogManageScreen';
 import MaterialsShopScreen from '../screens/materials/MaterialsShopScreen';
+import PrivateKilnScreen from '../screens/member/PrivateKilnScreen';
 import AttendanceScreen from '../screens/assistant/AttendanceScreen';
 import AssistantsOverviewScreen from '../screens/assistant/AssistantsOverviewScreen';
 import ArtistProfileScreen from '../screens/community/ArtistProfileScreen';
@@ -570,6 +571,16 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Materials',
+          headerBackTitle: 'Studio',
+        }}
+      />
+      <AppStack.Screen
+        name="PrivateKiln"
+        component={PrivateKilnScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Private kiln',
           headerBackTitle: 'Studio',
         }}
       />

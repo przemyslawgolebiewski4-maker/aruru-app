@@ -206,6 +206,18 @@ export default function MemberDashboardScreen() {
             style={styles.actionBtn}
           />
         ) : null}
+        {studioSubscriptionActive ? (
+          <Button
+            label="Private kiln"
+            variant="secondary"
+            onPress={() =>
+              tenantId
+                ? stackNav?.navigate('PrivateKiln', { tenantId })
+                : undefined
+            }
+            style={styles.actionBtn}
+          />
+        ) : null}
         <Button
           label="Events"
           variant="secondary"

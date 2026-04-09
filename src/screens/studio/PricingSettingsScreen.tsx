@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Button, SectionLabel, Divider, Input } from '../../components/ui';
@@ -134,6 +134,17 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
   const [savingPlan, setSavingPlan] = useState(false);
   const [planError, setPlanError] = useState('');
 
+  const [privateKilns, setPrivateKilns] = useState<
+    Array<{ id: string; name: string; description?: string; price: number }>
+  >([]);
+  const [pkLoading, setPkLoading] = useState(false);
+  const [showPkForm, setShowPkForm] = useState(false);
+  const [pkName, setPkName] = useState('');
+  const [pkDesc, setPkDesc] = useState('');
+  const [pkPrice, setPkPrice] = useState('');
+  const [pkSaving, setPkSaving] = useState(false);
+  const [pkError, setPkError] = useState('');
+
   useLayoutEffect(() => {
     if (!isOwner) {
       if (typeof window !== 'undefined') {
@@ -200,9 +211,47 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
     }
   }, [tenantId, isOwner]);
 
+  const loadPrivateKilns = useCallback(async () => {
+    if (!tenantId || !isOwner) return;
+    setPkLoading(true);
+    try {
+      const res = await apiFetch<{ privateKilns?: unknown[] }>(
+        `/studios/${tenantId}/private-kilns`,
+        {},
+        tenantId
+      );
+      const raw = res.privateKilns ?? [];
+      setPrivateKilns(
+        raw
+          .map((k) => {
+            const doc = k as Record<string, unknown>;
+            return {
+              id: String(doc.id ?? doc._id ?? '').trim(),
+              name: String(doc.name ?? ''),
+              description: doc.description
+                ? String(doc.description)
+                : undefined,
+              price: numFromUnknown(doc.price),
+            };
+          })
+          .filter((k) => k.id !== '')
+      );
+    } catch {
+      setPrivateKilns([]);
+    } finally {
+      setPkLoading(false);
+    }
+  }, [tenantId, isOwner]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadPrivateKilns();
+    }, [loadPrivateKilns])
+  );
 
   useEffect(() => {
     return () => {
@@ -283,6 +332,62 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
       );
     } finally {
       setSavingPlan(false);
+    }
+  }
+
+  async function savePrivateKiln() {
+    setPkError('');
+    if (!pkName.trim()) {
+      setPkError('Name is required.');
+      return;
+    }
+    const price = parseFloat(pkPrice.replace(',', '.'));
+    if (Number.isNaN(price) || price < 0) {
+      setPkError('Enter a valid price.');
+      return;
+    }
+    setPkSaving(true);
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/private-kilns`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: pkName.trim(),
+            description: pkDesc.trim() || null,
+            price,
+          }),
+        },
+        tenantId
+      );
+      setPkName('');
+      setPkDesc('');
+      setPkPrice('');
+      setShowPkForm(false);
+      void loadPrivateKilns();
+    } catch (e: unknown) {
+      setPkError(e instanceof Error ? e.message : 'Could not save.');
+    } finally {
+      setPkSaving(false);
+    }
+  }
+
+  async function deletePrivateKiln(id: string) {
+    const ok = await confirmDestructive(
+      'Delete private kiln type',
+      'Delete this private kiln type?',
+      'Delete'
+    );
+    if (!ok) return;
+    try {
+      await apiFetch(
+        `/studios/${tenantId}/private-kilns/${id}`,
+        { method: 'DELETE' },
+        tenantId
+      );
+      void loadPrivateKilns();
+    } catch {
+      /* ignore */
     }
   }
 
@@ -380,6 +485,86 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
               onChange={setKilnGlazeExternalPerKg}
               suffix={formatCurrencyPerUnitLabel(studioCurrency, 'kg')}
             />
+
+            <SectionLabel>PRIVATE KILNS</SectionLabel>
+            <Text style={styles.pkHint}>
+              Define private kiln types members can request. Each type has a
+              name, optional description and price.
+            </Text>
+
+            {pkLoading ? (
+              <ActivityIndicator color={colors.clay} />
+            ) : (
+              privateKilns.map((k) => (
+                <View key={k.id} style={styles.pkRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.pkName}>{k.name}</Text>
+                    {k.description ? (
+                      <Text style={styles.pkDesc}>{k.description}</Text>
+                    ) : null}
+                    <Text style={styles.pkPrice}>
+                      {formatCurrency(k.price, studioCurrency)}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => void deletePrivateKiln(k.id)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.pkDelete}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+
+            {!showPkForm ? (
+              <Button
+                label="+ Add private kiln type"
+                variant="ghost"
+                onPress={() => setShowPkForm(true)}
+                fullWidth
+              />
+            ) : (
+              <View style={styles.pkForm}>
+                <Input
+                  label="Name"
+                  value={pkName}
+                  onChangeText={setPkName}
+                  placeholder="e.g. Electric small, Gas raku..."
+                />
+                <Input
+                  label="Description (optional)"
+                  value={pkDesc}
+                  onChangeText={setPkDesc}
+                  placeholder="Capacity, notes..."
+                />
+                <Input
+                  label={`Price (${studioCurrency})`}
+                  value={pkPrice}
+                  onChangeText={setPkPrice}
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                />
+                {pkError ? (
+                  <Text style={styles.pkError}>{pkError}</Text>
+                ) : null}
+                <Button
+                  label="Save kiln type"
+                  variant="secondary"
+                  onPress={() => void savePrivateKiln()}
+                  loading={pkSaving}
+                  fullWidth
+                />
+                <Button
+                  label="Cancel"
+                  variant="ghost"
+                  onPress={() => {
+                    setShowPkForm(false);
+                    setPkError('');
+                  }}
+                  fullWidth
+                />
+              </View>
+            )}
 
             {error ? (
               <View style={styles.errorBox}>
@@ -604,6 +789,56 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   planError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+  },
+  pkHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+    marginBottom: spacing[2],
+  },
+  pkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing[3],
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+    gap: spacing[3],
+  },
+  pkName: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
+  pkDesc: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginTop: 2,
+  },
+  pkPrice: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    marginTop: 2,
+  },
+  pkDelete: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+  },
+  pkForm: {
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  pkError: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.error,
