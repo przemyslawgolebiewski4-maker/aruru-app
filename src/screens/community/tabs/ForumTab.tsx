@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -85,6 +88,9 @@ export default function ForumTab() {
   const [sort, setSort] = useState<'latest' | 'active' | 'popular'>('latest');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const [selectionStart, setSelectionStart] = useState(0);
+  const [selectionEnd, setSelectionEnd] = useState(0);
+  const contentInputRef = useRef<TextInput>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -160,6 +166,8 @@ export default function ForumTab() {
       setNewTitle('');
       setNewContent('');
       setNewCategory('general');
+      setSelectionStart(0);
+      setSelectionEnd(0);
       setShowNewPost(false);
       await load();
     } catch (e: unknown) {
@@ -167,6 +175,31 @@ export default function ForumTab() {
     } finally {
       setPosting(false);
     }
+  }
+
+  function wrapSelection(before: string, after: string) {
+    const selected = newContent.slice(selectionStart, selectionEnd);
+    const wrapped = before + (selected || 'text') + after;
+    const next =
+      newContent.slice(0, selectionStart) +
+      wrapped +
+      newContent.slice(selectionEnd);
+    setNewContent(next);
+  }
+
+  function insertLink() {
+    const url =
+      typeof window !== 'undefined'
+        ? window.prompt('Enter URL:', 'https://')
+        : null;
+    if (!url) return;
+    const selected = newContent.slice(selectionStart, selectionEnd);
+    const label = selected || 'link text';
+    const next =
+      newContent.slice(0, selectionStart) +
+      `[${label}](${url})` +
+      newContent.slice(selectionEnd);
+    setNewContent(next);
   }
 
   return (
@@ -244,6 +277,7 @@ export default function ForumTab() {
         <FlatList
           data={posts}
           keyExtractor={(p) => p.id}
+          keyboardShouldPersistTaps="handled"
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           renderItem={({ item: p }) => (
             <TouchableOpacity
@@ -292,61 +326,108 @@ export default function ForumTab() {
 
       {showNewPost ? (
         <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>New discussion</Text>
-            <TextInput
-              style={styles.input}
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="Title"
-              placeholderTextColor={colors.inkLight}
-            />
-            <View style={styles.catRow}>
-              {CATEGORIES.filter((c) => c.key).map((c) => (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKav}
+          >
+            <ScrollView
+              style={styles.modal}
+              contentContainerStyle={styles.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              scrollEnabled
+            >
+              <Text style={styles.modalTitle}>New discussion</Text>
+              <TextInput
+                style={styles.input}
+                value={newTitle}
+                onChangeText={setNewTitle}
+                placeholder="Title"
+                placeholderTextColor={colors.inkLight}
+              />
+              <View style={styles.catRow}>
+                {CATEGORIES.filter((c) => c.key).map((c) => (
+                  <TouchableOpacity
+                    key={c.key}
+                    style={[
+                      styles.chip,
+                      newCategory === c.key && styles.chipActive,
+                    ]}
+                    onPress={() => setNewCategory(c.key)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipLabel,
+                        newCategory === c.key && styles.chipLabelActive,
+                      ]}
+                    >
+                      {c.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.toolbar}>
                 <TouchableOpacity
-                  key={c.key}
-                  style={[
-                    styles.chip,
-                    newCategory === c.key && styles.chipActive,
-                  ]}
-                  onPress={() => setNewCategory(c.key)}
+                  style={styles.toolbarBtn}
+                  onPress={() => wrapSelection('**', '**')}
+                  accessibilityLabel="Bold"
+                >
+                  <Text style={styles.toolbarBtnText}>B</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.toolbarBtn}
+                  onPress={() => wrapSelection('_', '_')}
+                  accessibilityLabel="Italic"
                 >
                   <Text
-                    style={[
-                      styles.chipLabel,
-                      newCategory === c.key && styles.chipLabelActive,
-                    ]}
+                    style={[styles.toolbarBtnText, { fontStyle: 'italic' }]}
                   >
-                    {c.label}
+                    I
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            <TextInput
-              style={[styles.input, styles.textarea]}
-              value={newContent}
-              onChangeText={setNewContent}
-              placeholder="What's on your mind?"
-              placeholderTextColor={colors.inkLight}
-              multiline
-              numberOfLines={5}
-            />
-            {postError ? (
-              <Text style={styles.errorText}>{postError}</Text>
-            ) : null}
-            <View style={styles.modalBtns}>
-              <Button
-                label="Cancel"
-                variant="ghost"
-                onPress={() => setShowNewPost(false)}
+                <TouchableOpacity
+                  style={styles.toolbarBtn}
+                  onPress={insertLink}
+                  accessibilityLabel="Link"
+                >
+                  <Text style={styles.toolbarBtnText}>🔗</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                ref={contentInputRef}
+                style={[styles.input, styles.textarea]}
+                value={newContent}
+                onChangeText={setNewContent}
+                placeholder="What's on your mind?"
+                placeholderTextColor={colors.inkLight}
+                multiline
+                numberOfLines={8}
+                onSelectionChange={(e) => {
+                  setSelectionStart(e.nativeEvent.selection.start);
+                  setSelectionEnd(e.nativeEvent.selection.end);
+                }}
               />
-              <Button
-                label="Post"
-                onPress={() => void onSubmitPost()}
-                loading={posting}
-              />
-            </View>
-          </View>
+              {postError ? (
+                <Text style={styles.errorText}>{postError}</Text>
+              ) : null}
+              <View style={styles.modalBtns}>
+                <Button
+                  label="Cancel"
+                  variant="ghost"
+                  onPress={() => {
+                    setShowNewPost(false);
+                    setSelectionStart(0);
+                    setSelectionEnd(0);
+                  }}
+                />
+                <Button
+                  label="Post"
+                  onPress={() => void onSubmitPost()}
+                  loading={posting}
+                />
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       ) : null}
     </View>
@@ -521,12 +602,21 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(30,26,22,0.5)',
     justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  modalKav: {
+    width: '100%',
+    maxWidth: 600,
   },
   modal: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
+    maxHeight: '90%',
+  },
+  modalScrollContent: {
     padding: spacing[4],
+    paddingBottom: spacing[4],
     gap: spacing[3],
   },
   modalTitle: {
@@ -544,7 +634,32 @@ const styles = StyleSheet.create({
     color: colors.ink,
     backgroundColor: colors.cream,
   },
-  textarea: { height: 100, textAlignVertical: 'top' },
+  textarea: {
+    minHeight: 200,
+    maxHeight: 320,
+    textAlignVertical: 'top',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    gap: spacing[1],
+    paddingVertical: spacing[2],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+    marginTop: spacing[1],
+  },
+  toolbarBtn: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  toolbarBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+  },
   catRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

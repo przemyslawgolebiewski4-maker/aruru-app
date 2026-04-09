@@ -107,6 +107,11 @@ export default function ForumPostScreen({ route, navigation }: Props) {
   const [error, setError] = useState('');
   const [replyError, setReplyError] = useState('');
   const [reportSent, setReportSent] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editTitle, setEditTitle] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -189,6 +194,33 @@ export default function ForumPostScreen({ route, navigation }: Props) {
     }, [load])
   );
 
+  async function saveEdit() {
+    if (!editContent.trim()) return;
+    setEditSaving(true);
+    setEditError('');
+    try {
+      await apiFetch(
+        `/community/forum/${postId}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            title: editTitle.trim() || post?.title,
+            content: editContent.trim(),
+          }),
+        },
+        tenantId
+      );
+      setEditing(false);
+      void load();
+    } catch (e: unknown) {
+      setEditError(
+        e instanceof Error ? e.message : 'Could not save edits.'
+      );
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   async function onReply() {
     if (!reply.trim()) return;
     setPosting(true);
@@ -227,6 +259,9 @@ export default function ForumPostScreen({ route, navigation }: Props) {
     );
 
   const replies = post.replies ?? [];
+  const isAuthor =
+    Boolean(currentUserId && post.authorId) &&
+    currentUserId === post.authorId;
 
   return (
     <View style={styles.root}>
@@ -276,9 +311,64 @@ export default function ForumPostScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        <View style={styles.postBody}>
-          <Text style={styles.content2}>{post.content}</Text>
-        </View>
+        {!editing ? (
+          <View style={styles.postBody}>
+            <Text style={styles.content2}>{post.content}</Text>
+          </View>
+        ) : null}
+
+        {isAuthor && !editing ? (
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => {
+              setEditTitle(post.title ?? '');
+              setEditContent(post.content ?? '');
+              setEditing(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Edit post"
+          >
+            <Text style={styles.editBtnText}>Edit post</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {isAuthor && editing ? (
+          <View style={styles.editForm}>
+            <TextInput
+              style={styles.editInput}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholder="Title"
+              placeholderTextColor={colors.inkLight}
+            />
+            <TextInput
+              style={[styles.editInput, styles.editTextarea]}
+              value={editContent}
+              onChangeText={setEditContent}
+              placeholder="Content"
+              placeholderTextColor={colors.inkLight}
+              multiline
+              numberOfLines={8}
+              textAlignVertical="top"
+            />
+            {editError ? (
+              <Text style={styles.editError}>{editError}</Text>
+            ) : null}
+            <View style={styles.editActions}>
+              <Button
+                label="Cancel"
+                variant="ghost"
+                onPress={() => setEditing(false)}
+              />
+              <Button
+                label="Save changes"
+                variant="primary"
+                onPress={() => void saveEdit()}
+                loading={editSaving}
+              />
+            </View>
+          </View>
+        ) : null}
 
         <Divider />
 
@@ -505,5 +595,54 @@ const styles = StyleSheet.create({
   sendBtn: {
     flexShrink: 0,
     alignSelf: 'flex-end',
+  },
+  editBtn: {
+    alignSelf: 'flex-start',
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.sm,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    marginTop: spacing[2],
+    marginHorizontal: spacing[4],
+  },
+  editBtnText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  editForm: {
+    gap: spacing[3],
+    marginTop: spacing[3],
+    marginHorizontal: spacing[4],
+    padding: spacing[4],
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  editInput: {
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    backgroundColor: colors.cream,
+  },
+  editTextarea: {
+    minHeight: 160,
+    textAlignVertical: 'top',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing[2],
+  },
+  editError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
   },
 });
