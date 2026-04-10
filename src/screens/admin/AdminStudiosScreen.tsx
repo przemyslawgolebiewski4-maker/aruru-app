@@ -7,10 +7,14 @@ import {
   ActivityIndicator,
   TextInput,
   Linking,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
-import { apiFetch } from '../../services/api';
+import { apiFetch, type PatchStudioAdminBody } from '../../services/api';
 import {
   alertMessage,
   confirmDestructive,
@@ -31,7 +35,43 @@ type Studio = {
   trialEndsAt?: string;
   stripeCustomerId?: string;
   createdAt?: string;
+  suspensionReason?: string | null;
 };
+
+function parseAdminStudio(raw: Record<string, unknown>): Studio {
+  const trial = raw.trialEndsAt ?? raw.trial_ends_at;
+  const sr = raw.suspensionReason ?? raw.suspension_reason;
+  let suspensionReason: string | null = null;
+  if (sr != null && sr !== '') {
+    const t = String(sr).trim();
+    suspensionReason = t.length ? t : null;
+  }
+  const stripeRaw = raw.stripeCustomerId ?? raw.stripe_customer_id;
+  return {
+    id: String(raw.id ?? raw._id ?? ''),
+    name: String(raw.name ?? ''),
+    slug: String(raw.slug ?? ''),
+    ownerEmail: String(raw.ownerEmail ?? raw.owner_email ?? ''),
+    subscriptionStatus: String(
+      raw.subscriptionStatus ?? raw.subscription_status ?? ''
+    ),
+    subscriptionTier: String(
+      raw.subscriptionTier ?? raw.subscription_tier ?? ''
+    ),
+    memberCount: Number(raw.memberCount ?? raw.member_count ?? 0) || 0,
+    trialEndsAt:
+      trial != null && String(trial).trim() !== '' ? String(trial) : undefined,
+    stripeCustomerId:
+      stripeRaw != null && String(stripeRaw).trim() !== ''
+        ? String(stripeRaw)
+        : undefined,
+    createdAt:
+      raw.createdAt != null || raw.created_at != null
+        ? String(raw.createdAt ?? raw.created_at)
+        : undefined,
+    suspensionReason,
+  };
+}
 
 function statusColor(s: string): string {
   if (s === 'active') return colors.moss;
@@ -50,6 +90,11 @@ function timeLeft(iso?: string): string {
   return `${days}d left`;
 }
 
+type ReasonModalState = {
+  studio: Studio;
+  mode: 'suspend' | 'edit_reason';
+};
+
 export default function AdminStudiosScreen() {
   const { studios } = useAuth();
   const tenantId =
@@ -60,6 +105,9 @@ export default function AdminStudiosScreen() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [error, setError] = useState('');
+  const [reasonModal, setReasonModal] = useState<ReasonModalState | null>(null);
+  const [reasonDraft, setReasonDraft] = useState('');
+  const [reasonSaving, setReasonSaving] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(search), 400);
@@ -73,12 +121,13 @@ export default function AdminStudiosScreen() {
       const qs = debouncedSearch
         ? `?search=${encodeURIComponent(debouncedSearch)}`
         : '';
-      const res = await apiFetch<{ studios: Studio[] }>(
+      const res = await apiFetch<{ studios: unknown[] }>(
         `/admin/studios${qs}`,
         {},
         tenantId
       );
-      setList(res.studios ?? []);
+      const rows = (res.studios ?? []) as Record<string, unknown>[];
+      setList(rows.map((r) => parseAdminStudio(r)));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studios.');
     } finally {
@@ -98,7 +147,10 @@ export default function AdminStudiosScreen() {
     await patchStudio(studio.id, { extendTrialDays: days });
   }
 
-  async function patchStudio(id: string, body: object) {
+  async function patchStudio(
+    id: string,
+    body: PatchStudioAdminBody
+  ): Promise<boolean> {
     try {
       await apiFetch(
         `/admin/studios/${id}`,
@@ -109,11 +161,13 @@ export default function AdminStudiosScreen() {
         tenantId
       );
       await load();
+      return true;
     } catch (e: unknown) {
       alertMessage(
         'Error',
         e instanceof Error ? e.message : 'Could not update studio.'
       );
+      return false;
     }
   }
 
@@ -124,7 +178,30 @@ export default function AdminStudiosScreen() {
       'Suspend'
     );
     if (!ok) return;
-    await patchStudio(studio.id, { subscriptionStatus: 'suspended' });
+    setReasonDraft('');
+    setReasonModal({ studio, mode: 'suspend' });
+  }
+
+  async function submitReasonModal() {
+    if (!reasonModal) return;
+    const trimmed = reasonDraft.trim();
+    const payload: PatchStudioAdminBody =
+      reasonModal.mode === 'suspend'
+        ? {
+            subscriptionStatus: 'suspended',
+            suspensionReason: trimmed.length ? trimmed : null,
+          }
+        : { suspensionReason: trimmed.length ? trimmed : null };
+    setReasonSaving(true);
+    try {
+      const ok = await patchStudio(reasonModal.studio.id, payload);
+      if (ok) {
+        setReasonModal(null);
+        setReasonDraft('');
+      }
+    } finally {
+      setReasonSaving(false);
+    }
   }
 
   /** No separate unsuspend route: PATCH accepts subscriptionStatus (same as suspend). */
@@ -136,6 +213,11 @@ export default function AdminStudiosScreen() {
     );
     if (!ok) return;
     await patchStudio(studio.id, { subscriptionStatus: 'active' });
+  }
+
+  function openEditReason(studio: Studio) {
+    setReasonDraft(studio.suspensionReason?.trim() ?? '');
+    setReasonModal({ studio, mode: 'edit_reason' });
   }
 
   function openStripeCustomer(studio: Studio) {
@@ -182,6 +264,12 @@ export default function AdminStudiosScreen() {
                     {s.memberCount} members · {s.subscriptionTier}
                     {s.trialEndsAt ? ` · ${timeLeft(s.trialEndsAt)}` : ''}
                   </Text>
+                  {s.subscriptionStatus === 'suspended' &&
+                  s.suspensionReason ? (
+                    <Text style={styles.suspensionReason}>
+                      {s.suspensionReason}
+                    </Text>
+                  ) : null}
                 </View>
                 <View
                   style={[
@@ -215,11 +303,18 @@ export default function AdminStudiosScreen() {
                   />
                 ) : null}
                 {s.subscriptionStatus === 'suspended' ? (
-                  <Button
-                    label="Reactivate"
-                    variant="secondary"
-                    onPress={() => void reactivateStudio(s)}
-                  />
+                  <>
+                    <Button
+                      label="Reactivate"
+                      variant="secondary"
+                      onPress={() => void reactivateStudio(s)}
+                    />
+                    <Button
+                      label="Edit suspension reason"
+                      variant="secondary"
+                      onPress={() => openEditReason(s)}
+                    />
+                  </>
                 ) : (
                   <Button
                     label="Suspend"
@@ -232,6 +327,71 @@ export default function AdminStudiosScreen() {
           )}
         />
       )}
+
+      <Modal
+        visible={reasonModal != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!reasonSaving) setReasonModal(null);
+        }}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => {
+            if (!reasonSaving) setReasonModal(null);
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalKb}
+          >
+            <Pressable
+              style={styles.modalSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Text style={styles.modalTitle}>
+                {reasonModal?.mode === 'suspend'
+                  ? 'Suspension message'
+                  : 'Edit suspension message'}
+              </Text>
+              <Text style={styles.modalHint}>
+                Optional note for the studio owner (max 2000 characters). Sent
+                as suspensionReason in the API.
+              </Text>
+              <TextInput
+                style={styles.modalInput}
+                value={reasonDraft}
+                onChangeText={setReasonDraft}
+                placeholder="e.g. Payment failed. Please contact support@…"
+                placeholderTextColor={colors.inkLight}
+                multiline
+                maxLength={2000}
+                editable={!reasonSaving}
+              />
+              <View style={styles.modalActions}>
+                <Button
+                  label="Cancel"
+                  variant="ghost"
+                  onPress={() => {
+                    if (!reasonSaving) setReasonModal(null);
+                  }}
+                />
+                <Button
+                  label={
+                    reasonModal?.mode === 'suspend' ? 'Confirm suspend' : 'Save'
+                  }
+                  variant={
+                    reasonModal?.mode === 'suspend' ? 'danger' : 'primary'
+                  }
+                  loading={reasonSaving}
+                  onPress={() => void submitReasonModal()}
+                />
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -287,6 +447,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
   },
+  suspensionReason: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+    marginTop: spacing[2],
+    lineHeight: 15,
+  },
   statusBadge: {
     paddingHorizontal: spacing[2],
     paddingVertical: 2,
@@ -294,4 +461,47 @@ const styles = StyleSheet.create({
   },
   statusText: { fontFamily: typography.mono, fontSize: 9 },
   actions: { flexDirection: 'row', gap: spacing[2], flexWrap: 'wrap' },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 26, 22, 0.45)',
+    justifyContent: 'center',
+    padding: spacing[4],
+  },
+  modalKb: { width: '100%', maxWidth: 400, alignSelf: 'center' },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  modalTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  modalHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+  },
+  modalInput: {
+    minHeight: 100,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    textAlignVertical: 'top',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing[2],
+    flexWrap: 'wrap',
+  },
 });

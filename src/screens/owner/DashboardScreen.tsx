@@ -175,8 +175,14 @@ function IconTwoCircles60() {
 }
 
 export default function DashboardScreen() {
-  const { user, studios, activeCurrency, activeTenantId, switchStudio } =
-    useAuth();
+  const {
+    user,
+    studios,
+    suspendedStudios,
+    activeCurrency,
+    activeTenantId,
+    switchStudio,
+  } = useAuth();
   const navigation = useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
   const [stats, setStats] = useState({
     members: 0,
@@ -652,6 +658,7 @@ export default function DashboardScreen() {
     !hasSubscription;
 
   if (studios.length === 0) {
+    const onlySuspended = suspendedStudios.length > 0;
     return (
       <ScrollView
         style={styles.root}
@@ -673,33 +680,50 @@ export default function DashboardScreen() {
             <Text style={styles.logoWordmark}>Aruru</Text>
           </TouchableOpacity>
           <IconTwoCircles60 />
-          <Text style={styles.emptyStudiosTitle}>Welcome to Aruru.</Text>
-          <Text style={styles.emptyStudiosBody}>
-            You&apos;re not part of any studio yet.{'\n\n'}
-            If you run a ceramic studio, create one below.{'\n'}
-            If you were invited, check your email for an invitation link from
-            your studio owner.
+          <Text style={styles.emptyStudiosTitle}>
+            {onlySuspended ? 'No active studio' : 'Welcome to Aruru.'}
           </Text>
-          <Button
-            label="Create a studio"
-            variant="primary"
-            onPress={() =>
-              navigation
-                .getParent<NativeStackNavigationProp<AppStackParamList>>()
-                ?.navigate('CreateStudio')
-            }
-            fullWidth
-            style={styles.emptyStudiosCreateBtn}
-          />
-          <View style={styles.orDividerRow}>
-            <View style={styles.orLine} />
-            <Text style={styles.orText}>or</Text>
-            <View style={styles.orLine} />
-          </View>
+          <Text style={styles.emptyStudiosBody}>
+            {onlySuspended ? (
+              <>
+                Your studio memberships are suspended (subscription blocked).
+                Open Profile to see details and next steps. When the owner renews
+                the plan, your studio will appear here again.
+              </>
+            ) : (
+              <>
+                You&apos;re not part of any studio yet.{'\n\n'}
+                If you run a ceramic studio, create one below.{'\n'}
+                If you were invited, check your email for an invitation link from
+                your studio owner.
+              </>
+            )}
+          </Text>
+          {!onlySuspended ? (
+            <Button
+              label="Create a studio"
+              variant="primary"
+              onPress={() =>
+                navigation
+                  .getParent<NativeStackNavigationProp<AppStackParamList>>()
+                  ?.navigate('CreateStudio')
+              }
+              fullWidth
+              style={styles.emptyStudiosCreateBtn}
+            />
+          ) : null}
+          {!onlySuspended ? (
+            <View style={styles.orDividerRow}>
+              <View style={styles.orLine} />
+              <Text style={styles.orText}>or</Text>
+              <View style={styles.orLine} />
+            </View>
+          ) : null}
           <View style={styles.emptyStudiosInfoCard}>
             <Text style={styles.emptyStudiosInfoText}>
-              Waiting for an invitation? Ask your studio owner to invite you via
-              email. You&apos;ll receive a link to join automatically.
+              {onlySuspended
+                ? 'Need help? Use Contact support in Profile, or reach out to your studio owner.'
+                : 'Waiting for an invitation? Ask your studio owner to invite you via email. You&apos;ll receive a link to join automatically.'}
             </Text>
           </View>
           <TouchableOpacity
@@ -709,7 +733,9 @@ export default function DashboardScreen() {
             accessibilityLabel="Open profile to see your studios"
           >
             <Text style={styles.emptyStudiosLink}>
-              Already have an account in another studio? →
+              {onlySuspended
+                ? 'Open Profile — suspended studios →'
+                : 'Already have an account in another studio? →'}
             </Text>
           </TouchableOpacity>
         </View>

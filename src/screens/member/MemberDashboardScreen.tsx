@@ -47,11 +47,13 @@ function formatDate(iso: string): string {
 }
 
 export default function MemberDashboardScreen() {
-  const { user, studios } = useAuth();
+  const { user, studios, activeTenantId, suspendedStudios } = useAuth();
   const navigation = useNavigation<Nav>();
   const stackNav = navigation.getParent<StackNav>();
   const currentStudio =
-    studios.find((s) => s.status === 'active') ?? studios[0];
+    studios.find((s) => s.tenantId === activeTenantId) ??
+    studios.find((s) => s.status === 'active') ??
+    studios[0];
   const studioLabel = currentStudio?.studioName?.trim() || 'Studio';
   const tenantId = currentStudio?.tenantId ?? '';
   const studioSubscriptionActive =
@@ -145,6 +147,26 @@ export default function MemberDashboardScreen() {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.clay} />
       </View>
+    );
+  }
+
+  if (studios.length === 0 && suspendedStudios.length > 0) {
+    return (
+      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+        <Text style={styles.greeting}>
+          Hello, {user?.name?.split(' ')[0] ?? 'there'}.
+        </Text>
+        <Text style={styles.empty}>
+          You don&apos;t have an active studio membership. Your studio may be
+          suspended until the subscription is renewed. Open Profile for details.
+        </Text>
+        <Button
+          label="Open Profile"
+          variant="secondary"
+          onPress={() => navigation.jumpTo('Profile')}
+          style={styles.actionBtn}
+        />
+      </ScrollView>
     );
   }
 

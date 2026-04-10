@@ -30,15 +30,48 @@ function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
       curRaw != null && String(curRaw).trim() !== ''
         ? String(curRaw).toUpperCase()
         : 'EUR';
+    const srRaw = row.suspensionReason ?? row.suspension_reason;
+    const suspensionReason =
+      srRaw == null || srRaw === ''
+        ? null
+        : String(srRaw).trim() || null;
+    const logoRaw = row.logoUrl ?? row.logo_url ?? s.logoUrl;
+    const logoUrl =
+      logoRaw != null && String(logoRaw).trim() !== ''
+        ? String(logoRaw)
+        : null;
+    const trialRaw = row.trialEndsAt ?? row.trial_ends_at ?? s.trialEndsAt;
+    const trialEndsAt =
+      trialRaw != null && String(trialRaw).trim() !== ''
+        ? String(trialRaw)
+        : null;
+    const roleStr = String(s.role ?? 'member').toLowerCase();
+    const role: StudioMembership['role'] =
+      roleStr === 'owner' || roleStr === 'assistant' || roleStr === 'member'
+        ? roleStr
+        : 'member';
     return {
-      ...s,
-      logoUrl: s.logoUrl ?? (s as { logo_url?: string }).logo_url,
-      subscriptionStatus:
-        row.subscriptionStatus ?? (row.subscription_status as string | undefined),
-      subscriptionTier:
-        row.subscriptionTier ?? (row.subscription_tier as string | undefined),
-      trialEndsAt: row.trialEndsAt ?? (row.trial_ends_at as string | undefined),
+      tenantId: String(s.tenantId ?? ''),
+      studioName: String(s.studioName ?? ''),
+      studioSlug: String(s.studioSlug ?? ''),
+      logoUrl,
+      role,
+      status: String(s.status ?? ''),
+      subscriptionStatus: String(
+        row.subscriptionStatus ??
+          row.subscription_status ??
+          s.subscriptionStatus ??
+          ''
+      ),
+      subscriptionTier: String(
+        row.subscriptionTier ??
+          row.subscription_tier ??
+          s.subscriptionTier ??
+          ''
+      ),
+      trialEndsAt,
       currency,
+      suspensionReason: s.suspensionReason ?? suspensionReason,
     };
   });
 }
@@ -46,6 +79,8 @@ function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
 interface AuthState {
   user: AuthUser | null;
   studios: StudioMembership[];
+  /** Subscription-suspended studios from GET /auth/me — not for switcher. */
+  suspendedStudios: StudioMembership[];
   loading: boolean;
   error: string | null;
   /** First active studio (same rule as dashboard). */
@@ -80,6 +115,9 @@ const AuthContext = createContext<(AuthState & AuthActions) | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [studios, setStudios] = useState<StudioMembership[]>([]);
+  const [suspendedStudios, setSuspendedStudios] = useState<StudioMembership[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [manualTenantId, setManualTenantId] = useState<string | null>(null);
@@ -91,7 +129,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [studios]);
 
   const activeTenantId = useMemo(() => {
-    if (manualTenantId && studios.some((s) => s.tenantId === manualTenantId)) {
+    if (
+      manualTenantId &&
+      studios.some((s) => s.tenantId === manualTenantId)
+    ) {
       return manualTenantId;
     }
     return defaultTenantId;
@@ -114,6 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) {
       setUser(null);
       setStudios([]);
+      setSuspendedStudios([]);
       setManualTenantId(null);
       return;
     }
@@ -121,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const me = await getMe();
       setUser(me.user);
       setStudios(normalizeStudios(me.studios));
+      setSuspendedStudios(normalizeStudios(me.suspendedStudios ?? []));
       setManualTenantId((prev) => {
         if (!prev) return null;
         const still = normalizeStudios(me.studios);
@@ -146,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updated = await getMe();
         setUser(updated.user);
         setStudios(normalizeStudios(updated.studios));
+        setSuspendedStudios(normalizeStudios(updated.suspendedStudios ?? []));
         setManualTenantId((prev) => {
           if (!prev) return null;
           const still = normalizeStudios(updated.studios);
@@ -156,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await clearAuth();
       setUser(null);
       setStudios([]);
+      setSuspendedStudios([]);
       setManualTenantId(null);
     }
   }
@@ -165,12 +210,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) {
       setUser(null);
       setStudios([]);
+      setSuspendedStudios([]);
       setManualTenantId(null);
       return;
     }
     const me = await getMe();
     setUser(me.user);
     setStudios(normalizeStudios(me.studios));
+    setSuspendedStudios(normalizeStudios(me.suspendedStudios ?? []));
     setManualTenantId((prev) => {
       if (!prev) return null;
       const still = normalizeStudios(me.studios);
@@ -194,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const updated = await getMe();
       setUser(updated.user);
       setStudios(normalizeStudios(updated.studios));
+      setSuspendedStudios(normalizeStudios(updated.suspendedStudios ?? []));
       setManualTenantId((prev) => {
         if (!prev) return null;
         const still = normalizeStudios(updated.studios);
@@ -291,6 +339,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       if (data?.access_token) {
         await setToken(data.access_token);
+        try {
+          const me = await getMe();
+          setUser(me.user);
+          setStudios(normalizeStudios(me.studios));
+          setSuspendedStudios(normalizeStudios(me.suspendedStudios ?? []));
+          setManualTenantId(null);
+        } catch {
+          // Keep token; sync on next app load or refresh(). Avoid clearAuth here.
+        }
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Registration failed');
@@ -302,6 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await logout();
     setUser(null);
     setStudios([]);
+    setSuspendedStudios([]);
     setManualTenantId(null);
   }
 
@@ -327,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         studios,
+        suspendedStudios,
         loading,
         error,
         activeTenantId,

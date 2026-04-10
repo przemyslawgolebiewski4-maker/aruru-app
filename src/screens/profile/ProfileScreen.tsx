@@ -15,7 +15,7 @@ import { AvatarImage } from '../../components/AvatarImage';
 import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import { apiFetch, SUSPENDED_MEMBERSHIP_REASON_FALLBACK } from '../../services/api';
 import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
 
 async function confirmDeleteAccountFlow(): Promise<boolean> {
@@ -54,7 +54,7 @@ function studioInitials(name: string) {
 }
 
 export default function ProfileScreen() {
-  const { user, studios, signOut } = useAuth();
+  const { user, studios, suspendedStudios, signOut } = useAuth();
   const isSponsor = user?.userRole === 'sponsor';
   const navigation = useNavigation();
   const stackNav =
@@ -235,6 +235,50 @@ export default function ProfileScreen() {
         />
       )}
 
+      {suspendedStudios.length > 0 ? (
+        <>
+          <View style={styles.sectionGap} />
+          <SectionLabel>Suspended studios</SectionLabel>
+          <Text style={styles.suspendedLead}>
+            These studios have a blocked subscription. They do not appear in
+            the dashboard switcher until the plan is renewed.
+          </Text>
+          {suspendedStudios.map((s, i) => {
+            const reason = (s.suspensionReason ?? '').trim();
+            return (
+              <View key={`sus-${s.tenantId}`}>
+                <View style={styles.studioRow}>
+                  <View style={styles.studioLogoWrap}>
+                    <AvatarImage
+                      url={s.logoUrl}
+                      initials={studioInitials(
+                        s.studioName || s.studioSlug || '?'
+                      )}
+                      size={44}
+                      borderRadius={10}
+                      bgColor={colors.clayLight}
+                      textColor={colors.clay}
+                    />
+                  </View>
+                  <View style={styles.studioCol}>
+                    <Text style={styles.studioName} numberOfLines={1}>
+                      {s.studioName || s.studioSlug}
+                    </Text>
+                    <Text style={styles.suspendedReason}>
+                      {reason || SUSPENDED_MEMBERSHIP_REASON_FALLBACK}
+                    </Text>
+                  </View>
+                  <Badge label="Suspended" variant="neutral" />
+                </View>
+                {i < suspendedStudios.length - 1 ? (
+                  <Divider style={styles.rowDivider} />
+                ) : null}
+              </View>
+            );
+          })}
+        </>
+      ) : null}
+
       {/* ── Account ── */}
       <View style={styles.sectionGap} />
       <SectionLabel>Account</SectionLabel>
@@ -414,6 +458,21 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 20,
     marginTop: spacing[2],
+  },
+  suspendedLead: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+    marginTop: spacing[2],
+    marginBottom: spacing[2],
+  },
+  suspendedReason: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.inkLight,
+    marginTop: spacing[1],
+    lineHeight: 16,
   },
   studioRow: {
     flexDirection: 'row',

@@ -145,24 +145,134 @@ export type PatchMeBody = {
   community_visibility?: Record<string, string | string[] | undefined>;
 };
 
+/**
+ * One membership row from GET /auth/me (`studios` or `suspendedStudios`).
+ * Same shape in both arrays (spec: camelCase). Do not use `tenantStatus` from /me.
+ */
 export interface StudioMembership {
   tenantId: string;
   studioName: string;
   studioSlug: string;
+  logoUrl: string | null;
   role: 'owner' | 'assistant' | 'member';
-  status: 'active' | 'invited' | 'suspended';
-  /** From GET /auth/me — tenant logo (camelCase or normalized from logo_url). */
-  logoUrl?: string;
-  /** ISO currency code, e.g. EUR, PLN. */
-  currency?: string;
-  subscriptionStatus?: string;
-  subscriptionTier?: string;
-  trialEndsAt?: string;
+  /** studio_members.status, e.g. active, invited */
+  status: string;
+  subscriptionStatus: string;
+  subscriptionTier: string;
+  trialEndsAt: string | null;
+  currency: string;
+  /** From tenant.suspension_reason; usually null in `studios`, set in `suspendedStudios`. */
+  suspensionReason: string | null;
 }
+
+/** PATCH /admin/studios/{studioId} (optional fields — send only what changes). */
+export type PatchStudioAdminBody = {
+  subscriptionTier?: string;
+  subscriptionStatus?: 'trial' | 'active' | 'suspended' | 'past_due';
+  extendTrialDays?: number;
+  suspensionReason?: string | null;
+};
 
 export interface MeResponse {
   user: AuthUser;
+  /** Active / usable memberships for studio switcher and tenant context. */
   studios: StudioMembership[];
+  /** Suspended (subscription-blocked) memberships — not in switcher; always an array. */
+  suspendedStudios: StudioMembership[];
+}
+
+/** Default copy when HTTP 402 has no usable `detail` (subscription blocked). */
+export const SUBSCRIPTION_BLOCKED_DEFAULT_MESSAGE =
+  'Subscription required. Please renew your plan or contact your studio administrator.';
+
+/** User-facing text for 402 on write endpoints; optional reason from last GET /auth/me suspended list. */
+export function formatSubscriptionBlockedMessage(
+  apiDetail: string,
+  suspensionReason?: string | null
+): string {
+  const d = (apiDetail ?? '').trim();
+  const base =
+    d && !/^HTTP \d+$/.test(d) ? d : SUBSCRIPTION_BLOCKED_DEFAULT_MESSAGE;
+  const r = suspensionReason?.trim();
+  if (r) return `${base}\n\n${r}`;
+  return base;
+}
+
+/** Checklist §8.4 — when `suspensionReason` is null or empty in /me suspended list. */
+export const SUSPENDED_MEMBERSHIP_REASON_FALLBACK =
+  'No details were provided. Please contact support or your studio administrator.';
+
+/** One row in GET /auth/data-export `studios_memberships` / `studiosMemberships`. */
+export type AuthDataExportStudioMembership = {
+  tenant_id?: string;
+  tenantId?: string;
+  tenantStatus?: string;
+  tenant_status?: string;
+  suspensionReason?: string | null;
+  suspension_reason?: string | null;
+  [key: string]: unknown;
+};
+
+/** Loose shape for GDPR export JSON (extend as backend adds fields). */
+export type AuthDataExportPayload = Record<string, unknown> & {
+  studios_memberships?: AuthDataExportStudioMembership[];
+  studiosMemberships?: AuthDataExportStudioMembership[];
+};
+
+export function mapStudioMembershipFromMeRow(
+  row: Record<string, unknown>
+): StudioMembership {
+  const srRaw = row.suspensionReason ?? row.suspension_reason;
+  const suspensionReason =
+    srRaw == null || srRaw === ''
+      ? null
+      : String(srRaw).trim() || null;
+
+  const logoRaw = row.logoUrl ?? row.logo_url;
+  const logoUrl =
+    logoRaw != null && String(logoRaw).trim() !== ''
+      ? String(logoRaw)
+      : null;
+
+  const trialRaw = row.trialEndsAt ?? row.trial_ends_at;
+  const trialEndsAt =
+    trialRaw != null && String(trialRaw).trim() !== ''
+      ? String(trialRaw)
+      : null;
+
+  const subSt =
+    row.subscriptionStatus != null || row.subscription_status != null
+      ? String(row.subscriptionStatus ?? row.subscription_status).trim()
+      : '';
+  const tier =
+    row.subscriptionTier != null || row.subscription_tier != null
+      ? String(row.subscriptionTier ?? row.subscription_tier).trim()
+      : '';
+  const curRaw = row.currency ?? row.currency_code;
+  const currency =
+    curRaw != null && String(curRaw).trim() !== ''
+      ? String(curRaw).toUpperCase()
+      : 'EUR';
+
+  const roleStr = String(row.role ?? 'member').toLowerCase();
+  const role: StudioMembership['role'] =
+    roleStr === 'owner' || roleStr === 'assistant' || roleStr === 'member'
+      ? roleStr
+      : 'member';
+
+  return {
+    tenantId: String(row.tenantId ?? row.tenant_id ?? ''),
+    studioName: String(row.studioName ?? row.studio_name ?? ''),
+    studioSlug: String(row.studioSlug ?? row.studio_slug ?? ''),
+    logoUrl,
+    role,
+    status: String(row.status ?? ''),
+    subscriptionStatus: subSt,
+    subscriptionTier: tier,
+    trialEndsAt,
+    currency,
+    suspensionReason,
+  };
 }
 
 // ─── Storage keys ──────────────────────────────────────────────────────────
@@ -393,46 +503,28 @@ export async function finalizeLoginSession(accessToken: string): Promise<void> {
 }
 
 /** GDPR-style export: Bearer only, no X-Tenant-ID. */
-export async function getAuthDataExport(): Promise<Record<string, unknown>> {
-  return apiFetch<Record<string, unknown>>('/auth/data-export', {});
+export async function getAuthDataExport(): Promise<AuthDataExportPayload> {
+  return apiFetch<AuthDataExportPayload>('/auth/data-export', {});
 }
 
 export async function getMe(): Promise<MeResponse> {
-  const res = await apiFetch<{ user: Record<string, unknown>; studios: unknown[] }>(
-    '/auth/me'
-  );
+  const res = await apiFetch<{
+    user: Record<string, unknown>;
+    studios?: unknown[];
+    suspendedStudios?: unknown[];
+    suspended_studios?: unknown[];
+  }>('/auth/me');
+  const studioRows = (res.studios ?? []) as unknown[];
+  const suspendedRows =
+    (res.suspendedStudios ?? res.suspended_studios ?? []) as unknown[];
   return {
     user: normalizeAuthUser(res.user),
-    studios: (res.studios ?? []).map((s) => {
-      const row = s as Record<string, unknown>;
-      return {
-        tenantId: String(row.tenantId ?? row.tenant_id ?? ''),
-        studioName: String(row.studioName ?? row.studio_name ?? ''),
-        studioSlug: String(row.studioSlug ?? row.studio_slug ?? ''),
-        role: row.role as 'owner' | 'assistant' | 'member',
-        status: row.status as 'active' | 'invited' | 'suspended',
-        logoUrl:
-          (row.logoUrl ?? row.logo_url) != null
-            ? String(row.logoUrl ?? row.logo_url)
-            : undefined,
-        subscriptionStatus:
-          row.subscriptionStatus != null || row.subscription_status != null
-            ? String(row.subscriptionStatus ?? row.subscription_status)
-            : undefined,
-        subscriptionTier:
-          row.subscriptionTier != null || row.subscription_tier != null
-            ? String(row.subscriptionTier ?? row.subscription_tier)
-            : undefined,
-        trialEndsAt:
-          row.trialEndsAt != null || row.trial_ends_at != null
-            ? String(row.trialEndsAt ?? row.trial_ends_at)
-            : undefined,
-        currency:
-          row.currency != null || row.currency_code != null
-            ? String(row.currency ?? row.currency_code).toUpperCase()
-            : undefined,
-      };
-    }),
+    studios: studioRows.map((s) =>
+      mapStudioMembershipFromMeRow(s as Record<string, unknown>)
+    ),
+    suspendedStudios: suspendedRows.map((s) =>
+      mapStudioMembershipFromMeRow(s as Record<string, unknown>)
+    ),
   };
 }
 
@@ -516,6 +608,7 @@ export async function createStudio(payload: {
 export async function getStudioMembers(
   tenantId: string
 ): Promise<{ members: StudioMembership[] }> {
+  /** Members list shape overlaps /auth/me only partially; callers map fields locally. */
   return apiFetch(`/studios/${tenantId}/members`, {}, tenantId);
 }
 

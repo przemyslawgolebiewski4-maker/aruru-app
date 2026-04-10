@@ -20,7 +20,11 @@ import TaskCalendar from '../../components/TaskCalendar';
 import { Avatar, Badge, Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { ApiError, apiFetch } from '../../services/api';
+import {
+  ApiError,
+  apiFetch,
+  formatSubscriptionBlockedMessage,
+} from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'TaskList'>;
@@ -171,13 +175,16 @@ function canEditAssignee(
 export default function TaskListScreen({ route }: { route: Route }) {
   const paramTenantId = route.params?.tenantId;
   const navigation = useNavigation<Nav>();
-  const { user, studios } = useAuth();
+  const { user, studios, activeTenantId, suspendedStudios } = useAuth();
 
-  const tenantId =
-    (paramTenantId && String(paramTenantId).trim()) ||
-    studios.find((s) => s.status === 'active')?.tenantId ||
-    studios[0]?.tenantId ||
-    '';
+  const rawParam = paramTenantId ? String(paramTenantId).trim() : '';
+  const paramInStudios =
+    !!rawParam && studios.some((s) => s.tenantId === rawParam);
+  const tenantId = (paramInStudios ? rawParam : '') || activeTenantId || '';
+
+  const suspensionReasonForTenant =
+    suspendedStudios.find((s) => s.tenantId === tenantId)?.suspensionReason ??
+    null;
 
   const role = studios.find((s) => s.tenantId === tenantId)?.role;
   const isStaff = role === 'owner' || role === 'assistant';
@@ -358,7 +365,10 @@ export default function TaskListScreen({ route }: { route: Route }) {
     } catch (e: unknown) {
       if (e instanceof ApiError && e.status === 402) {
         setCreateError(
-          'An active studio subscription is required to create tasks. Please renew your plan.'
+          formatSubscriptionBlockedMessage(
+            e.message,
+            suspensionReasonForTenant
+          )
         );
       } else {
         setCreateError(
@@ -402,7 +412,16 @@ export default function TaskListScreen({ route }: { route: Route }) {
       );
       setAssignPickerTask(null);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Could not update assignee.');
+      if (e instanceof ApiError && e.status === 402) {
+        setError(
+          formatSubscriptionBlockedMessage(
+            e.message,
+            suspensionReasonForTenant
+          )
+        );
+      } else {
+        setError(e instanceof Error ? e.message : 'Could not update assignee.');
+      }
     } finally {
       setAssignSaving(false);
     }
