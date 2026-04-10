@@ -519,13 +519,10 @@ export default function DashboardScreen() {
       );
       return;
     }
-    if (!tenantId) {
-      alertMessage('Members', 'Create or join a studio first.');
-      return;
-    }
-    navigation
-      .getParent<NativeStackNavigationProp<AppStackParamList>>()
-      ?.navigate('Members', { tenantId });
+    if (!tenantId) return;
+    const stack =
+      navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
+    stack?.navigate('Members', { tenantId });
   }
 
   function goTasks() {
@@ -960,7 +957,19 @@ export default function DashboardScreen() {
 
       <View style={styles.statsRow}>
         <View style={styles.statCardWrap}>
-          <StatCard label="Members" value={membersVal} accent="clay" />
+          {canManageMembers ? (
+            <TouchableOpacity
+              style={styles.statCardTap}
+              onPress={goMembers}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Open members"
+            >
+              <StatCard label="Members" value={membersVal} accent="clay" />
+            </TouchableOpacity>
+          ) : (
+            <StatCard label="Members" value={membersVal} accent="clay" />
+          )}
         </View>
         <View style={styles.statCardWrap}>
           <StatCard label="Firings" value={firingsVal} accent="moss" />
@@ -1189,16 +1198,6 @@ export default function DashboardScreen() {
             />
           </View>
         ) : null}
-        {currentStudio?.role !== 'assistant' ? (
-          <View style={styles.actionQuarter}>
-            <Button
-              label="Members"
-              variant="secondary"
-              onPress={goMembers}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
         {hasSubscription ? (
           <View style={styles.actionQuarter}>
             <Button
@@ -1283,6 +1282,14 @@ export default function DashboardScreen() {
                 />
               </View>
             ) : null}
+            <View style={styles.actionQuarter}>
+              <Button
+                label="Members"
+                variant="secondary"
+                onPress={goMembers}
+                style={styles.quickActionBtn}
+              />
+            </View>
             <View style={styles.actionQuarter}>
               <Button
                 label="Studio settings"
