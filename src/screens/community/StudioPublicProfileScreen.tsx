@@ -7,6 +7,11 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Linking,
+  Modal,
+  Pressable,
+  TextInput,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import type {
   NativeStackNavigationProp,
@@ -14,10 +19,14 @@ import type {
 } from '@react-navigation/native-stack';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../hooks/useAuth';
-import { apiFetch } from '../../services/api';
+import {
+  apiFetch,
+  postCommunityStudioJoinRequest,
+  ApiError,
+} from '../../services/api';
 import { AvatarImage } from '../../components/AvatarImage';
-import { Divider, Badge } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { Divider, Badge, Button } from '../../components/ui';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudioPublicProfile'>;
@@ -89,14 +98,17 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const stackNav =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { studioSlug, studioName } = route.params;
-  const { studios } = useAuth();
-  const tenantId =
-    (studios.find((s) => s.status === 'active') ?? studios[0])?.tenantId ?? '';
+  const { user, studios } = useAuth();
 
   const [studio, setStudio] = useState<StudioProfile | null>(null);
   const [events, setEvents] = useState<FeedEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
+  const [joinNote, setJoinNote] = useState('');
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinMessage, setJoinMessage] = useState('');
+  const [joinError, setJoinError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -111,10 +123,10 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     }
     try {
       const encoded = encodeURIComponent(slug);
+      /** Community public route: Bearer only, no X-Tenant-ID. */
       const res = await apiFetch<StudioProfile & { logo_url?: string }>(
         `/community/studios/${encoded}`,
-        {},
-        tenantId
+        {}
       );
       setStudio({
         ...res,
@@ -159,7 +171,7 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [studioSlug, tenantId]);
+  }, [studioSlug]);
 
   useFocusEffect(
     useCallback(() => {
@@ -198,6 +210,36 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const shop = studio.shopUrl?.trim();
   const hasLinks = Boolean(ig || web || shop);
 
+  const alreadyMember = studios.some(
+    (s) => s.tenantId === studio.id || s.studioSlug === studio.slug
+  );
+
+  async function submitJoinRequest() {
+    setJoinError('');
+    setJoinBusy(true);
+    try {
+      const res = await postCommunityStudioJoinRequest(studio.slug, {
+        note: joinNote.trim() ? joinNote.trim() : null,
+      });
+      setJoinModalOpen(false);
+      setJoinNote('');
+      setJoinMessage(res.message || 'Your request was sent.');
+    } catch (e: unknown) {
+      let msg = e instanceof Error ? e.message : 'Could not submit join request.';
+      if (e instanceof ApiError) {
+        if (e.status === 403) {
+          msg =
+            'Verify your email address before requesting to join a studio.';
+        } else if (e.status === 404) {
+          msg = 'This studio was not found.';
+        }
+      }
+      setJoinError(msg);
+    } finally {
+      setJoinBusy(false);
+    }
+  }
+
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -231,6 +273,43 @@ export default function StudioPublicProfileScreen({ route }: Props) {
           </View>
         ) : null}
       </View>
+
+      {!alreadyMember ? (
+        <>
+          <Divider />
+          <View style={styles.joinSection}>
+            <Text style={styles.sectionLabel}>Membership</Text>
+            {joinMessage ? (
+              <Text style={styles.joinSuccess}>{joinMessage}</Text>
+            ) : null}
+            {user && !user.emailVerified ? (
+              <Text style={styles.verifyHint}>
+                Verify your email to send a join request.
+              </Text>
+            ) : null}
+            <Button
+              label="Request to join this studio"
+              variant="primary"
+              onPress={() => {
+                setJoinError('');
+                setJoinModalOpen(true);
+              }}
+              disabled={!user?.emailVerified}
+              fullWidth
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <Divider />
+          <View style={styles.joinSection}>
+            <Text style={styles.sectionLabel}>Membership</Text>
+            <Text style={styles.memberHint}>
+              You are already a member of this studio.
+            </Text>
+          </View>
+        </>
+      )}
 
       {events.length > 0 ? (
         <>
@@ -299,6 +378,68 @@ export default function StudioPublicProfileScreen({ route }: Props) {
           </View>
         </>
       ) : null}
+
+      <Modal
+        visible={joinModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!joinBusy) setJoinModalOpen(false);
+        }}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => {
+            if (!joinBusy) setJoinModalOpen(false);
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalKb}
+          >
+            <Pressable
+              style={styles.modalSheet}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Text style={styles.modalTitle}>Join request</Text>
+              <Text style={styles.modalHint}>
+                Optional note to the studio owner (keep it short).
+              </Text>
+              <TextInput
+                style={styles.modalInput}
+                value={joinNote}
+                onChangeText={(t) => {
+                  setJoinNote(t);
+                  setJoinError('');
+                }}
+                placeholder="Why you’d like to join…"
+                placeholderTextColor={colors.inkLight}
+                multiline
+                editable={!joinBusy}
+                maxLength={2000}
+              />
+              {joinError ? (
+                <Text style={styles.joinModalError}>{joinError}</Text>
+              ) : null}
+              <View style={styles.modalRow}>
+                <Button
+                  label="Cancel"
+                  variant="ghost"
+                  onPress={() => {
+                    if (!joinBusy) setJoinModalOpen(false);
+                  }}
+                />
+                <Button
+                  label="Send request"
+                  variant="primary"
+                  loading={joinBusy}
+                  onPress={() => void submitJoinRequest()}
+                />
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }
@@ -419,5 +560,79 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.clay,
     paddingVertical: spacing[1],
+  },
+  joinSection: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[4],
+    gap: spacing[2],
+    backgroundColor: colors.surface,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  verifyHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    lineHeight: 18,
+  },
+  memberHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+  },
+  joinSuccess: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.mossDark,
+    lineHeight: 18,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(30, 26, 22, 0.45)',
+    justifyContent: 'center',
+    padding: spacing[4],
+  },
+  modalKb: { width: '100%', maxWidth: 400, alignSelf: 'center' },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  modalTitle: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.md,
+    color: colors.ink,
+  },
+  modalHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+  },
+  modalInput: {
+    minHeight: 88,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    textAlignVertical: 'top',
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing[2],
+    flexWrap: 'wrap',
+  },
+  joinModalError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.error,
   },
 });

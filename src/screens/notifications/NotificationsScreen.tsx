@@ -20,7 +20,9 @@ type NotifType =
   | 'forum_reply'
   | 'forum_reply_thread'
   | 'new_member'
-  | 'new_event';
+  | 'new_event'
+  | 'studio_join_request'
+  | 'studio_join_request_update';
 
 type Notification = {
   id: string;
@@ -32,6 +34,8 @@ type Notification = {
   body: string;
   refId?: string;
   refType?: string;
+  /** When present (e.g. join-request notifications), used for deep link target studio. */
+  tenantId?: string;
   createdAt?: string;
 };
 
@@ -50,13 +54,17 @@ function NotifIcon({ type }: { type: NotifType }) {
       ? colors.clayLight
       : type === 'new_member'
         ? colors.mossLight
-        : colors.cream;
+        : type === 'studio_join_request' || type === 'studio_join_request_update'
+          ? colors.mossLight
+          : colors.cream;
   const label =
     type === 'forum_reply' || type === 'forum_reply_thread'
       ? '💬'
       : type === 'new_member'
         ? '👤'
-        : '📅';
+        : type === 'studio_join_request' || type === 'studio_join_request_update'
+          ? '🏛'
+          : '📅';
   return (
     <View style={[styles.icon, { backgroundColor: bg }]}>
       <Text style={styles.iconText}>{label}</Text>
@@ -64,17 +72,25 @@ function NotifIcon({ type }: { type: NotifType }) {
   );
 }
 
+const NOTIF_TYPES: NotifType[] = [
+  'forum_reply',
+  'forum_reply_thread',
+  'new_member',
+  'new_event',
+  'studio_join_request',
+  'studio_join_request_update',
+];
+
 function parseNotification(raw: Record<string, unknown>): Notification | null {
   const id = String(raw.id ?? raw._id ?? '').trim();
   if (!id) return null;
-  const type = String(raw.type ?? 'new_event') as NotifType;
+  const typeRaw = String(raw.type ?? 'new_event');
+  const type = NOTIF_TYPES.includes(typeRaw as NotifType)
+    ? (typeRaw as NotifType)
+    : 'new_event';
   return {
     id,
-    type: ['forum_reply', 'forum_reply_thread', 'new_member', 'new_event'].includes(
-      type
-    )
-      ? type
-      : 'new_event',
+    type,
     read: Boolean(raw.read ?? raw.is_read),
     actorName: String(raw.actorName ?? raw.actor_name ?? ''),
     actorAvatarUrl: (() => {
@@ -96,6 +112,12 @@ function parseNotification(raw: Record<string, unknown>): Notification | null {
         : raw.ref_type != null
           ? String(raw.ref_type)
           : undefined,
+    tenantId:
+      raw.tenantId != null
+        ? String(raw.tenantId)
+        : raw.tenant_id != null
+          ? String(raw.tenant_id)
+          : undefined,
     createdAt:
       raw.createdAt != null
         ? String(raw.createdAt)
@@ -108,10 +130,12 @@ function parseNotification(raw: Record<string, unknown>): Notification | null {
 export default function NotificationsScreen() {
   const navigation =
     useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
-  const { studios } = useAuth();
+  const { studios, activeTenantId } = useAuth();
   const currentStudio =
-    studios.find((s) => s.status === 'active') ?? studios[0];
-  const fallbackTenantId = currentStudio?.tenantId ?? '';
+    studios.find((s) => s.tenantId === activeTenantId) ??
+    studios.find((s) => s.status === 'active') ??
+    studios[0];
+  const fallbackTenantId = activeTenantId || currentStudio?.tenantId || '';
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,6 +195,18 @@ export default function NotificationsScreen() {
     }
 
     const rt = (item.refType ?? '').toLowerCase();
+    const isJoinNotif =
+      item.type === 'studio_join_request' ||
+      item.type === 'studio_join_request_update' ||
+      rt === 'studio_join_request' ||
+      rt === 'studio_join_request_update';
+    if (isJoinNotif && (item.tenantId || fallbackTenantId)) {
+      stack?.navigate('StudioJoinRequests', {
+        tenantId: item.tenantId ?? fallbackTenantId,
+        focusRequestId: item.refId,
+      });
+      return;
+    }
     if (rt === 'forum_post' && item.refId) {
       stack?.navigate('ForumPost', { postId: item.refId });
       return;
@@ -229,7 +265,8 @@ export default function NotificationsScreen() {
         <View style={styles.center}>
           <Text style={styles.emptyText}>No notifications yet.</Text>
           <Text style={styles.emptyHint}>
-            You&apos;ll see forum replies, new members and events here.
+            You&apos;ll see forum replies, new members, join requests and events
+            here.
           </Text>
         </View>
       ) : (

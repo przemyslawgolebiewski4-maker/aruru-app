@@ -48,6 +48,8 @@ export type AppStackParamList = {
   SetupPricing: { tenantId: string; studioName: string };
   PricingSettings: { tenantId: string; studioName: string };
   StudioSettings: { tenantId: string; studioName: string };
+  /** Owner: pending / interview_pending join requests from community. */
+  StudioJoinRequests: { tenantId: string; focusRequestId?: string };
   StudioPlan: { tenantId: string };
   StudioFreeTier: { tenantId: string };
   Members: { tenantId: string };

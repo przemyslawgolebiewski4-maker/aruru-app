@@ -766,6 +766,25 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
           </View>
         </View>
 
+        {isOwner ? (
+          <>
+            <View style={styles.sectionGap} />
+            <SectionLabel>Join requests</SectionLabel>
+            <Text style={styles.exportHint}>
+              Review requests from people who want to join via your public studio
+              page in the community directory.
+            </Text>
+            <Button
+              label="Manage join requests"
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate('StudioJoinRequests', { tenantId })
+              }
+              fullWidth
+            />
+          </>
+        ) : null}
+
         {/* ─── Danger zone ─────────────── */}
         <View style={styles.sectionGap} />
         <SectionLabel>Danger zone</SectionLabel>

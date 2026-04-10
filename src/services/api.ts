@@ -623,6 +623,160 @@ export async function inviteMember(
   );
 }
 
+// ─── Community: join studio request (Bearer only, no X-Tenant-ID) ─────────
+
+export type PostCommunityJoinRequestBody = {
+  note?: string | null;
+};
+
+export async function postCommunityStudioJoinRequest(
+  slug: string,
+  body: PostCommunityJoinRequestBody
+): Promise<{ message: string; requestId: string }> {
+  const s = slug.trim();
+  const note =
+    body.note == null || String(body.note).trim() === ''
+      ? null
+      : String(body.note).trim();
+  const res = await apiFetch<Record<string, unknown>>(
+    `/community/studios/${encodeURIComponent(s)}/join-request`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }
+  );
+  return {
+    message: String(res.message ?? ''),
+    requestId: String(res.requestId ?? res.request_id ?? ''),
+  };
+}
+
+// ─── Owner: join requests (X-Tenant-ID required) ──────────────────────────
+
+export type JoinRequestStatus = 'pending' | 'interview_pending';
+
+/** Row from GET /studios/{tenantId}/join-requests (camelCase as in API). */
+export interface JoinRequest {
+  id: string;
+  status: JoinRequestStatus;
+  applicantUserId: string;
+  applicantName: string;
+  applicantEmail: string;
+  note: string | null;
+  createdAt: string;
+  /** Owner message when status moved to interview_pending (if API returns it). */
+  interviewMessage?: string | null;
+}
+
+export function parseJoinRequestRow(
+  raw: Record<string, unknown>
+): JoinRequest | null {
+  const id = String(raw.id ?? raw._id ?? '').trim();
+  if (!id) return null;
+  const st = String(raw.status ?? '').toLowerCase();
+  if (st !== 'pending' && st !== 'interview_pending') return null;
+
+  const noteRaw = raw.note;
+  const note =
+    noteRaw == null || String(noteRaw).trim() === ''
+      ? null
+      : String(noteRaw).trim();
+
+  const im =
+    raw.interviewMessage ??
+    raw.interview_message ??
+    raw.lastOwnerMessage ??
+    raw.last_owner_message;
+  const interviewMessage =
+    im != null && String(im).trim() !== '' ? String(im).trim() : null;
+
+  return {
+    id,
+    status: st as JoinRequestStatus,
+    applicantUserId: String(
+      raw.applicantUserId ??
+        raw.applicant_user_id ??
+        raw.userId ??
+        raw.user_id ??
+        ''
+    ),
+    applicantName: String(
+      raw.applicantName ?? raw.applicant_name ?? raw.name ?? ''
+    ),
+    applicantEmail: String(
+      raw.applicantEmail ?? raw.applicant_email ?? raw.email ?? ''
+    ),
+    note,
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    interviewMessage,
+  };
+}
+
+export async function getStudioJoinRequests(
+  tenantId: string
+): Promise<JoinRequest[]> {
+  const res = await apiFetch<unknown>(
+    `/studios/${tenantId}/join-requests`,
+    {},
+    tenantId
+  );
+  let rows: unknown[] = [];
+  if (Array.isArray(res)) rows = res;
+  else if (res && typeof res === 'object' && Array.isArray((res as { requests?: unknown[] }).requests)) {
+    rows = (res as { requests: unknown[] }).requests;
+  } else if (res && typeof res === 'object' && Array.isArray((res as { joinRequests?: unknown[] }).joinRequests)) {
+    rows = (res as { joinRequests: unknown[] }).joinRequests;
+  }
+  const out: JoinRequest[] = [];
+  for (const item of rows) {
+    if (!item || typeof item !== 'object') continue;
+    const parsed = parseJoinRequestRow(item as Record<string, unknown>);
+    if (parsed) out.push(parsed);
+  }
+  return out;
+}
+
+export async function postJoinRequestAccept(
+  tenantId: string,
+  requestId: string
+): Promise<void> {
+  await apiFetch(
+    `/studios/${tenantId}/join-requests/${encodeURIComponent(requestId)}/accept`,
+    { method: 'POST' },
+    tenantId
+  );
+}
+
+export async function postJoinRequestReject(
+  tenantId: string,
+  requestId: string,
+  message: string
+): Promise<void> {
+  await apiFetch(
+    `/studios/${tenantId}/join-requests/${encodeURIComponent(requestId)}/reject`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message: message.trim() }),
+    },
+    tenantId
+  );
+}
+
+export async function postJoinRequestInterview(
+  tenantId: string,
+  requestId: string,
+  message: string
+): Promise<void> {
+  await apiFetch(
+    `/studios/${tenantId}/join-requests/${encodeURIComponent(requestId)}/interview`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message: message.trim() }),
+    },
+    tenantId
+  );
+}
+
 export async function getPricing(
   tenantId: string
 ): Promise<{
