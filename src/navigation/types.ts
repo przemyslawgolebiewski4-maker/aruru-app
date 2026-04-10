@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 /** Root stack: authenticated app vs auth flows (deep linking). */
 export type RootStackParamList = {
   App: undefined;
@@ -36,7 +38,7 @@ export type MainTabParamList = {
 };
 
 export type AppStackParamList = {
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabParamList> | undefined;
   PaymentSuccess: { type: 'studio' | 'sponsor'; tenantId?: string };
   PaymentCancelled: undefined;
   EditProfile: undefined;
@@ -95,6 +97,8 @@ export type AppStackParamList = {
   ArtistProfile: { userId: string };
   ForumPost: { postId: string };
   StudioPublicProfile: { studioSlug: string; studioName: string };
+  /** Applicant: open join requests (GET /community/me/join-requests). */
+  MyJoinRequests: undefined;
   AdminStudios: undefined;
   AdminSponsors: undefined;
   AdminForum: undefined;

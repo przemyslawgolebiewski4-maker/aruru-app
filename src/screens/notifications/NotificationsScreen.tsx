@@ -11,7 +11,11 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import { useAuth } from '../../hooks/useAuth';
-import { apiFetch } from '../../services/api';
+import {
+  apiFetch,
+  resolveCommunityStudioSlugForTenant,
+} from '../../services/api';
+import { alertMessage } from '../../utils/confirmAction';
 import { Avatar, Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
@@ -36,6 +40,8 @@ type Notification = {
   refType?: string;
   /** When present (e.g. join-request notifications), used for deep link target studio. */
   tenantId?: string;
+  /** Community slug when backend includes it (applicant notifications). */
+  studioSlug?: string;
   createdAt?: string;
 };
 
@@ -118,6 +124,12 @@ function parseNotification(raw: Record<string, unknown>): Notification | null {
         : raw.tenant_id != null
           ? String(raw.tenant_id)
           : undefined,
+    studioSlug:
+      raw.studioSlug != null
+        ? String(raw.studioSlug)
+        : raw.studio_slug != null
+          ? String(raw.studio_slug)
+          : undefined,
     createdAt:
       raw.createdAt != null
         ? String(raw.createdAt)
@@ -195,16 +207,49 @@ export default function NotificationsScreen() {
     }
 
     const rt = (item.refType ?? '').toLowerCase();
-    const isJoinNotif =
+
+    if (
       item.type === 'studio_join_request' ||
+      rt === 'studio_join_request'
+    ) {
+      const tid = item.tenantId ?? fallbackTenantId;
+      if (tid) {
+        stack?.navigate('StudioJoinRequests', {
+          tenantId: tid,
+          focusRequestId: item.refId,
+        });
+      }
+      return;
+    }
+
+    if (
       item.type === 'studio_join_request_update' ||
-      rt === 'studio_join_request' ||
-      rt === 'studio_join_request_update';
-    if (isJoinNotif && (item.tenantId || fallbackTenantId)) {
-      stack?.navigate('StudioJoinRequests', {
-        tenantId: item.tenantId ?? fallbackTenantId,
-        focusRequestId: item.refId,
-      });
+      rt === 'studio_join_request_update'
+    ) {
+      void (async () => {
+        let slug = item.studioSlug?.trim();
+        if (!slug && item.tenantId) {
+          slug =
+            (await resolveCommunityStudioSlugForTenant(item.tenantId)) ??
+            undefined;
+        }
+        if (!slug && !item.tenantId && fallbackTenantId) {
+          slug =
+            (await resolveCommunityStudioSlugForTenant(fallbackTenantId)) ??
+            undefined;
+        }
+        if (slug) {
+          stack?.navigate('StudioPublicProfile', {
+            studioSlug: slug,
+            studioName: '',
+          });
+          return;
+        }
+        alertMessage(
+          String(item.title ?? '').trim() || 'Studio',
+          String(item.body ?? '').trim() || 'No further details.'
+        );
+      })();
       return;
     }
     if (rt === 'forum_post' && item.refId) {

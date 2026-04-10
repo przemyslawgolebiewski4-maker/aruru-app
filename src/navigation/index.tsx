@@ -57,6 +57,7 @@ import AssistantsOverviewScreen from '../screens/assistant/AssistantsOverviewScr
 import ArtistProfileScreen from '../screens/community/ArtistProfileScreen';
 import ForumPostScreen from '../screens/community/ForumPostScreen';
 import StudioPublicProfileScreen from '../screens/community/StudioPublicProfileScreen';
+import MyJoinRequestsScreen from '../screens/community/MyJoinRequestsScreen';
 import AdminStudiosScreen from '../screens/admin/AdminStudiosScreen';
 import AdminSponsorsScreen from '../screens/admin/AdminSponsorsScreen';
 import AdminForumScreen from '../screens/admin/AdminForumScreen';
@@ -266,6 +267,15 @@ function AppNavigator() {
           headerShown: true,
           title: route.params.studioName || 'Studio',
         })}
+      />
+      <AppStack.Screen
+        name="MyJoinRequests"
+        component={MyJoinRequestsScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'My join requests',
+        }}
       />
       <AppStack.Screen
         name="EditProfile"

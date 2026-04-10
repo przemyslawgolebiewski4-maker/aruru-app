@@ -23,6 +23,8 @@ import {
   apiFetch,
   postCommunityStudioJoinRequest,
   ApiError,
+  parseCommunityStudioJoinFields,
+  type CommunityStudioJoinFields,
 } from '../../services/api';
 import { AvatarImage } from '../../components/AvatarImage';
 import { Divider, Badge, Button } from '../../components/ui';
@@ -56,7 +58,7 @@ type StudioProfile = {
   websiteUrl?: string;
   shopUrl?: string;
   upcomingEvents: FeedEvent[];
-};
+} & CommunityStudioJoinFields;
 
 function kindLabel(kind: string): string {
   switch (kind) {
@@ -98,7 +100,7 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const stackNav =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { studioSlug, studioName } = route.params;
-  const { user, studios } = useAuth();
+  const { user, switchStudio } = useAuth();
 
   const [studio, setStudio] = useState<StudioProfile | null>(null);
   const [events, setEvents] = useState<FeedEvent[]>([]);
@@ -107,7 +109,6 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [joinNote, setJoinNote] = useState('');
   const [joinBusy, setJoinBusy] = useState(false);
-  const [joinMessage, setJoinMessage] = useState('');
   const [joinError, setJoinError] = useState('');
 
   const load = useCallback(async () => {
@@ -124,46 +125,83 @@ export default function StudioPublicProfileScreen({ route }: Props) {
     try {
       const encoded = encodeURIComponent(slug);
       /** Community public route: Bearer only, no X-Tenant-ID. */
-      const res = await apiFetch<StudioProfile & { logo_url?: string }>(
+      const res = await apiFetch<Record<string, unknown>>(
         `/community/studios/${encoded}`,
         {}
       );
-      setStudio({
-        ...res,
-        logoUrl: res.logoUrl ?? res.logo_url,
+      const join = parseCommunityStudioJoinFields(res);
+      const rawEvents = (res.upcomingEvents ?? res.upcoming_events ?? []) as unknown[];
+      const mappedEvents: FeedEvent[] = rawEvents.map((row) => {
+        const e = row as Record<string, unknown>;
+        return {
+          id: String(e.id ?? ''),
+          title: String(e.title ?? ''),
+          kind: String(e.kind ?? ''),
+          startsAt:
+            e.startsAt != null
+              ? String(e.startsAt)
+              : e.starts_at != null
+                ? String(e.starts_at)
+                : undefined,
+          endsAt:
+            e.endsAt != null
+              ? String(e.endsAt)
+              : e.ends_at != null
+                ? String(e.ends_at)
+                : undefined,
+          location: e.location != null ? String(e.location) : undefined,
+          maxParticipants:
+            e.maxParticipants != null
+              ? Number(e.maxParticipants)
+              : e.max_participants != null
+                ? Number(e.max_participants)
+                : undefined,
+          description:
+            e.description != null ? String(e.description) : undefined,
+        };
       });
-      const rawEvents = res.upcomingEvents ?? [];
-      setEvents(
-        rawEvents.map((row) => {
-          const e = row as Record<string, unknown>;
-          return {
-            id: String(e.id ?? ''),
-            title: String(e.title ?? ''),
-            kind: String(e.kind ?? ''),
-            startsAt:
-              e.startsAt != null
-                ? String(e.startsAt)
-                : e.starts_at != null
-                  ? String(e.starts_at)
-                  : undefined,
-            endsAt:
-              e.endsAt != null
-                ? String(e.endsAt)
-                : e.ends_at != null
-                  ? String(e.ends_at)
-                  : undefined,
-            location: e.location != null ? String(e.location) : undefined,
-            maxParticipants:
-              e.maxParticipants != null
-                ? Number(e.maxParticipants)
-                : e.max_participants != null
-                  ? Number(e.max_participants)
-                  : undefined,
-            description:
-              e.description != null ? String(e.description) : undefined,
-          };
-        })
-      );
+      setStudio({
+        id: String(res.id ?? ''),
+        name: String(res.name ?? ''),
+        slug: String(res.slug ?? slug),
+        city: String(res.city ?? ''),
+        country: String(res.country ?? ''),
+        publicDescription:
+          res.publicDescription != null
+            ? String(res.publicDescription)
+            : res.public_description != null
+              ? String(res.public_description)
+              : undefined,
+        tags: Array.isArray(res.tags)
+          ? (res.tags as unknown[]).map((t) => String(t))
+          : [],
+        memberCount: Number(res.memberCount ?? res.member_count ?? 0) || 0,
+        logoUrl:
+          (res.logoUrl ?? res.logo_url) != null
+            ? String(res.logoUrl ?? res.logo_url)
+            : undefined,
+        instagramUrl:
+          res.instagramUrl != null
+            ? String(res.instagramUrl)
+            : res.instagram_url != null
+              ? String(res.instagram_url)
+              : undefined,
+        websiteUrl:
+          res.websiteUrl != null
+            ? String(res.websiteUrl)
+            : res.website_url != null
+              ? String(res.website_url)
+              : undefined,
+        shopUrl:
+          res.shopUrl != null
+            ? String(res.shopUrl)
+            : res.shop_url != null
+              ? String(res.shop_url)
+              : undefined,
+        upcomingEvents: mappedEvents,
+        ...join,
+      });
+      setEvents(mappedEvents);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load studio.');
       setStudio(null);
@@ -210,20 +248,16 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const shop = studio.shopUrl?.trim();
   const hasLinks = Boolean(ig || web || shop);
 
-  const alreadyMember = studios.some(
-    (s) => s.tenantId === studio.id || s.studioSlug === studio.slug
-  );
-
   async function submitJoinRequest() {
     setJoinError('');
     setJoinBusy(true);
     try {
-      const res = await postCommunityStudioJoinRequest(studio.slug, {
+      await postCommunityStudioJoinRequest(studio.slug, {
         note: joinNote.trim() ? joinNote.trim() : null,
       });
       setJoinModalOpen(false);
       setJoinNote('');
-      setJoinMessage(res.message || 'Your request was sent.');
+      await load();
     } catch (e: unknown) {
       let msg = e instanceof Error ? e.message : 'Could not submit join request.';
       if (e instanceof ApiError) {
@@ -274,42 +308,71 @@ export default function StudioPublicProfileScreen({ route }: Props) {
         ) : null}
       </View>
 
-      {!alreadyMember ? (
+      {user ? (
         <>
           <Divider />
           <View style={styles.joinSection}>
             <Text style={styles.sectionLabel}>Membership</Text>
-            {joinMessage ? (
-              <Text style={styles.joinSuccess}>{joinMessage}</Text>
-            ) : null}
-            {user && !user.emailVerified ? (
+            {studio.belongsToStudio ? (
+              <>
+                <Text style={styles.memberHint}>
+                  You are a member of this studio.
+                </Text>
+                <Button
+                  label="Go to studio dashboard"
+                  variant="primary"
+                  fullWidth
+                  onPress={() => {
+                    switchStudio(studio.id);
+                    stackNav.navigate('Main', { screen: 'Studio' });
+                  }}
+                />
+              </>
+            ) : studio.joinRequestStatus === 'pending' ? (
+              <>
+                <Text style={styles.statusHint}>
+                  Your join request is pending review.
+                </Text>
+                {studio.ownerMessage ? (
+                  <Text style={styles.ownerMsg}>{studio.ownerMessage}</Text>
+                ) : null}
+              </>
+            ) : studio.joinRequestStatus === 'interview_pending' ? (
+              <>
+                <Text style={styles.statusHint}>
+                  The owner is following up (interview or message).
+                </Text>
+                {studio.ownerMessage ? (
+                  <Text style={styles.ownerMsg}>{studio.ownerMessage}</Text>
+                ) : null}
+              </>
+            ) : studio.canRequestJoin ? (
+              <Button
+                label="Request to join this studio"
+                variant="primary"
+                onPress={() => {
+                  setJoinError('');
+                  setJoinModalOpen(true);
+                }}
+                fullWidth
+              />
+            ) : studio.joinRequestBlockedReason ===
+              'email_verification_required' ? (
               <Text style={styles.verifyHint}>
-                Verify your email to send a join request.
+                Verify your email address to request joining this studio.
+              </Text>
+            ) : studio.joinRequestBlockedReason === 'pending_request' ? (
+              <Text style={styles.memberHint}>
+                You already have a pending join request for this studio.
+              </Text>
+            ) : studio.joinRequestBlockedReason === 'already_member' ? (
+              <Text style={styles.memberHint}>
+                You are already associated with this studio.
               </Text>
             ) : null}
-            <Button
-              label="Request to join this studio"
-              variant="primary"
-              onPress={() => {
-                setJoinError('');
-                setJoinModalOpen(true);
-              }}
-              disabled={!user?.emailVerified}
-              fullWidth
-            />
           </View>
         </>
-      ) : (
-        <>
-          <Divider />
-          <View style={styles.joinSection}>
-            <Text style={styles.sectionLabel}>Membership</Text>
-            <Text style={styles.memberHint}>
-              You are already a member of this studio.
-            </Text>
-          </View>
-        </>
-      )}
+      ) : null}
 
       {events.length > 0 ? (
         <>
@@ -581,11 +644,18 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 20,
   },
-  joinSuccess: {
+  statusHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    lineHeight: 20,
+  },
+  ownerMsg: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
-    color: colors.mossDark,
+    color: colors.inkLight,
     lineHeight: 18,
+    marginTop: spacing[1],
   },
   modalBackdrop: {
     flex: 1,

@@ -623,6 +623,141 @@ export async function inviteMember(
   );
 }
 
+// ─── Community: studio profile join flags + my join requests (no X-Tenant-ID) ─
+
+export type JoinRequestBlockedReason =
+  | 'already_member'
+  | 'pending_request'
+  | 'email_verification_required';
+
+export type CommunityJoinRequestStatus = 'pending' | 'interview_pending';
+
+/** Join-related fields on GET /community/studios/{slug} (logged-in user). */
+export type CommunityStudioJoinFields = {
+  canRequestJoin: boolean;
+  belongsToStudio: boolean;
+  joinRequestStatus: CommunityJoinRequestStatus | null;
+  joinRequestBlockedReason: JoinRequestBlockedReason | null;
+  ownerMessage: string | null;
+};
+
+export function parseCommunityStudioJoinFields(
+  raw: Record<string, unknown>
+): CommunityStudioJoinFields {
+  const jrStatusRaw = raw.joinRequestStatus ?? raw.join_request_status;
+  let joinRequestStatus: CommunityJoinRequestStatus | null = null;
+  if (jrStatusRaw != null && String(jrStatusRaw).trim() !== '') {
+    const s = String(jrStatusRaw).toLowerCase();
+    if (s === 'pending' || s === 'interview_pending') {
+      joinRequestStatus = s as CommunityJoinRequestStatus;
+    }
+  }
+  const blockedRaw =
+    raw.joinRequestBlockedReason ?? raw.join_request_blocked_reason;
+  let joinRequestBlockedReason: JoinRequestBlockedReason | null = null;
+  if (blockedRaw != null && String(blockedRaw).trim() !== '') {
+    const b = String(blockedRaw) as JoinRequestBlockedReason;
+    if (
+      b === 'already_member' ||
+      b === 'pending_request' ||
+      b === 'email_verification_required'
+    ) {
+      joinRequestBlockedReason = b;
+    }
+  }
+  const om = raw.ownerMessage ?? raw.owner_message;
+  const ownerMessage =
+    om != null && String(om).trim() !== '' ? String(om).trim() : null;
+
+  return {
+    canRequestJoin: Boolean(raw.canRequestJoin ?? raw.can_request_join),
+    belongsToStudio: Boolean(raw.belongsToStudio ?? raw.belongs_to_studio),
+    joinRequestStatus,
+    joinRequestBlockedReason,
+    ownerMessage,
+  };
+}
+
+/** Applicant’s open requests from GET /community/me/join-requests. */
+export interface MyCommunityJoinRequest {
+  id: string;
+  tenantId: string;
+  studioName: string;
+  studioSlug: string;
+  logoUrl: string | null;
+  status: CommunityJoinRequestStatus;
+  note: string | null;
+  ownerMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function parseMyCommunityJoinRequestRow(
+  raw: Record<string, unknown>
+): MyCommunityJoinRequest | null {
+  const id = String(raw.id ?? raw._id ?? '').trim();
+  if (!id) return null;
+  const st = String(raw.status ?? '').toLowerCase();
+  if (st !== 'pending' && st !== 'interview_pending') return null;
+  const logoRaw = raw.logoUrl ?? raw.logo_url;
+  const logoUrl =
+    logoRaw != null && String(logoRaw).trim() !== ''
+      ? String(logoRaw)
+      : null;
+  const om = raw.ownerMessage ?? raw.owner_message;
+  const ownerMessage =
+    om != null && String(om).trim() !== '' ? String(om).trim() : null;
+  const noteRaw = raw.note;
+  const note =
+    noteRaw == null || String(noteRaw).trim() === ''
+      ? null
+      : String(noteRaw).trim();
+  return {
+    id,
+    tenantId: String(raw.tenantId ?? raw.tenant_id ?? ''),
+    studioName: String(raw.studioName ?? raw.studio_name ?? ''),
+    studioSlug: String(raw.studioSlug ?? raw.studio_slug ?? ''),
+    logoUrl,
+    status: st as CommunityJoinRequestStatus,
+    note,
+    ownerMessage,
+    createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    updatedAt: String(raw.updatedAt ?? raw.updated_at ?? ''),
+  };
+}
+
+export async function getCommunityMyJoinRequests(): Promise<
+  MyCommunityJoinRequest[]
+> {
+  const res = await apiFetch<{ requests?: unknown[] }>(
+    '/community/me/join-requests',
+    {}
+  );
+  const rows = Array.isArray(res.requests) ? res.requests : [];
+  const out: MyCommunityJoinRequest[] = [];
+  for (const item of rows) {
+    if (!item || typeof item !== 'object') continue;
+    const p = parseMyCommunityJoinRequestRow(item as Record<string, unknown>);
+    if (p) out.push(p);
+  }
+  return out;
+}
+
+/** Resolve public studio slug for a tenant (e.g. notification tap) via my join requests cache. */
+export async function resolveCommunityStudioSlugForTenant(
+  tenantId: string
+): Promise<string | null> {
+  const tid = tenantId.trim();
+  if (!tid) return null;
+  try {
+    const list = await getCommunityMyJoinRequests();
+    const hit = list.find((r) => r.tenantId === tid);
+    return hit?.studioSlug?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Community: join studio request (Bearer only, no X-Tenant-ID) ─────────
 
 export type PostCommunityJoinRequestBody = {
@@ -664,7 +799,8 @@ export interface JoinRequest {
   applicantEmail: string;
   note: string | null;
   createdAt: string;
-  /** Owner message when status moved to interview_pending (if API returns it). */
+  /** Owner message (interview / update); API may use ownerMessage or interviewMessage. */
+  ownerMessage?: string | null;
   interviewMessage?: string | null;
 }
 
@@ -682,13 +818,17 @@ export function parseJoinRequestRow(
       ? null
       : String(noteRaw).trim();
 
-  const im =
+  const omRaw =
+    raw.ownerMessage ??
+    raw.owner_message ??
     raw.interviewMessage ??
     raw.interview_message ??
     raw.lastOwnerMessage ??
     raw.last_owner_message;
-  const interviewMessage =
-    im != null && String(im).trim() !== '' ? String(im).trim() : null;
+  const ownerMessage =
+    omRaw != null && String(omRaw).trim() !== ''
+      ? String(omRaw).trim()
+      : null;
 
   return {
     id,
@@ -708,7 +848,8 @@ export function parseJoinRequestRow(
     ),
     note,
     createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
-    interviewMessage,
+    ownerMessage,
+    interviewMessage: ownerMessage,
   };
 }
 

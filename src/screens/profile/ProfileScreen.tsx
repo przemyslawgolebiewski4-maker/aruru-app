@@ -234,6 +234,17 @@ export default function ProfileScreen() {
           style={styles.sectionBtn}
         />
       )}
+      {!isSponsor && user ? (
+        <Button
+          label="My join requests"
+          variant="ghost"
+          onPress={() =>
+            stackNav?.navigate('MyJoinRequests')
+          }
+          fullWidth
+          style={styles.sectionBtn}
+        />
+      ) : null}
 
       {suspendedStudios.length > 0 ? (
         <>

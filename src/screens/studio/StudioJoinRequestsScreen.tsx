@@ -212,10 +212,10 @@ export default function StudioJoinRequestsScreen({
                     {req.note}
                   </Text>
                 ) : null}
-                {req.interviewMessage ? (
+                {req.ownerMessage || req.interviewMessage ? (
                   <Text style={styles.note}>
-                    <Text style={styles.noteLabel}>Your last message: </Text>
-                    {req.interviewMessage}
+                    <Text style={styles.noteLabel}>Owner message: </Text>
+                    {req.ownerMessage ?? req.interviewMessage}
                   </Text>
                 ) : null}
                 <View style={styles.actions}>
