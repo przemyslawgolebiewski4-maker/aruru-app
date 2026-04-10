@@ -46,6 +46,16 @@ function formatDate(iso: string): string {
   }
 }
 
+/** Member role: hide section when key is explicitly false in /auth/me map. */
+function memberSectionVisible(
+  visibility: Record<string, boolean> | null | undefined,
+  key: string
+): boolean {
+  if (visibility == null || typeof visibility !== 'object') return true;
+  if (!Object.prototype.hasOwnProperty.call(visibility, key)) return true;
+  return visibility[key] !== false;
+}
+
 export default function MemberDashboardScreen() {
   const { user, studios, activeTenantId, suspendedStudios } = useAuth();
   const navigation = useNavigation<Nav>();
@@ -60,6 +70,28 @@ export default function MemberDashboardScreen() {
     currentStudio?.subscriptionStatus === 'active' ||
     currentStudio?.subscriptionStatus === 'trial';
 
+  const isMemberRole = currentStudio?.role === 'member';
+  const memberVis = currentStudio?.memberDashboardVisibility ?? null;
+  const showEvents =
+    !isMemberRole || memberSectionVisible(memberVis, 'events');
+  const showBookings =
+    !isMemberRole || memberSectionVisible(memberVis, 'bookings');
+  const showMaterials =
+    !isMemberRole || memberSectionVisible(memberVis, 'materials');
+  const showPrivateKilnSection =
+    !isMemberRole ||
+    memberSectionVisible(memberVis, 'privateKilns') ||
+    memberSectionVisible(memberVis, 'kiln');
+  const showCosts =
+    !isMemberRole || memberSectionVisible(memberVis, 'costs');
+  const showEventsBlock = showEvents || showBookings;
+  const anyQuickAction =
+    showBookings ||
+    (studioSubscriptionActive && showMaterials) ||
+    (studioSubscriptionActive && showPrivateKilnSection) ||
+    showEvents ||
+    (studioSubscriptionActive && showCosts);
+
   const [events, setEvents] = useState<Event[]>([]);
   const [todayBookings, setTodayBookings] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -72,13 +104,21 @@ export default function MemberDashboardScreen() {
     setLoading(true);
     setTodayBookings(0);
     try {
+      const needEvents =
+        !isMemberRole || memberSectionVisible(memberVis, 'events');
+      const needBookings =
+        !isMemberRole || memberSectionVisible(memberVis, 'bookings');
       const [eventsRes, bookingsRes] = await Promise.allSettled([
-        apiFetch<unknown>(`/studios/${tenantId}/events`, {}, tenantId),
-        apiFetch<unknown>(`/studios/${tenantId}/bookings`, {}, tenantId),
+        needEvents
+          ? apiFetch<unknown>(`/studios/${tenantId}/events`, {}, tenantId)
+          : Promise.resolve(null),
+        needBookings
+          ? apiFetch<unknown>(`/studios/${tenantId}/bookings`, {}, tenantId)
+          : Promise.resolve(null),
       ]);
 
-      if (bookingsRes.status === 'fulfilled') {
-        const raw = bookingsRes.value;
+      if (bookingsRes.status === 'fulfilled' && bookingsRes.value != null) {
+        const raw = bookingsRes.value as unknown;
         const all = Array.isArray(raw)
           ? raw
           : ((raw as { bookings?: unknown[] }).bookings ?? []);
@@ -91,7 +131,7 @@ export default function MemberDashboardScreen() {
         setTodayBookings(count);
       }
 
-      if (eventsRes.status === 'fulfilled') {
+      if (eventsRes.status === 'fulfilled' && eventsRes.value != null) {
         const all = Array.isArray(eventsRes.value)
           ? (eventsRes.value as Event[])
           : (((eventsRes.value as Record<string, unknown>)?.events as
@@ -105,7 +145,7 @@ export default function MemberDashboardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, user?.id]);
+  }, [tenantId, user?.id, isMemberRole, memberVis]);
 
   useFocusEffect(useCallback(() => void load(), [load]));
 
@@ -182,79 +222,97 @@ export default function MemberDashboardScreen() {
         <Badge label="Member" variant="moss" />
       </View>
 
-      <Divider />
+      {showEventsBlock ? (
+        <>
+          <Divider />
+          <SectionLabel>
+            {showEvents && showBookings
+              ? 'UPCOMING EVENTS & BOOKINGS'
+              : showEvents
+                ? 'UPCOMING EVENTS'
+                : 'BOOKINGS'}
+          </SectionLabel>
 
-      <SectionLabel>UPCOMING EVENTS & BOOKINGS</SectionLabel>
-
-      {todayBookings > 0 ? (
-        <View style={styles.bookingsTodayRow}>
-          <Text style={styles.bookingsTodayText}>
-            {todayBookings}{' '}
-            {todayBookings === 1 ? 'member has' : 'members have'} booked studio
-            time today
-          </Text>
-        </View>
-      ) : null}
-
-      {events.length === 0 ? (
-        <Text style={styles.empty}>No upcoming events.</Text>
-      ) : (
-        events.map((e) => (
-          <View key={e.id} style={styles.row}>
-            <View style={styles.rowMain}>
-              <Text style={styles.rowTitle}>{e.title}</Text>
-              <Text style={styles.rowMeta}>
-                {formatDate(e.starts_at ?? e.startsAt ?? '')}
+          {showBookings && todayBookings > 0 ? (
+            <View style={styles.bookingsTodayRow}>
+              <Text style={styles.bookingsTodayText}>
+                {todayBookings}{' '}
+                {todayBookings === 1 ? 'member has' : 'members have'} booked
+                studio time today
               </Text>
             </View>
+          ) : null}
+
+          {showEvents ? (
+            events.length === 0 ? (
+              <Text style={styles.empty}>No upcoming events.</Text>
+            ) : (
+              events.map((e) => (
+                <View key={e.id} style={styles.row}>
+                  <View style={styles.rowMain}>
+                    <Text style={styles.rowTitle}>{e.title}</Text>
+                    <Text style={styles.rowMeta}>
+                      {formatDate(e.starts_at ?? e.startsAt ?? '')}
+                    </Text>
+                  </View>
+                </View>
+              ))
+            )
+          ) : null}
+        </>
+      ) : null}
+
+      {anyQuickAction ? (
+        <>
+          <Divider />
+          <View style={styles.actions}>
+            {showBookings ? (
+              <Button
+                label="Book studio time"
+                variant="secondary"
+                onPress={goBookStudio}
+                style={styles.actionBtn}
+              />
+            ) : null}
+            {studioSubscriptionActive && showMaterials ? (
+              <Button
+                label="Buy materials"
+                variant="secondary"
+                onPress={goShop}
+                style={styles.actionBtn}
+              />
+            ) : null}
+            {studioSubscriptionActive && showPrivateKilnSection ? (
+              <Button
+                label="Private kiln"
+                variant="secondary"
+                onPress={() =>
+                  tenantId
+                    ? stackNav?.navigate('PrivateKiln', { tenantId })
+                    : undefined
+                }
+                style={styles.actionBtn}
+              />
+            ) : null}
+            {showEvents ? (
+              <Button
+                label="Events"
+                variant="secondary"
+                onPress={goEvents}
+                style={styles.actionBtn}
+              />
+            ) : null}
+            {studioSubscriptionActive && showCosts ? (
+              <Button
+                label="My costs"
+                variant="secondary"
+                onPress={goCosts}
+                style={styles.actionBtn}
+              />
+            ) : null}
           </View>
-        ))
-      )}
-
-      <Divider />
-
-      <View style={styles.actions}>
-        <Button
-          label="Book studio time"
-          variant="secondary"
-          onPress={goBookStudio}
-          style={styles.actionBtn}
-        />
-        {studioSubscriptionActive ? (
-          <Button
-            label="Buy materials"
-            variant="secondary"
-            onPress={goShop}
-            style={styles.actionBtn}
-          />
-        ) : null}
-        {studioSubscriptionActive ? (
-          <Button
-            label="Private kiln"
-            variant="secondary"
-            onPress={() =>
-              tenantId
-                ? stackNav?.navigate('PrivateKiln', { tenantId })
-                : undefined
-            }
-            style={styles.actionBtn}
-          />
-        ) : null}
-        <Button
-          label="Events"
-          variant="secondary"
-          onPress={goEvents}
-          style={styles.actionBtn}
-        />
-        {studioSubscriptionActive ? (
-          <Button
-            label="My costs"
-            variant="secondary"
-            onPress={goCosts}
-            style={styles.actionBtn}
-          />
-        ) : null}
-      </View>
+        </>
+      ) : null}
       {!studioSubscriptionActive ? (
         <Text style={styles.noSubHint}>
           Costs, kiln history and materials are available when your studio

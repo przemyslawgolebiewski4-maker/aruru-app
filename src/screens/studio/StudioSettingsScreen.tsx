@@ -782,6 +782,15 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
               }
               fullWidth
             />
+            <Button
+              label="Member dashboard visibility"
+              variant="secondary"
+              onPress={() =>
+                navigation.navigate('MemberDashboardSettings', { tenantId })
+              }
+              fullWidth
+              style={styles.joinRequestsBelowBtn}
+            />
           </>
         ) : null}
 
@@ -865,6 +874,7 @@ const styles = StyleSheet.create({
     marginTop: spacing[3],
   },
   saveBtn: { marginTop: spacing[4] },
+  joinRequestsBelowBtn: { marginTop: spacing[3] },
   subscriptionBtn: { marginTop: spacing[2] },
   exportWrap: {
     marginTop: spacing[4],

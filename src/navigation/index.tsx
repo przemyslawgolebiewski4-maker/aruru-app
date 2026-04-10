@@ -34,6 +34,7 @@ import InviteFirstMemberScreen from '../screens/studio/InviteFirstMemberScreen';
 import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import PricingSettingsScreen from '../screens/studio/PricingSettingsScreen';
 import StudioSettingsScreen from '../screens/studio/StudioSettingsScreen';
+import MemberDashboardSettingsScreen from '../screens/studio/MemberDashboardSettingsScreen';
 import StudioJoinRequestsScreen from '../screens/studio/StudioJoinRequestsScreen';
 import MembersScreen from '../screens/members/MembersScreen';
 import InviteMemberScreen from '../screens/members/InviteMemberScreen';
@@ -401,6 +402,16 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Studio settings',
+          headerBackTitle: 'Studio',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="MemberDashboardSettings"
+        component={MemberDashboardSettingsScreen}
+        options={{
+          headerShown: true,
+          title: 'Member dashboard visibility',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
         }}

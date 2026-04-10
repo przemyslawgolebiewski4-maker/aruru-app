@@ -26,7 +26,8 @@ type NotifType =
   | 'new_member'
   | 'new_event'
   | 'studio_join_request'
-  | 'studio_join_request_update';
+  | 'studio_join_request_update'
+  | 'studio_join_email_intent';
 
 type Notification = {
   id: string;
@@ -60,7 +61,9 @@ function NotifIcon({ type }: { type: NotifType }) {
       ? colors.clayLight
       : type === 'new_member'
         ? colors.mossLight
-        : type === 'studio_join_request' || type === 'studio_join_request_update'
+        : type === 'studio_join_request' ||
+            type === 'studio_join_request_update' ||
+            type === 'studio_join_email_intent'
           ? colors.mossLight
           : colors.cream;
   const label =
@@ -68,9 +71,12 @@ function NotifIcon({ type }: { type: NotifType }) {
       ? '💬'
       : type === 'new_member'
         ? '👤'
-        : type === 'studio_join_request' || type === 'studio_join_request_update'
+        : type === 'studio_join_request' ||
+            type === 'studio_join_request_update'
           ? '🏛'
-          : '📅';
+          : type === 'studio_join_email_intent'
+            ? '✉️'
+            : '📅';
   return (
     <View style={[styles.icon, { backgroundColor: bg }]}>
       <Text style={styles.iconText}>{label}</Text>
@@ -85,6 +91,7 @@ const NOTIF_TYPES: NotifType[] = [
   'new_event',
   'studio_join_request',
   'studio_join_request_update',
+  'studio_join_email_intent',
 ];
 
 function parseNotification(raw: Record<string, unknown>): Notification | null {
@@ -223,6 +230,26 @@ export default function NotificationsScreen() {
     }
 
     if (
+      item.type === 'studio_join_email_intent' ||
+      rt === 'studio_join_email_intent'
+    ) {
+      const tid = item.tenantId ?? fallbackTenantId;
+      if (tid && item.refId) {
+        stack?.navigate('MemberProfile', {
+          tenantId: tid,
+          userId: item.refId,
+          memberName: item.actorName?.trim() || 'Member',
+          memberEmail: '',
+          role: 'member',
+          status: 'active',
+        });
+      } else if (tid) {
+        stack?.navigate('Members', { tenantId: tid });
+      }
+      return;
+    }
+
+    if (
       item.type === 'studio_join_request_update' ||
       rt === 'studio_join_request_update'
     ) {
@@ -310,8 +337,8 @@ export default function NotificationsScreen() {
         <View style={styles.center}>
           <Text style={styles.emptyText}>No notifications yet.</Text>
           <Text style={styles.emptyHint}>
-            You&apos;ll see forum replies, new members, join requests and events
-            here.
+            You&apos;ll see forum replies, new members, join requests, e-mail
+            intents and events here.
           </Text>
         </View>
       ) : (

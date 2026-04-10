@@ -163,6 +163,11 @@ export interface StudioMembership {
   currency: string;
   /** From tenant.suspension_reason; usually null in `studios`, set in `suspendedStudios`. */
   suspensionReason: string | null;
+  /**
+   * GET /auth/me — which member-dashboard sections are visible for role === member.
+   * Omitted or null = treat as all visible (backwards compatible).
+   */
+  memberDashboardVisibility?: Record<string, boolean> | null;
 }
 
 /** PATCH /admin/studios/{studioId} (optional fields — send only what changes). */
@@ -260,6 +265,17 @@ export function mapStudioMembershipFromMeRow(
       ? roleStr
       : 'member';
 
+  const visRaw =
+    row.memberDashboardVisibility ?? row.member_dashboard_visibility;
+  let memberDashboardVisibility: Record<string, boolean> | null | undefined;
+  if (visRaw != null && typeof visRaw === 'object' && !Array.isArray(visRaw)) {
+    const o: Record<string, boolean> = {};
+    for (const [k, v] of Object.entries(visRaw as Record<string, unknown>)) {
+      if (typeof v === 'boolean') o[k] = v;
+    }
+    memberDashboardVisibility = Object.keys(o).length > 0 ? o : null;
+  }
+
   return {
     tenantId: String(row.tenantId ?? row.tenant_id ?? ''),
     studioName: String(row.studioName ?? row.studio_name ?? ''),
@@ -272,6 +288,7 @@ export function mapStudioMembershipFromMeRow(
     trialEndsAt,
     currency,
     suspensionReason,
+    memberDashboardVisibility,
   };
 }
 
@@ -623,6 +640,52 @@ export async function inviteMember(
   );
 }
 
+/** Owner: GET/PATCH member dashboard section visibility (X-Tenant-ID). */
+export type MemberDashboardSettingsPayload = {
+  sectionKeys: string[];
+  visibility: Record<string, boolean>;
+};
+
+function parseMemberDashboardSettingsPayload(
+  raw: Record<string, unknown>
+): MemberDashboardSettingsPayload {
+  const keysRaw = raw.sectionKeys ?? raw.section_keys;
+  const sectionKeys = Array.isArray(keysRaw)
+    ? keysRaw.map((k) => String(k)).filter(Boolean)
+    : [];
+  const visRaw = raw.visibility;
+  const visibility: Record<string, boolean> = {};
+  if (visRaw && typeof visRaw === 'object' && !Array.isArray(visRaw)) {
+    for (const [k, v] of Object.entries(visRaw as Record<string, unknown>)) {
+      if (typeof v === 'boolean') visibility[k] = v;
+    }
+  }
+  return { sectionKeys, visibility };
+}
+
+export async function getMemberDashboardSettings(
+  tenantId: string
+): Promise<MemberDashboardSettingsPayload> {
+  const res = await apiFetch<Record<string, unknown>>(
+    `/studios/${tenantId}/member-dashboard-settings`,
+    {},
+    tenantId
+  );
+  return parseMemberDashboardSettingsPayload(res);
+}
+
+export async function patchMemberDashboardSettings(
+  tenantId: string,
+  visibility: Record<string, boolean>
+): Promise<MemberDashboardSettingsPayload> {
+  const res = await apiFetch<Record<string, unknown>>(
+    `/studios/${tenantId}/member-dashboard-settings`,
+    { method: 'PATCH', body: JSON.stringify({ visibility }) },
+    tenantId
+  );
+  return parseMemberDashboardSettingsPayload(res);
+}
+
 // ─── Community: studio profile join flags + my join requests (no X-Tenant-ID) ─
 
 export type JoinRequestBlockedReason =
@@ -639,6 +702,10 @@ export type CommunityStudioJoinFields = {
   joinRequestStatus: CommunityJoinRequestStatus | null;
   joinRequestBlockedReason: JoinRequestBlockedReason | null;
   ownerMessage: string | null;
+  canRecordJoinEmailIntent: boolean;
+  joinEmailIntentBlockedReason: JoinRequestBlockedReason | null;
+  /** Owner contact for mailto after join-email-intent (may be null). */
+  ownerEmail: string | null;
 };
 
 export function parseCommunityStudioJoinFields(
@@ -669,12 +736,36 @@ export function parseCommunityStudioJoinFields(
   const ownerMessage =
     om != null && String(om).trim() !== '' ? String(om).trim() : null;
 
+  const emailBlockedRaw =
+    raw.joinEmailIntentBlockedReason ??
+    raw.join_email_intent_blocked_reason;
+  let joinEmailIntentBlockedReason: JoinRequestBlockedReason | null = null;
+  if (emailBlockedRaw != null && String(emailBlockedRaw).trim() !== '') {
+    const b = String(emailBlockedRaw) as JoinRequestBlockedReason;
+    if (
+      b === 'already_member' ||
+      b === 'pending_request' ||
+      b === 'email_verification_required'
+    ) {
+      joinEmailIntentBlockedReason = b;
+    }
+  }
+
+  const oe = raw.ownerEmail ?? raw.owner_email;
+  const ownerEmail =
+    oe != null && String(oe).trim() !== '' ? String(oe).trim() : null;
+
   return {
     canRequestJoin: Boolean(raw.canRequestJoin ?? raw.can_request_join),
     belongsToStudio: Boolean(raw.belongsToStudio ?? raw.belongs_to_studio),
     joinRequestStatus,
     joinRequestBlockedReason,
     ownerMessage,
+    canRecordJoinEmailIntent: Boolean(
+      raw.canRecordJoinEmailIntent ?? raw.can_record_join_email_intent
+    ),
+    joinEmailIntentBlockedReason,
+    ownerEmail,
   };
 }
 
@@ -783,6 +874,23 @@ export async function postCommunityStudioJoinRequest(
   return {
     message: String(res.message ?? ''),
     requestId: String(res.requestId ?? res.request_id ?? ''),
+  };
+}
+
+/** Community: record intent to contact owner by email (Bearer only, no X-Tenant-ID). */
+export async function postCommunityStudioJoinEmailIntent(
+  slug: string
+): Promise<{ deduplicated?: boolean; ownerEmail?: string | null }> {
+  const s = slug.trim();
+  const res = await apiFetch<Record<string, unknown>>(
+    `/community/studios/${encodeURIComponent(s)}/join-email-intent`,
+    { method: 'POST', body: JSON.stringify({}) }
+  );
+  const oe = res.ownerEmail ?? res.owner_email;
+  return {
+    deduplicated: Boolean(res.deduplicated),
+    ownerEmail:
+      oe != null && String(oe).trim() !== '' ? String(oe).trim() : null,
   };
 }
 

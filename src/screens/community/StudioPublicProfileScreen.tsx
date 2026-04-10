@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   apiFetch,
   postCommunityStudioJoinRequest,
+  postCommunityStudioJoinEmailIntent,
   ApiError,
   parseCommunityStudioJoinFields,
   type CommunityStudioJoinFields,
@@ -30,6 +31,7 @@ import { AvatarImage } from '../../components/AvatarImage';
 import { Divider, Badge, Button } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
+import { alertMessage } from '../../utils/confirmAction';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudioPublicProfile'>;
 
@@ -110,6 +112,19 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const [joinNote, setJoinNote] = useState('');
   const [joinBusy, setJoinBusy] = useState(false);
   const [joinError, setJoinError] = useState('');
+  const [emailIntentBusy, setEmailIntentBusy] = useState(false);
+  const [emailIntentResult, setEmailIntentResult] = useState<{
+    ownerEmail: string | null;
+    deduplicated?: boolean;
+  } | null>(null);
+  const [emailIntentError, setEmailIntentError] = useState<
+    '' | 'verify' | 'blocked'
+  >('');
+
+  useEffect(() => {
+    setEmailIntentResult(null);
+    setEmailIntentError('');
+  }, [studioSlug]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -249,10 +264,12 @@ export default function StudioPublicProfileScreen({ route }: Props) {
   const hasLinks = Boolean(ig || web || shop);
 
   async function submitJoinRequest() {
+    const s = studio;
+    if (!s) return;
     setJoinError('');
     setJoinBusy(true);
     try {
-      await postCommunityStudioJoinRequest(studio.slug, {
+      await postCommunityStudioJoinRequest(s.slug, {
         note: joinNote.trim() ? joinNote.trim() : null,
       });
       setJoinModalOpen(false);
@@ -273,6 +290,85 @@ export default function StudioPublicProfileScreen({ route }: Props) {
       setJoinBusy(false);
     }
   }
+
+  function goToStudioDashboard() {
+    const s = studio;
+    if (!s) return;
+    switchStudio(s.id);
+    stackNav.navigate('Main', { screen: 'Studio' });
+  }
+
+  function buildOwnerMailto(): string | null {
+    const s = studio;
+    if (!s) return null;
+    const to = emailIntentResult?.ownerEmail ?? s.ownerEmail ?? null;
+    if (!to?.trim()) return null;
+    const sub = encodeURIComponent(
+      `Request to join ${s.name || s.slug}`
+    );
+    const body = encodeURIComponent(
+      `Hello,\n\nI would like to join ${s.name || s.slug}.\n\nThank you`
+    );
+    return `mailto:${encodeURIComponent(to.trim())}?subject=${sub}&body=${body}`;
+  }
+
+  async function handleNotMemberYet() {
+    const s = studio;
+    if (!s) return;
+    setEmailIntentError('');
+    const ir = s.joinEmailIntentBlockedReason;
+    const irStr = ir != null ? String(ir) : '';
+    const emailVerify =
+      irStr === 'email_verification_required' ||
+      (!s.canRecordJoinEmailIntent && irStr === 'email_verification_required');
+    if (emailVerify) {
+      setEmailIntentError('verify');
+      return;
+    }
+    const already =
+      irStr === 'already_member' ||
+      (!s.canRecordJoinEmailIntent && irStr === 'already_member');
+    if (already) {
+      goToStudioDashboard();
+      return;
+    }
+    if (!s.canRecordJoinEmailIntent) {
+      setEmailIntentError('blocked');
+      return;
+    }
+    setEmailIntentBusy(true);
+    try {
+      const r = await postCommunityStudioJoinEmailIntent(s.slug);
+      const mail = r.ownerEmail ?? s.ownerEmail ?? null;
+      setEmailIntentResult({
+        ownerEmail: mail,
+        deduplicated: r.deduplicated,
+      });
+      await load();
+    } catch (e: unknown) {
+      let msg =
+        e instanceof Error ? e.message : 'Could not record your contact intent.';
+      if (e instanceof ApiError && e.status === 403) {
+        msg = 'Verify your email address to continue.';
+        setEmailIntentError('verify');
+      } else {
+        alertMessage('Error', msg);
+      }
+    } finally {
+      setEmailIntentBusy(false);
+    }
+  }
+
+  const inJoinFlow =
+    studio.joinRequestStatus === 'pending' ||
+    studio.joinRequestStatus === 'interview_pending' ||
+    studio.joinRequestBlockedReason === 'pending_request';
+
+  const showMemberEmailPath =
+    user &&
+    !studio.belongsToStudio &&
+    !inJoinFlow &&
+    studio.joinRequestBlockedReason !== 'already_member';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -322,16 +418,13 @@ export default function StudioPublicProfileScreen({ route }: Props) {
                   label="Go to studio dashboard"
                   variant="primary"
                   fullWidth
-                  onPress={() => {
-                    switchStudio(studio.id);
-                    stackNav.navigate('Main', { screen: 'Studio' });
-                  }}
+                  onPress={goToStudioDashboard}
                 />
               </>
             ) : studio.joinRequestStatus === 'pending' ? (
               <>
                 <Text style={styles.statusHint}>
-                  Your join request is pending review.
+                  Your join request is pending review by the owner.
                 </Text>
                 {studio.ownerMessage ? (
                   <Text style={styles.ownerMsg}>{studio.ownerMessage}</Text>
@@ -340,36 +433,143 @@ export default function StudioPublicProfileScreen({ route }: Props) {
             ) : studio.joinRequestStatus === 'interview_pending' ? (
               <>
                 <Text style={styles.statusHint}>
-                  The owner is following up (interview or message).
+                  The owner is following up (e.g. interview or message).
                 </Text>
                 {studio.ownerMessage ? (
                   <Text style={styles.ownerMsg}>{studio.ownerMessage}</Text>
                 ) : null}
               </>
-            ) : studio.canRequestJoin ? (
-              <Button
-                label="Request to join this studio"
-                variant="primary"
-                onPress={() => {
-                  setJoinError('');
-                  setJoinModalOpen(true);
-                }}
-                fullWidth
-              />
-            ) : studio.joinRequestBlockedReason ===
-              'email_verification_required' ? (
-              <Text style={styles.verifyHint}>
-                Verify your email address to request joining this studio.
-              </Text>
             ) : studio.joinRequestBlockedReason === 'pending_request' ? (
               <Text style={styles.memberHint}>
                 You already have a pending join request for this studio.
               </Text>
             ) : studio.joinRequestBlockedReason === 'already_member' ? (
-              <Text style={styles.memberHint}>
-                You are already associated with this studio.
+              <>
+                <Text style={styles.memberHint}>
+                  Your account is already linked to this studio.
+                </Text>
+                <Button
+                  label="Go to studio dashboard"
+                  variant="secondary"
+                  fullWidth
+                  onPress={goToStudioDashboard}
+                />
+              </>
+            ) : emailIntentResult ? (
+              <>
+                <Text style={styles.flowLead}>
+                  We&apos;ve recorded that you plan to contact the owner by
+                  email. This is separate from a formal in-app join request —
+                  please email them to ask about joining.
+                </Text>
+                {emailIntentResult.deduplicated ? (
+                  <Text style={styles.flowMuted}>
+                    This intent was already saved — you can use the button below
+                    again.
+                  </Text>
+                ) : null}
+                {buildOwnerMailto() ? (
+                  <Button
+                    label="Email the owner"
+                    variant="primary"
+                    fullWidth
+                    onPress={() => {
+                      const u = buildOwnerMailto();
+                      if (u) void Linking.openURL(u);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <Text style={styles.flowMuted}>
+                      The owner&apos;s email is not shared in the app. Reach out
+                      via the studio website or social links.
+                    </Text>
+                    {studio.websiteUrl?.trim() ? (
+                      <Button
+                        label="Studio website"
+                        variant="secondary"
+                        fullWidth
+                        onPress={() =>
+                          void Linking.openURL(studio.websiteUrl!.trim())
+                        }
+                      />
+                    ) : null}
+                  </>
+                )}
+                {studio.canRequestJoin ? (
+                  <Button
+                    label="Submit formal join request"
+                    variant="ghost"
+                    fullWidth
+                    onPress={() => {
+                      setJoinError('');
+                      setJoinModalOpen(true);
+                    }}
+                    style={styles.formalAfterEmail}
+                  />
+                ) : null}
+              </>
+            ) : studio.joinRequestBlockedReason ===
+                'email_verification_required' ||
+              studio.joinEmailIntentBlockedReason ===
+                'email_verification_required' ? (
+              <Text style={styles.verifyHint}>
+                Verify your email in your profile to submit a join request or use
+                the email contact path.
               </Text>
-            ) : null}
+            ) : (
+              <>
+                {showMemberEmailPath ? (
+                  <>
+                    <Text style={styles.flowQuestion}>
+                      Are you already a member of this studio?
+                    </Text>
+                    <View style={styles.memberChoiceRow}>
+                      <View style={styles.memberChoiceHalf}>
+                        <Button
+                          label="Yes"
+                          variant="secondary"
+                          fullWidth
+                          onPress={goToStudioDashboard}
+                        />
+                      </View>
+                      <View style={styles.memberChoiceHalf}>
+                        <Button
+                          label="No"
+                          variant="secondary"
+                          fullWidth
+                          loading={emailIntentBusy}
+                          onPress={() => void handleNotMemberYet()}
+                        />
+                      </View>
+                    </View>
+                    {emailIntentError === 'blocked' ? (
+                      <Text style={styles.flowMuted}>
+                        This path isn&apos;t available right now. Try the formal
+                        request below or come back later.
+                      </Text>
+                    ) : null}
+                    {emailIntentError === 'verify' ? (
+                      <Text style={styles.verifyHint}>
+                        Verify your email in your profile to continue.
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
+                {studio.canRequestJoin ? (
+                  <Button
+                    label="Request to join this studio"
+                    variant="primary"
+                    onPress={() => {
+                      setJoinError('');
+                      setJoinModalOpen(true);
+                    }}
+                    fullWidth
+                    style={styles.formalJoinBtn}
+                  />
+                ) : null}
+              </>
+            )}
           </View>
         </>
       ) : null}
@@ -637,6 +837,41 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.clay,
     lineHeight: 18,
+  },
+  flowQuestion: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    lineHeight: 22,
+    marginBottom: spacing[2],
+  },
+  flowLead: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    lineHeight: 22,
+  },
+  flowMuted: {
+    fontFamily: typography.body,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
+    marginTop: spacing[2],
+  },
+  memberChoiceRow: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    marginBottom: spacing[1],
+  },
+  memberChoiceHalf: {
+    flex: 1,
+    minWidth: 0,
+  },
+  formalJoinBtn: {
+    marginTop: spacing[2],
+  },
+  formalAfterEmail: {
+    marginTop: spacing[3],
   },
   memberHint: {
     fontFamily: typography.body,

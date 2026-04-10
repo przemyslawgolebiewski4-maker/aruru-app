@@ -35,6 +35,16 @@ function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
       srRaw == null || srRaw === ''
         ? null
         : String(srRaw).trim() || null;
+    const visRaw =
+      row.memberDashboardVisibility ?? row.member_dashboard_visibility;
+    let parsedVisibility: Record<string, boolean> | null | undefined;
+    if (visRaw != null && typeof visRaw === 'object' && !Array.isArray(visRaw)) {
+      const o: Record<string, boolean> = {};
+      for (const [k, v] of Object.entries(visRaw as Record<string, unknown>)) {
+        if (typeof v === 'boolean') o[k] = v;
+      }
+      parsedVisibility = Object.keys(o).length > 0 ? o : null;
+    }
     const logoRaw = row.logoUrl ?? row.logo_url ?? s.logoUrl;
     const logoUrl =
       logoRaw != null && String(logoRaw).trim() !== ''
@@ -72,6 +82,8 @@ function normalizeStudios(list: StudioMembership[]): StudioMembership[] {
       trialEndsAt,
       currency,
       suspensionReason: s.suspensionReason ?? suspensionReason,
+      memberDashboardVisibility:
+        parsedVisibility ?? s.memberDashboardVisibility ?? null,
     };
   });
 }
