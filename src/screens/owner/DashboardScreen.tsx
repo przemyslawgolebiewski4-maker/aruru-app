@@ -693,37 +693,57 @@ export default function DashboardScreen() {
             ) : (
               <>
                 You&apos;re not part of any studio yet.{'\n\n'}
-                If you run a ceramic studio, create one below.{'\n'}
-                If you were invited, check your email for an invitation link from
-                your studio owner.
+                <Text style={styles.emptyStudiosBodyStrong}>
+                  Create a studio only if you own or run the workshop
+                </Text>
+                — you become that studio&apos;s owner in Aruru. This is not for
+                members who only want to take classes elsewhere.{'\n\n'}
+                To join an existing studio, open{' '}
+                <Text style={styles.emptyStudiosBodyStrong}>Community</Text> and
+                use Studio Finder to send a join request where the studio is
+                listed.{'\n\n'}
+                Don&apos;t see your studio? Ask the owner to list it in the
+                Community (studio settings) so you can find it and request to
+                join — or they can still invite you by email.
               </>
             )}
           </Text>
           {!onlySuspended ? (
-            <Button
-              label="Create a studio"
-              variant="primary"
-              onPress={() =>
-                navigation
-                  .getParent<NativeStackNavigationProp<AppStackParamList>>()
-                  ?.navigate('CreateStudio')
-              }
-              fullWidth
-              style={styles.emptyStudiosCreateBtn}
-            />
-          ) : null}
-          {!onlySuspended ? (
-            <View style={styles.orDividerRow}>
-              <View style={styles.orLine} />
-              <Text style={styles.orText}>or</Text>
-              <View style={styles.orLine} />
-            </View>
+            <>
+              <Button
+                label="Create a studio (I am the owner)"
+                variant="primary"
+                onPress={() =>
+                  navigation
+                    .getParent<NativeStackNavigationProp<AppStackParamList>>()
+                    ?.navigate('CreateStudio')
+                }
+                fullWidth
+                style={styles.emptyStudiosCreateBtn}
+              />
+              <View style={styles.orDividerRow}>
+                <View style={styles.orLine} />
+                <Text style={styles.orText}>or</Text>
+                <View style={styles.orLine} />
+              </View>
+              <Button
+                label="Studio directory & join requests"
+                variant="secondary"
+                onPress={() =>
+                  (
+                    navigation as MaterialTopTabNavigationProp<MainTabParamList>
+                  ).jumpTo('Community')
+                }
+                fullWidth
+                style={styles.emptyStudiosSecondaryBtn}
+              />
+            </>
           ) : null}
           <View style={styles.emptyStudiosInfoCard}>
             <Text style={styles.emptyStudiosInfoText}>
               {onlySuspended
-                ? 'Need help? Use Contact support in Profile, or reach out to your studio owner.'
-                : 'Waiting for an invitation? Ask your studio owner to invite you via email. You&apos;ll receive a link to join automatically.'}
+                ? 'Need help? Use Contact support in Profile, or reach out to your studio owner. You can also browse Community → Studio Finder to request joining another listed studio.'
+                : 'Waiting for an email invite? Check your inbox — the owner can add you directly without the directory.'}
             </Text>
           </View>
           <TouchableOpacity
@@ -1401,11 +1421,19 @@ const styles = StyleSheet.create({
     color: colors.inkMid,
     textAlign: 'center',
     lineHeight: 22,
-    maxWidth: 280,
+    maxWidth: 340,
     marginTop: 8,
+  },
+  emptyStudiosBodyStrong: {
+    fontFamily: typography.bodyMedium,
+    color: colors.ink,
   },
   emptyStudiosCreateBtn: {
     marginTop: 24,
+    width: '100%',
+  },
+  emptyStudiosSecondaryBtn: {
+    marginTop: 0,
     width: '100%',
   },
   orDividerRow: {
@@ -1431,6 +1459,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 14,
     width: '100%',
+    marginTop: spacing[4],
   },
   emptyStudiosInfoText: {
     fontFamily: typography.body,

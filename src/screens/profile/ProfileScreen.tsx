@@ -9,12 +9,13 @@ import {
   Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
 import { AvatarImage } from '../../components/AvatarImage';
 import { Avatar, SectionLabel, Divider, Button, Badge } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import type { AppStackParamList } from '../../navigation/types';
+import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 import { apiFetch, SUSPENDED_MEMBERSHIP_REASON_FALLBACK } from '../../services/api';
 import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
 
@@ -173,11 +174,31 @@ export default function ProfileScreen() {
       {/* ── Studios ── */}
       <SectionLabel>Studios</SectionLabel>
       {studios.length === 0 ? (
-        <Text style={styles.empty}>
-          {isSponsor
-            ? 'No studios linked to this account.'
-            : 'No studios yet. Create one to get started.'}
-        </Text>
+        isSponsor ? (
+          <Text style={styles.empty}>
+            No studios linked to this account.
+          </Text>
+        ) : (
+          <View style={styles.studioEmptyBlock}>
+            <Text style={styles.studioEmptyLead}>
+              You&apos;re not in any studio yet.
+            </Text>
+            <Text style={styles.studioEmptyBody}>
+              <Text style={styles.studioEmptyStrong}>
+                Create a studio only if you own or run the workshop
+              </Text>
+              — you become that studio&apos;s owner. To join an existing studio,
+              open Community → Studio Finder and send a join request. If you
+              don&apos;t see your studio, ask the owner to list it in the
+              Community so it appears in the directory.
+            </Text>
+            <View style={styles.studioEmptyHint}>
+              <Text style={styles.studioEmptyHintText}>
+                Owners can still invite you by email without using the directory.
+              </Text>
+            </View>
+          </View>
+        )
       ) : (
         studios.map((s, i) => (
           <View key={s.tenantId}>
@@ -223,7 +244,11 @@ export default function ProfileScreen() {
       )}
       {!isSponsor && (
         <Button
-          label="+ Create studio"
+          label={
+            studios.length === 0
+              ? '+ Create studio (I am the owner)'
+              : '+ Create studio'
+          }
           variant="secondary"
           onPress={() =>
             navigation
@@ -234,6 +259,19 @@ export default function ProfileScreen() {
           style={styles.sectionBtn}
         />
       )}
+      {!isSponsor && studios.length === 0 ? (
+        <Button
+          label="Community — studio directory"
+          variant="ghost"
+          onPress={() =>
+            (
+              navigation as MaterialTopTabNavigationProp<MainTabParamList>
+            ).jumpTo('Community')
+          }
+          fullWidth
+          style={styles.sectionBtn}
+        />
+      ) : null}
       {!isSponsor && user ? (
         <Button
           label="My join requests"
@@ -469,6 +507,39 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 20,
     marginTop: spacing[2],
+  },
+  studioEmptyBlock: {
+    marginTop: spacing[2],
+    gap: spacing[3],
+  },
+  studioEmptyLead: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.base,
+    color: colors.ink,
+    lineHeight: 22,
+  },
+  studioEmptyBody: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    lineHeight: 21,
+  },
+  studioEmptyStrong: {
+    fontFamily: typography.bodyMedium,
+    color: colors.ink,
+  },
+  studioEmptyHint: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.md,
+    padding: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  studioEmptyHintText: {
+    fontFamily: typography.mono,
+    fontSize: 11,
+    color: colors.inkMid,
+    lineHeight: 17,
   },
   suspendedLead: {
     fontFamily: typography.mono,
