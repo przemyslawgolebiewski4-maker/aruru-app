@@ -11,10 +11,11 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { Avatar, Badge } from '../../components/ui';
+import { Avatar, Badge, Button, Divider, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'Members'>;
 type Route = RouteProp<AppStackParamList, 'Members'>;
@@ -43,6 +44,7 @@ function formatErr(e: unknown): string {
 export default function MembersScreen({ route }: { route: Route }) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
+  const { studios } = useAuth();
   const [search, setSearch] = useState('');
   const [list, setList] = useState<StudioMemberRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +116,11 @@ export default function MembersScreen({ route }: { route: Route }) {
     };
   }, [list]);
 
+  const isOwner = useMemo(() => {
+    const m = studios.find((s) => s.tenantId === tenantId);
+    return m?.role === 'owner' && m?.status === 'active';
+  }, [studios, tenantId]);
+
   return (
     <ScrollView
       style={styles.root}
@@ -128,6 +135,26 @@ export default function MembersScreen({ route }: { route: Route }) {
 
       {error ? (
         <Text style={styles.errorBanner}>{error}</Text>
+      ) : null}
+
+      {isOwner ? (
+        <>
+          <SectionLabel>Join requests</SectionLabel>
+          <Text style={styles.joinRequestsHint}>
+            Review requests from people who want to join via your public studio
+            page in the community directory.
+          </Text>
+          <Button
+            label="Manage join requests"
+            variant="secondary"
+            onPress={() =>
+              navigation.navigate('StudioJoinRequests', { tenantId })
+            }
+            fullWidth
+            style={styles.joinRequestsBtn}
+          />
+          <Divider style={styles.joinRequestsDivider} />
+        </>
       ) : null}
 
       <View style={styles.statsRow}>
@@ -237,6 +264,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
     marginBottom: spacing[3],
+  },
+  joinRequestsHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+    marginBottom: spacing[3],
+  },
+  joinRequestsBtn: {
+    marginBottom: spacing[4],
+  },
+  joinRequestsDivider: {
+    marginBottom: spacing[4],
   },
   headerInvite: {
     fontFamily: typography.mono,
