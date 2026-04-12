@@ -5,6 +5,13 @@
 - TypeScript, deploy: **Vercel** (export statyczny do `dist`)
 - Stan sesji: **AsyncStorage** — klucz `aruru_access_token` (Bearer do chronionych ścieżek)
 
+## Deploy web i katalog `dist`
+- **Vercel** serwuje statyczny output z **`dist/`** (`vercel.json`: `/` → `landing.html`, `/privacy` → `privacy.html`, `/terms` → `terms.html`, pozostałe ścieżki — SPA przez `index.html` i `filesystem`).
+- **`npm run build:web`** (to samo co `export:web` / `build`) = `expo export --platform web` **oraz** `node scripts/copy-landing-to-dist.cjs`.
+- Po samym `expo export` pliki z `public/` trafiają do `dist/`, ale **źródłem prawdy dla strony głównej** jest `public/landing.html` — skrypt **`copy-landing-to-dist.cjs`** zawsze kopiuje je do `dist/landing.html`, ustawia **cache-bust** `og-image.jpg?v=…` (hash z `public/og-image.svg`) i synchronizuje m.in. `og-image.jpg` / `og-image.svg`, `sitemap.xml`, `sitemap.xsl`, `robots.txt`.
+- Jeśli zmieniasz tylko **`public/landing.html`** i `dist/` już istnieje lokalnie, możesz uruchomić samo `node scripts/copy-landing-to-dist.cjs`; w CI i przed releasem używaj pełnego **`npm run build:web`**, żeby zaktualizować też bundel JS z Expo.
+- **`npm run verify:dist`** — pełny build + `git diff --exit-code HEAD -- dist` (wykrywa nieskommitowany lub rozjechany `dist/`).
+
 ## Live URLs
 - Frontend: https://aruru.xyz
 - Backend (produkcja): https://aruru-backend-production.up.railway.app
@@ -107,15 +114,14 @@ Przykładowe klucze: `typography.display`, `typography.body`, `typography.bodyMe
 ## Subskrypcja studia (owner)
 - **StudioPlanScreen** — wybór planu przed Stripe Checkout; wejście z **DashboardScreen** lub **StudioSettingsScreen** przez `navigation.getParent()?.navigate('StudioPlan', { tenantId })`.
 - **`POST /stripe/studio/checkout`** — body: `tenant_id`, `tier` (jak poniżej). Odpowiedź: `checkoutUrl` / `checkout_url`.
-- **Backend / Stripe:** muszą mapować każdy `tier` na właściwy price ID (w tym `studio_large`).
-- **Kolejność na ekranie:** zawsze od najniższego do najwyższego tieru — jak w tabeli (Solo → Studio → Aruru Studio Large → Community).
+- **Backend / Stripe:** muszą mapować każdy `tier` na właściwy price ID (`solo`, `studio`, `community`).
+- **Kolejność na ekranie:** od najniższego do najwyższego — Solo → Studio → Community (zgodnie z `StudioPlanScreen` i **AdminPricingScreen**).
 
 | Nazwa w UI (EN) | `tier` (API) | Cena w UI (EN) | Limit w UI (EN) | Skrót możliwości (UI EN) |
 |-----------------|--------------|----------------|-----------------|---------------------------|
-| Solo | `solo` | €15 / month | Up to 5 members | Kiln & costs, tasks & hours, events & feed, materials, HTML cost summaries |
-| Studio | `studio` | €29 / month | Up to 20 members | Everything in Solo + assistants + attendance |
-| Aruru Studio Large | `studio_large` | €45 / month | Up to 35 members | Everything in Studio + more seats for classes and members |
-| Community | `community` | €59 / month | Up to 50 members | Everything in Aruru Studio Large + largest capacity, full ops suite |
+| Solo | `solo` | €15 / month | Up to 20 members | Kiln firings & cost splits, tasks & hour logging, costs & billing, data export (Excel), events & community feed |
+| Studio | `studio` | €29 / month | Up to 50 members | Everything in Solo + assistant roles, materials catalogue, attendance tracking |
+| Community | `community` | €49 / month | Unlimited members | Everything in Studio + priority support, partner visibility boost |
 
 ## Badge variant
 - `'clay' | 'moss' | 'neutral'` (nie używaj `'default'`).
@@ -128,13 +134,13 @@ Przykładowe klucze: `typography.display`, `typography.body`, `typography.bodyMe
 ### Role
 - `user_role: "sponsor"` ustawiane przy rejestracji gdy `is_sponsor: true`
 - Status: pending → (Przemek zatwierdza) → active
-- Po zatwierdzeniu: wybór planu Basic €29 / Standard €59 przez Stripe Checkout
+- Po zatwierdzeniu: wybór planu Basic €15 / Standard €29 przez Stripe Checkout (**SponsorPlanScreen**)
 
-### Plany sponsora
-| Plan | Cena | Posty/mies | Footer logo |
-|------|------|-------------|-------------|
-| Basic | €29 | 1 | Nie |
-| Standard | €59 | 2 | Tak |
+### Plany sponsora (zgodnie z **SponsorPlanScreen**)
+| Plan | Cena | W skrócie |
+|------|------|-----------|
+| Basic | €15 / month | 1 post / month, profil w katalogu, logo na postach, logo w stopce aruru.xyz, statystyki |
+| Standard | €29 / month | 2 posty / month, to samo co Basic + filtr kraju (studia, do których wysyłasz) |
 
 ### Nawigacja sponsora
 - MainTabs: Community + Sponsors + Profile (bez Studio)
