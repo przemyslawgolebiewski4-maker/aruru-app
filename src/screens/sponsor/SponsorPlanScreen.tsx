@@ -94,7 +94,7 @@ export default function SponsorPlanScreen(_props: Props) {
         accessibilityState={{ selected: selectedPlan === 'basic' }}
       >
         <Text style={styles.planName}>Basic</Text>
-        <Text style={styles.planPrice}>€29 / month</Text>
+        <Text style={styles.planPrice}>€15 / month</Text>
         {BASIC_FEATURES.map((line) => (
           <Text key={line} style={styles.planFeature}>
             · {line}
@@ -113,7 +113,7 @@ export default function SponsorPlanScreen(_props: Props) {
         accessibilityState={{ selected: selectedPlan === 'standard' }}
       >
         <Text style={styles.planName}>Standard</Text>
-        <Text style={styles.planPrice}>€59 / month</Text>
+        <Text style={styles.planPrice}>€29 / month</Text>
         <View style={styles.popularBadge}>
           <Text style={styles.popularBadgeText}>Most popular</Text>
         </View>

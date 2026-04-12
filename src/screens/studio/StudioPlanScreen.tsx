@@ -16,13 +16,14 @@ import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'StudioPlan'>;
 
-type Tier = 'solo' | 'studio' | 'community' | 'large';
+type Tier = 'solo' | 'studio' | 'community';
 
 const PLANS: {
   tier: Tier;
   name: string;
   priceAmount: number;
   members: string;
+  description: string;
   features: string[];
   recommended?: boolean;
 }[] = [
@@ -30,25 +31,27 @@ const PLANS: {
     tier: 'solo',
     name: 'Solo',
     priceAmount: 15,
-    members: 'Up to 5 members',
+    members: 'Up to 20 members',
+    description: 'For small studios getting started',
     features: [
-      'Kiln management & cost tracking',
-      'Task management with hour logs',
+      'Kiln firings & cost splits',
+      'Tasks & hour logging',
+      'Costs & billing',
+      'Data export (Excel)',
       'Events & community feed',
-      'Materials catalogue',
-      'Cost summaries & PDF export',
     ],
   },
   {
     tier: 'studio',
     name: 'Studio',
     priceAmount: 29,
-    members: 'Up to 20 members',
+    members: 'Up to 50 members',
+    description: 'For growing studios',
     recommended: true,
     features: [
       'Everything in Solo',
-      'Larger member capacity',
       'Assistant roles',
+      'Materials catalogue',
       'Attendance tracking',
     ],
   },
@@ -56,23 +59,12 @@ const PLANS: {
     tier: 'community',
     name: 'Community',
     priceAmount: 49,
-    members: 'Up to 50 members',
+    members: 'Unlimited members',
+    description: 'For large studios and collectives',
     features: [
       'Everything in Studio',
-      'Large community studios',
-      'Multiple assistants',
-      'Full operational suite',
-    ],
-  },
-  {
-    tier: 'large',
-    name: 'Large',
-    priceAmount: 79,
-    members: 'Unlimited members',
-    features: [
-      'Everything in Community',
-      'Unlimited member capacity',
-      'Ideal for large studios and collectives',
+      'Priority support',
+      'Partner visibility boost',
     ],
   },
 ];
@@ -223,6 +215,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     marginTop: 2,
+  },
+  planDescription: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    marginTop: spacing[2],
+    lineHeight: 20,
   },
   planPrice: {
     fontFamily: typography.bodyMedium,

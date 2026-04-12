@@ -73,12 +73,10 @@ export function MainTabNavigator() {
   }
 
   return (
-    <Tab.Navigator screenOptions={tabScreenOptions}>
-      <Tab.Screen
-        name="Studio"
-        component={DashboardScreen}
-        options={{ title: 'Studio' }}
-      />
+    <Tab.Navigator
+      initialRouteName="Community"
+      screenOptions={tabScreenOptions}
+    >
       <Tab.Screen
         name="Community"
         component={CommunityScreen}
@@ -93,6 +91,11 @@ export function MainTabNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{ title: 'Profile' }}
+      />
+      <Tab.Screen
+        name="Studio"
+        component={DashboardScreen}
+        options={{ title: 'Studio' }}
       />
       {showAdminTab ? (
         <Tab.Screen
