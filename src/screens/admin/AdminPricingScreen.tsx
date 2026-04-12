@@ -17,12 +17,11 @@ import { alertMessage } from '../../utils/confirmAction';
 type Tier = { maxMembers: number | null; priceMonthly: number };
 type PricingData = { tiers: Record<string, Tier>; sponsorNote: string };
 
-const TIER_ORDER = ['solo', 'studio', 'community', 'large'] as const;
+const TIER_ORDER = ['solo', 'studio', 'community'] as const;
 const TIER_LABELS: Record<string, string> = {
-  solo: 'Solo (0–5 members)',
-  studio: 'Studio (6–20 members)',
-  community: 'Community (21–50 members)',
-  large: 'Large (51+ members)',
+  solo: 'Solo (up to 20 members)',
+  studio: 'Studio (up to 50 members)',
+  community: 'Community (unlimited)',
 };
 
 export default function AdminPricingScreen() {
