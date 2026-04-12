@@ -1058,6 +1058,39 @@ export async function deleteStudio(tenantId: string): Promise<{ message: string 
   return apiFetch(`/studios/${tenantId}`, { method: 'DELETE' }, tenantId);
 }
 
+/**
+ * POST /studios/{tenantId}/costs/misc — misc charge (kiln damage, manual fee, €0 firing notes).
+ * Uses `cost` + `date` (same contract as Cost list); not `amount`.
+ */
+export async function postStudioMiscCharge(
+  tenantId: string,
+  payload: {
+    userId: string;
+    description: string;
+    cost: number;
+    /** YYYY-MM-DD for billing period anchor; defaults to UTC calendar today */
+    bookingDate?: string;
+  }
+): Promise<void> {
+  const ymd =
+    payload.bookingDate?.trim() ||
+    new Date().toISOString().slice(0, 10);
+  const date = new Date(`${ymd}T12:00:00Z`).toISOString();
+  await apiFetch(
+    `/studios/${tenantId}/costs/misc`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        userId: payload.userId,
+        description: payload.description,
+        cost: payload.cost,
+        date,
+      }),
+    },
+    tenantId
+  );
+}
+
 /** Web only: browser download of studio Excel export. No-op on native. */
 export async function downloadStudioDataExport(tenantId: string): Promise<void> {
   if (typeof window === 'undefined') return;

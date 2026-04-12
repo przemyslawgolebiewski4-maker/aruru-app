@@ -13,7 +13,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Button, Input, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import { apiFetch, postStudioMiscCharge } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { confirmNeutral } from '../../utils/confirmAction';
 
@@ -653,18 +653,13 @@ export default function CostDetailScreen({ route }: { route: Route }) {
     if (!note.trim()) return;
     setSavingNote(firingKey);
     try {
-      await apiFetch(
-        `/studios/${tenantId}/costs/misc`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            userId,
-            description: `Firing note: ${note.trim()}`,
-            amount: 0,
-          }),
-        },
-        tenantId
-      );
+      const ymd = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+      await postStudioMiscCharge(tenantId, {
+        userId,
+        description: `Firing note: ${note.trim()}`,
+        cost: 0,
+        bookingDate: ymd,
+      });
       setSavedNotes((prev) => new Set([...prev, firingKey]));
       setFiringNotes((prev) => ({ ...prev, [firingKey]: '' }));
     } catch {

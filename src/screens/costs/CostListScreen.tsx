@@ -13,7 +13,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Badge, Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch, formatCurrency } from '../../services/api';
+import { apiFetch, formatCurrency, postStudioMiscCharge } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'CostList'>;
@@ -298,19 +298,12 @@ export default function CostListScreen({ route }: { route: Route }) {
     }
     setMiscSubmitting(true);
     try {
-      await apiFetch(
-        `/studios/${tenantId}/costs/misc`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            userId: miscUserId,
-            description: miscDesc.trim(),
-            cost: costNum,
-            date: new Date(miscDate + 'T12:00:00Z').toISOString(),
-          }),
-        },
-        tenantId
-      );
+      await postStudioMiscCharge(tenantId, {
+        userId: miscUserId,
+        description: miscDesc.trim(),
+        cost: costNum,
+        bookingDate: miscDate,
+      });
       setShowMiscForm(false);
       setMiscUserId('');
       setMiscDesc('');

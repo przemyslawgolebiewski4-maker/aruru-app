@@ -14,7 +14,8 @@ import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Button, Input, SectionLabel } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
-import { apiFetch } from '../../services/api';
+import { apiFetch, postStudioMiscCharge } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import { confirmDestructive } from '../../utils/confirmAction';
 
 type Nav = NativeStackNavigationProp<AppStackParamList, 'KilnLoadMembers'>;
@@ -72,6 +73,10 @@ function extractItems(data: unknown): FiringItem[] {
 export default function KilnLoadMembersScreen({ route }: { route: Route }) {
   const { tenantId, firingId } = route.params;
   const navigation = useNavigation<Nav>();
+  const { studios } = useAuth();
+  const studioCurrency = (
+    studios.find((s) => s.tenantId === tenantId)?.currency ?? 'EUR'
+  ).toUpperCase();
 
   const [members, setMembers] = useState<StudioMember[]>([]);
   const [weightInputs, setWeightInputs] = useState<Record<string, string>>({});
@@ -348,18 +353,11 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
     }
     setDamageSaving(true);
     try {
-      await apiFetch(
-        `/studios/${tenantId}/costs/misc`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            userId: damageUserId,
-            description: `Kiln damage: ${damageDesc.trim()}`,
-            amount,
-          }),
-        },
-        tenantId
-      );
+      await postStudioMiscCharge(tenantId, {
+        userId: damageUserId,
+        description: `Kiln damage: ${damageDesc.trim()}`,
+        cost: amount,
+      });
       setDamageSaved(true);
       setShowDamage(false);
       setDamageDesc('');
@@ -560,7 +558,9 @@ export default function KilnLoadMembersScreen({ route }: { route: Route }) {
               numberOfLines={2}
             />
 
-            <Text style={styles.damageLabel}>Amount (EUR)</Text>
+            <Text style={styles.damageLabel}>
+              {`Amount (${studioCurrency})`}
+            </Text>
             <Input
               value={damageAmount}
               onChangeText={setDamageAmount}
