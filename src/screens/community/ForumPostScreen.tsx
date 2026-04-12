@@ -17,6 +17,7 @@ import { AvatarImage } from '../../components/AvatarImage';
 import { Button, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
+import { renderMarkdown } from '../../utils/renderMarkdown';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ForumPost'>;
 
@@ -314,7 +315,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
 
         {!editing ? (
           <View style={styles.postBody}>
-            <Text style={styles.content2}>{post.content}</Text>
+            {renderMarkdown(post.content ?? '', styles.content2)}
           </View>
         ) : null}
 
@@ -419,7 +420,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                         {timeAgo(r.createdAt)}
                       </Text>
                     </Text>
-                    <Text style={styles.replyContent}>{r.content}</Text>
+                    {renderMarkdown(r.content ?? '', styles.replyContent)}
                     {r.authorId === currentUserId ? (
                       <TouchableOpacity
                         onPress={() => void handleDeleteReply(r.id)}
