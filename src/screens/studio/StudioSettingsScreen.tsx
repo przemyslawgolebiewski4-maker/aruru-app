@@ -47,7 +47,7 @@ import type { AppStackParamList } from '../../navigation/types';
 import {
   apiFetch,
   deleteStudio,
-  getToken,
+  downloadStudioDataExport,
   patchStudioVisibility,
   SUPPORTED_CURRENCIES,
 } from '../../services/api';
@@ -274,22 +274,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     if (typeof window === 'undefined') return;
     setExporting(true);
     try {
-      const token = await getToken();
-      const url = `${process.env.EXPO_PUBLIC_API_URL ?? 'https://aruru-backend-production.up.railway.app'}/studios/${tenantId}/export`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token ?? ''}` },
-      });
-      if (!res.ok) throw new Error('Export failed');
-      const blob = await res.blob();
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      const cd = res.headers.get('Content-Disposition') ?? '';
-      const match = cd.match(/filename=([^;]+)/);
-      a.download = match ? match[1] : 'aruru_export.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
+      await downloadStudioDataExport(tenantId);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Export failed.';
       if (typeof window !== 'undefined') window.alert(msg);

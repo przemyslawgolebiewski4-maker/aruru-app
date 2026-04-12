@@ -26,7 +26,11 @@ import {
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../navigation/types';
 import { alertMessage } from '../../utils/confirmAction';
-import { apiFetch, formatCurrency } from '../../services/api';
+import {
+  apiFetch,
+  downloadStudioDataExport,
+  formatCurrency,
+} from '../../services/api';
 import MemberDashboardScreen from '../member/MemberDashboardScreen';
 
 type RecentFiring = {
@@ -199,6 +203,7 @@ export default function DashboardScreen() {
   const [trialPromptDismissed, setTrialPromptDismissed] = useState(false);
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [kilnRequests, setKilnRequests] = useState<KilnRequest[]>([]);
+  const [exportingStudio, setExportingStudio] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -624,6 +629,20 @@ export default function DashboardScreen() {
       tenantId,
       studioName: name,
     });
+  }
+
+  async function handleStudioExport() {
+    if (!canManageMembers || !tenantId) return;
+    if (typeof window === 'undefined') return;
+    setExportingStudio(true);
+    try {
+      await downloadStudioDataExport(tenantId);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Export failed.';
+      alertMessage('Export studio data', msg);
+    } finally {
+      setExportingStudio(false);
+    }
   }
 
   function goAssistants() {
@@ -1295,6 +1314,18 @@ export default function DashboardScreen() {
                 label="Studio settings"
                 variant="secondary"
                 onPress={goStudioSettings}
+                style={styles.quickActionBtn}
+              />
+            </View>
+            <View style={styles.actionQuarter}>
+              <Button
+                label={
+                  exportingStudio ? 'Preparing...' : 'Export studio data'
+                }
+                variant="secondary"
+                onPress={() => void handleStudioExport()}
+                loading={exportingStudio}
+                disabled={typeof window === 'undefined'}
                 style={styles.quickActionBtn}
               />
             </View>

@@ -1058,6 +1058,27 @@ export async function deleteStudio(tenantId: string): Promise<{ message: string 
   return apiFetch(`/studios/${tenantId}`, { method: 'DELETE' }, tenantId);
 }
 
+/** Web only: browser download of studio Excel export. No-op on native. */
+export async function downloadStudioDataExport(tenantId: string): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const token = await getToken();
+  const url = `${BASE_URL}/studios/${tenantId}/export`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token ?? ''}` },
+  });
+  if (!res.ok) throw new Error('Export failed');
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const cd = res.headers.get('Content-Disposition') ?? '';
+  const match = cd.match(/filename=([^;]+)/);
+  a.download = match ? match[1].trim() : 'aruru_export.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
 export async function patchStudioVisibility(
   tenantId: string,
   communityVisible: boolean
