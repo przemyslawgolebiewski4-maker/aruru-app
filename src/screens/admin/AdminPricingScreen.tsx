@@ -140,6 +140,32 @@ export default function AdminPricingScreen() {
         ))}
       </View>
       <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Sponsor plans</Text>
+        <Text style={styles.hint}>
+          Managed via Stripe. Update price_id in Railway variables.
+        </Text>
+        {[
+          {
+            name: 'Basic',
+            price: '€15/mo',
+            desc: '1 partner update + 1 forum post',
+          },
+          {
+            name: 'Standard',
+            price: '€29/mo',
+            desc: '2 partner updates + 2 forum posts',
+          },
+        ].map((plan) => (
+          <View key={plan.name} style={styles.tierRow}>
+            <View style={styles.tierInfo}>
+              <Text style={styles.tierName}>{plan.name}</Text>
+              <Text style={[styles.hint, { marginTop: 2 }]}>{plan.desc}</Text>
+            </View>
+            <Text style={styles.sponsorPrice}>{plan.price}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={styles.section}>
         <Text style={styles.sectionLabel}>Sponsor note</Text>
         <Text style={styles.hint}>Visible in Community → Sponsors tab.</Text>
         <TextInput
@@ -231,6 +257,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  sponsorPrice: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+    fontWeight: '500',
   },
   noteInput: {
     borderWidth: 0.5,
