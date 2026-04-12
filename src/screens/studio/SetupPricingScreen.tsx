@@ -93,7 +93,7 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         kilnPrivatePerFiring: parseAmount(priv),
         membershipFee: parseAmount(membership),
       });
-      navigation.replace('InviteFirstMember', {
+      navigation.replace('MemberDashboardSettingsOnboarding', {
         tenantId,
         studioName,
       });
@@ -186,7 +186,7 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
           label="Skip for now"
           variant="ghost"
           onPress={() =>
-            navigation.replace('InviteFirstMember', {
+            navigation.replace('MemberDashboardSettingsOnboarding', {
               tenantId,
               studioName,
             })

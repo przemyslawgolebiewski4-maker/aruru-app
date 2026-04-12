@@ -35,6 +35,7 @@ import SetupPricingScreen from '../screens/studio/SetupPricingScreen';
 import PricingSettingsScreen from '../screens/studio/PricingSettingsScreen';
 import StudioSettingsScreen from '../screens/studio/StudioSettingsScreen';
 import MemberDashboardSettingsScreen from '../screens/studio/MemberDashboardSettingsScreen';
+import MemberDashboardSettingsOnboardingScreen from '../screens/studio/MemberDashboardSettingsOnboardingScreen';
 import StudioJoinRequestsScreen from '../screens/studio/StudioJoinRequestsScreen';
 import MembersScreen from '../screens/members/MembersScreen';
 import InviteMemberScreen from '../screens/members/InviteMemberScreen';
@@ -373,6 +374,15 @@ function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Pricing',
+          ...appModalHeaderOptions,
+        }}
+      />
+      <AppStack.Screen
+        name="MemberDashboardSettingsOnboarding"
+        component={MemberDashboardSettingsOnboardingScreen}
+        options={{
+          headerShown: true,
+          title: 'Member view',
           ...appModalHeaderOptions,
         }}
       />

@@ -48,6 +48,10 @@ export type AppStackParamList = {
   StudioOnboarding: { tenantId: string; studioName: string };
   InviteFirstMember: { tenantId: string; studioName: string };
   SetupPricing: { tenantId: string; studioName: string };
+  MemberDashboardSettingsOnboarding: {
+    tenantId: string;
+    studioName: string;
+  };
   PricingSettings: { tenantId: string; studioName: string };
   StudioSettings: { tenantId: string; studioName: string };
   /** Owner: toggles visible sections on member role dashboard. */
