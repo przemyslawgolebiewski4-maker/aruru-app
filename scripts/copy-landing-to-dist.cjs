@@ -29,9 +29,12 @@ let html = fs.readFileSync(dest, 'utf8');
 const svgPath = path.join(root, 'public', 'og-image.svg');
 let version = 'v1';
 if (fs.existsSync(svgPath)) {
+  // Normalize newlines so MD5 matches Linux CI and Windows (git autocrlf) checkouts
+  const svgText = fs.readFileSync(svgPath, 'utf8');
+  const svgNormalized = svgText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const hash = crypto
     .createHash('md5')
-    .update(fs.readFileSync(svgPath))
+    .update(svgNormalized, 'utf8')
     .digest('hex')
     .slice(0, 8);
   version = hash;
