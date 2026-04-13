@@ -5,6 +5,8 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -21,6 +23,7 @@ import {
   formatTime,
   kindBadgeLabel,
   kindBadgeVariant,
+  parseEvents,
 } from './EventListScreen';
 
 type Route = RouteProp<AppStackParamList, 'EventDetail'>;
@@ -37,13 +40,15 @@ type Booking = {
 function parseEventDetail(data: unknown): StudioEvent | null {
   if (!data || typeof data !== 'object') return null;
   const o = data as Record<string, unknown>;
+  let raw: Record<string, unknown> | null = null;
   if (o.event != null && typeof o.event === 'object') {
-    return o.event as StudioEvent;
+    raw = o.event as Record<string, unknown>;
+  } else if ('id' in o || 'title' in o) {
+    raw = o as Record<string, unknown>;
   }
-  if ('id' in o || 'title' in o) {
-    return o as unknown as StudioEvent;
-  }
-  return null;
+  if (!raw) return null;
+  const rows = parseEvents([raw]);
+  return rows[0] ?? null;
 }
 
 export default function EventDetailScreen({ route }: { route: Route }) {
@@ -243,6 +248,37 @@ export default function EventDetailScreen({ route }: { route: Route }) {
         {loc ? (
           <Text style={styles.infoRow}>📍 {loc}</Text>
         ) : null}
+        {ev.bookingUrl ? (
+          <TouchableOpacity
+            style={styles.bookingBtn}
+            onPress={async () => {
+              try {
+                await apiFetch(
+                  `/studios/${tenantId}/events/${eventId}/booking-click`,
+                  { method: 'POST' },
+                  tenantId ?? ''
+                );
+              } catch {
+                /* still open URL */
+              }
+              const url = ev.bookingUrl!.startsWith('http')
+                ? ev.bookingUrl!
+                : `https://${ev.bookingUrl}`;
+              void Linking.openURL(url);
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="link"
+          >
+            <Text style={styles.bookingBtnText}>Book a spot →</Text>
+          </TouchableOpacity>
+        ) : null}
+        {isStaff && (ev.bookingClicks ?? 0) > 0 ? (
+          <Text style={styles.bookingStats}>
+            {ev.bookingClicks}{' '}
+            {ev.bookingClicks === 1 ? 'person' : 'people'} clicked the
+            booking link
+          </Text>
+        ) : null}
         {max != null && max > 0 ? (
           <Text style={styles.infoRow}>👥 Max {max} participants</Text>
         ) : null}
@@ -381,6 +417,26 @@ const styles = StyleSheet.create({
     color: colors.inkMid,
     marginTop: 12,
     lineHeight: 22,
+  },
+  bookingBtn: {
+    backgroundColor: colors.moss,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    alignItems: 'center',
+    marginTop: spacing[3],
+    marginBottom: spacing[2],
+  },
+  bookingBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.md,
+    color: colors.surfaceRaised,
+  },
+  bookingStats: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textAlign: 'center',
+    marginTop: spacing[1],
   },
   errBanner: {
     fontFamily: typography.body,

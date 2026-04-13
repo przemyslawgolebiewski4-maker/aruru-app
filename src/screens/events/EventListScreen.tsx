@@ -41,6 +41,8 @@ export type StudioEvent = {
   location?: string;
   status?: string;
   createdAt?: string;
+  bookingUrl?: string;
+  bookingClicks?: number;
 };
 
 const KIND_OPTIONS: { value: EventKind; label: string }[] = [
@@ -99,6 +101,10 @@ export function parseEvents(data: unknown): StudioEvent[] {
       location: r.location != null ? String(r.location) : undefined,
       status: r.status != null ? String(r.status) : undefined,
       createdAt: (r.createdAt ?? r.created_at) as string | undefined,
+      bookingUrl: (r.bookingUrl ?? r.booking_url)
+        ? String(r.bookingUrl ?? r.booking_url)
+        : undefined,
+      bookingClicks: Number(r.bookingClicks ?? r.booking_clicks ?? 0),
     };
   });
 }
@@ -169,6 +175,7 @@ export default function EventListScreen({ route }: { route: Route }) {
   const [maxP, setMaxP] = useState('');
   const [description, setDescription] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [bookingUrl, setBookingUrl] = useState('');
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [isPublic, setIsPublic] = useState(false);
@@ -244,6 +251,7 @@ export default function EventListScreen({ route }: { route: Route }) {
     setMaxP('');
     setDescription('');
     setWebsiteUrl('');
+    setBookingUrl('');
     setCreateError('');
     setIsPublic(false);
     setShowForm(false);
@@ -285,6 +293,7 @@ export default function EventListScreen({ route }: { route: Route }) {
             maxParticipants: parseInt(maxP, 10) || null,
             description: description.trim() || null,
             websiteUrl: websiteUrl.trim() || null,
+            bookingUrl: bookingUrl.trim() || null,
             public: isPublic,
           }),
         },
@@ -441,6 +450,15 @@ export default function EventListScreen({ route }: { route: Route }) {
             value={websiteUrl}
             onChangeText={setWebsiteUrl}
             placeholder="https://..."
+            keyboardType="url"
+            autoCapitalize="none"
+            containerStyle={styles.inputSpaced}
+          />
+          <Input
+            label="Booking link (optional)"
+            value={bookingUrl}
+            onChangeText={setBookingUrl}
+            placeholder="https://... (Eventbrite, your site...)"
             keyboardType="url"
             autoCapitalize="none"
             containerStyle={styles.inputSpaced}

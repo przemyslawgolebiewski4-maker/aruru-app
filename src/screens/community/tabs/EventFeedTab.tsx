@@ -16,7 +16,7 @@ import { apiFetch } from '../../../services/api';
 import { AvatarImage } from '../../../components/AvatarImage';
 import { Badge, Button, Input } from '../../../components/ui';
 import DateTimeField, { toLocalISOString } from '../../../components/DateTimeField';
-import { colors, typography, fontSize, spacing } from '../../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../../theme/tokens';
 import type { AppStackParamList, MainTabParamList } from '../../../navigation/types';
 
 type FeedEvent = {
@@ -30,6 +30,7 @@ type FeedEvent = {
   isPersonal?: boolean;
   title: string;
   description?: string;
+  bookingUrl?: string;
   websiteUrl?: string;
   kind: string;
   startsAt?: string;
@@ -127,6 +128,9 @@ function normalizeFeedEvent(ev: unknown): FeedEvent {
     title: String(r.title ?? ''),
     description:
       r.description != null ? String(r.description) : undefined,
+    bookingUrl: (r.bookingUrl ?? r.booking_url)
+      ? String(r.bookingUrl ?? r.booking_url)
+      : undefined,
     websiteUrl:
       (r.websiteUrl ?? r.website_url) != null
         ? String(r.websiteUrl ?? r.website_url)
@@ -443,6 +447,20 @@ export default function EventFeedTab() {
               {e.description}
             </Text>
           ) : null}
+          {e.bookingUrl ? (
+            <TouchableOpacity
+              style={styles.feedBookingBtn}
+              onPress={() => {
+                const url = e.bookingUrl!.startsWith('http')
+                  ? e.bookingUrl!
+                  : `https://${e.bookingUrl}`;
+                void Linking.openURL(url);
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.feedBookingBtnText}>Book a spot →</Text>
+            </TouchableOpacity>
+          ) : null}
           {e.isPersonal && e.websiteUrl?.trim() ? (
             <TouchableOpacity
               onPress={() => {
@@ -618,5 +636,17 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  feedBookingBtn: {
+    backgroundColor: colors.moss,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    alignItems: 'center',
+    marginTop: spacing[2],
+  },
+  feedBookingBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.surfaceRaised,
   },
 });
