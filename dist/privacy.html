@@ -59,57 +59,83 @@
 <div class="page">
   <p class="page__eyebrow">Legal</p>
   <h1 class="page__title">Privacy Policy</h1>
-  <p class="page__meta">Effective date: 5 April 2026 &nbsp;·&nbsp; Version 1.1 &nbsp;·&nbsp; Updated: April 2026</p>
+  <p class="page__meta">Effective date: 5 April 2026 &nbsp;·&nbsp; Version 1.2 &nbsp;·&nbsp; Updated: April 2026</p>
 
   <div class="info-box">
-    <p>This policy explains how Aruru collects, uses, and protects your personal data. Questions? Contact us at <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a>.</p>
+    <p>This policy describes how Aruru collects, uses, and protects personal data based on our <strong>application backend and infrastructure</strong> as operated today. It is not legal advice. Questions: <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a>.</p>
   </div>
 
   <h2>1. Who is responsible for your data?</h2>
   <p><strong>Przemysław Gołębiewski</strong><br>Sewan str 128, 10319 Berlin, Germany<br>Privacy: <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a></p>
 
   <h2>2. What personal data we collect and why</h2>
+  <p>Data is stored in our <strong>MongoDB Atlas</strong> database (Frankfurt). The categories below match the collections and flows implemented in our backend.</p>
 
-  <h3>2.1 Account data</h3>
-  <p>Full name, email, password (bcrypt hash — never plain text), account type, email verification status.</p>
+  <h3>2.1 Account and authentication</h3>
+  <p>Email address; password (bcrypt hash only — never stored in plain text); email verification status and related tokens; password-reset tokens; optional two-factor authentication data (e.g. TOTP and/or email-based codes); account type and status; administrative flags where applicable.</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR); where applicable, legitimate interest in securing accounts (Art. 6(1)(f) GDPR).</p>
+
+  <h3>2.2 Profile and community visibility</h3>
+  <p>Display name; optional avatar (image file uploaded to <strong>Cloudinary</strong>, stored as URL and cloud asset identifier); bio; city and country; optional social or website links; settings controlling how your profile appears in the community.</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR) and, for optional fields, legitimate interest (Art. 6(1)(f) GDPR).</p>
+
+  <h3>2.3 Studio (tenant) records</h3>
+  <p>Studio name, public slug and description, location and tags, logo (Cloudinary), public studio profile data, subscription and trial status, identifiers and metadata for <strong>Stripe</strong> billing (e.g. customer and subscription IDs, plan tier, billing period), owner contact email where stored on the tenant, and suspension or operational notices where applicable.</p>
   <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR).</p>
 
-  <h3>2.2 Profile data</h3>
-  <p>Optionally: city, country, bio, avatar image, social links. You control community visibility settings.</p>
-  <p><strong>Legal basis:</strong> legitimate interest (Art. 6(1)(f) GDPR).</p>
-
-  <h3>2.3 Studio data</h3>
-  <p>Studio name, city, country, description, tags, logo, your role, and operational records — kiln firing logs, task logs, event details, material purchases, cost summaries, attendance records.</p>
+  <h3>2.4 Membership, invitations, and join requests</h3>
+  <p>Links between your user account and studios (roles, membership status); invitation emails and tokens; studio join requests and related notes or intents as implemented in the application.</p>
   <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR).</p>
 
-  <h3>2.4 Sponsor data</h3>
-  <p>Company name, description, category, website URL, logo, delivery countries, sponsor posts, and aggregate click and view statistics.</p>
+  <h3>2.5 Forum, notifications, and reports</h3>
+  <p>Forum thread titles and bodies; replies; view/reply counters; in-app <strong>notifications</strong>; reports of forum content (reporting user, reason, timestamp). Forum lists are ordered by objective fields such as creation time, last reply, or view count — <strong>not</strong> by personalised “recommendation” algorithms in our backend.</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR); legitimate interest in platform safety (Art. 6(1)(f) GDPR) for reports and moderation.</p>
+
+  <h3>2.6 Studio operational data tied to members</h3>
+  <p>Where your studio uses operational features, we process records that reference your user identifier, including for example: material purchases, miscellaneous charges, cost summaries, kiln firing entries, studio events and bookings, tasks and task logs, assistant attendance, materials catalogue usage, membership plans, and private kiln requests — as enabled for that studio.</p>
   <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR).</p>
 
-  <h3>2.5 Payment data</h3>
-  <p>Payments are processed by Stripe. We store only your Stripe Customer ID, Subscription ID, status, plan tier, and period end date. We never store card numbers or CVV codes.</p>
-  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR) and legal obligations (Art. 6(1)(c) GDPR) for accounting.</p>
-
-  <h3>2.6 Communication data</h3>
-  <p>Forum posts, replies, in-app notifications, and transactional emails (verification, password reset, 2FA, notifications). We do not send marketing emails without your separate consent.</p>
+  <h3>2.7 Sponsor accounts</h3>
+  <p>Organisation profile (name, description, category, website, logo via Cloudinary, delivery countries), sponsor posts, aggregate profile view and click statistics, and Stripe billing data linked to the sponsor account.</p>
   <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR).</p>
 
-  <h3>2.7 Security data</h3>
-  <p>IP addresses (rate limiting on auth endpoints), 2FA secrets, login attempt metadata.</p>
-  <p><strong>Legal basis:</strong> legitimate interest (Art. 6(1)(f) GDPR).</p>
+  <h3>2.8 Payments (Stripe)</h3>
+  <p>Card payments go through <strong>Stripe Checkout</strong> and the Stripe customer portal. Our servers do <strong>not</strong> receive or store full card numbers or CVV codes. We store billing identifiers and status in our database (e.g. Stripe customer and subscription IDs, plan tier, subscription status, period dates). When creating or updating a Stripe Customer, we send Stripe at least the <strong>email address</strong> and a <strong>name</strong> (e.g. studio or sponsor organisation name) and <strong>metadata</strong> needed to link the payment to your tenant or sponsor account (such as tenant id, plan, and account type).</p>
+  <p>Stripe acts as a payment service provider; for European payments Stripe commonly uses <strong>Stripe Payments Europe, Ltd.</strong> — see Stripe’s own privacy notice for the controller/processor role that applies to you: <a href="https://stripe.com/privacy" target="_blank" rel="noopener">stripe.com/privacy</a>.</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR) and legal obligations (Art. 6(1)(c) GDPR) where accounting or tax law requires retention.</p>
+  <p><strong>Strong customer authentication (SCA)</strong> and fraud measures for card payments are applied by Stripe under applicable <strong>EU payment-services law</strong> (successor rules to PSD2 are in force in the EU; requirements are operationalised by your bank and Stripe).</p>
 
-  <h3>2.8 Technical data</h3>
-  <p>We do not use third-party analytics or advertising trackers. Minimal server logs on Railway. Sponsor profiles receive aggregate view and click counts only.</p>
+  <h3>2.9 Transactional email (Resend)</h3>
+  <p>We send transactional messages (e.g. email verification, password reset, security and notification emails) via <strong>Resend</strong>. For each message, Resend receives the <strong>recipient address</strong>, <strong>subject</strong>, and <strong>HTML body</strong> (which may contain single-use links or tokens).</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR).</p>
+
+  <h3>2.10 Images (Cloudinary)</h3>
+  <p>Uploaded images (avatars, studio and sponsor logos, and similar) are transmitted to <strong>Cloudinary</strong> for storage and delivery. When an image is removed, we send the relevant <strong>public_id</strong> (or equivalent) so Cloudinary can delete the asset.</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR).</p>
+
+  <h3>2.11 Support requests</h3>
+  <p>If you contact support through the product, we store the content of your request, status, and related messages (including admin replies) and the email or channel you use, as implemented in our support ticket system.</p>
+  <p><strong>Legal basis:</strong> performance of a contract (Art. 6(1)(b) GDPR) or legitimate interest in handling requests (Art. 6(1)(f) GDPR).</p>
+
+  <h3>2.12 Abuse prevention and logs</h3>
+  <p>We use the client <strong>IP address</strong> as part of <strong>rate limiting</strong> on selected authentication-related HTTP endpoints (implemented with SlowAPI-style logic in our API). That address is <strong>not</strong> sent by our backend to a separate analytics or advertising service for profiling. Our hosting provider (<strong>Railway</strong>) may retain short-term server or access logs in the ordinary course of operations.</p>
+  <p><strong>Legal basis:</strong> legitimate interest in security and abuse prevention (Art. 6(1)(f) GDPR).</p>
+
+  <h3>2.13 What we do not do (backend)</h3>
+  <p>Our backend does <strong>not</strong> call third-party <strong>analytics</strong> (e.g. Google Analytics), <strong>error-tracking SaaS</strong> (e.g. Sentry), or <strong>generative-AI / LLM APIs</strong> for moderation or feed ranking. If that changes, we will update this policy.</p>
+
+  <h3>2.14 Data download (export)</h3>
+  <p>The personal data export available in the app is designed to reflect the main categories above (account, memberships, notifications, invitations, sponsor profile where relevant, forum posts and replies, tasks, kiln-related entries, purchases, and related records) — see the in-app export for the exact JSON structure.</p>
 
   <h2>3. How long we keep your data</h2>
   <ul>
     <li><strong>Active accounts:</strong> for the duration of your account</li>
-    <li><strong>Deleted accounts:</strong> personal identifiers (name, email, bio, avatar URL) anonymised immediately upon deletion</li>
+    <li><strong>Deleted accounts:</strong> core personal identifiers on the user record (such as name, email, bio, avatar URL) are anonymised immediately upon deletion; related records (e.g. notifications, certain memberships and invitations) are removed or anonymised as implemented in our deletion routine</li>
     <li><strong>Deleted studios:</strong> operational data (kiln logs, tasks, costs, events, member records) retained for <strong>90 days</strong> after studio deletion, then permanently purged. Inaccessible to all users during this period</li>
     <li><strong>Payment records:</strong> retained 7 years (German and EU tax law)</li>
     <li><strong>Server logs:</strong> up to 30 days</li>
     <li><strong>Studio data export:</strong> studio owners can download all operational data as Excel (.xlsx) at any time via Studio Settings → Export data. We encourage regular exports as a personal backup.</li>
-    <li><strong>Forum posts after account deletion:</strong> displayed as "Deleted User" — content may remain visible</li>
+    <li><strong>Forum content after account deletion:</strong> posts and replies may remain visible (for example labelled as from a deleted user). Depending on implementation, a <strong>technical user identifier</strong> may still be stored on those records for integrity and moderation even after the public profile is anonymised. This is a known limitation we are working to align fully with erasure expectations; until then, the practical outcome is described here.</li>
   </ul>
   <p>Media files (avatars, logos) in Cloudinary may take up to 30 days to be fully purged after account deletion.</p>
 
@@ -122,17 +148,30 @@
       <tr><td><strong>Railway</strong></td><td>Backend hosting</td><td>United States</td><td>SCCs · <a href="https://railway.com/legal/dpa" target="_blank" rel="noopener">DPA</a></td></tr>
       <tr><td><strong>Cloudinary</strong></td><td>Media storage</td><td>United States</td><td>SCCs + EU-US DPF · <a href="https://cloudinary.com/gdpr/dpa" target="_blank" rel="noopener">DPA</a></td></tr>
       <tr><td><strong>Resend</strong></td><td>Transactional email</td><td>United States</td><td>SCCs · <a href="https://resend.com/legal/dpa" target="_blank" rel="noopener">DPA</a></td></tr>
-      <tr><td><strong>Stripe</strong></td><td>Payment processing</td><td>United States</td><td>EU-US Data Privacy Framework</td></tr>
+      <tr><td><strong>Stripe</strong> (incl. Stripe Payments Europe, Ltd. for many EU payments — see Stripe’s privacy policy)</td><td>Payment processing, Checkout, Customer Portal</td><td>United States / EU as per Stripe</td><td>EU-US Data Privacy Framework and/or SCCs as described in Stripe’s DPA · <a href="https://stripe.com/legal/dpa" target="_blank" rel="noopener">stripe.com/legal/dpa</a></td></tr>
       <tr><td><strong>Vercel</strong></td><td>Frontend hosting</td><td>United States (edge)</td><td>SCCs</td></tr>
     </tbody>
   </table>
-  <p>We do not sell your data. We do not share your data with advertisers. We do not use your data for profiling or automated decision-making.</p>
+  <p>We do not sell your data. We do not share your data with advertisers for their own campaigns. We do not use your data for profiling or automated decision-making in our backend.</p>
 
-  <h2>5. Your rights under GDPR</h2>
+  <h2>5. Illegal content, reporting, and the Digital Services Act (EU)</h2>
+  <p>Aruru hosts user-generated content (including the forum). Under <strong>Regulation (EU) 2022/2065</strong> (Digital Services Act; <a href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32022R2065" target="_blank" rel="noopener">EUR-Lex</a>), providers of intermediary services must operate notice-and-action mechanisms and related transparency rules. In the product you can <strong>report</strong> forum content that you believe is illegal or violates our rules. We review reports and may remove or restrict content, suspend accounts, or take other proportionate measures. We do not operate automated <strong>AI-based moderation</strong> in our backend; moderation decisions are human-led, aside from technical limits such as rate limiting.</p>
+  <p>If we remove or restrict your content for illegality or policy breaches, we will, where practicable, provide the <strong>main grounds</strong> via the contact channel associated with your account or in-product messaging. You may contest a decision by writing to <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a>.</p>
+
+  <h2>6. Artificial intelligence</h2>
+  <p>Our <strong>backend services</strong> do not call third-party large-language-model or similar AI APIs for content moderation or personalised feed ranking. Forum ordering uses transparent, non-personalised sort fields (e.g. time, activity). If you add AI features in the client in the future, describe them separately in this policy.</p>
+
+  <h2>7. Digital content and subscriptions (consumers)</h2>
+  <p>For consumers in the EU, contracts for digital content and services (including subscriptions) are also governed by <strong>Directive (EU) 2019/770</strong> as implemented in national law, alongside these Terms. Practical performance (access, updates, termination) is described in the <a href="/terms">Terms of Service</a>.</p>
+
+  <h2>8. ePrivacy, cookies, local storage, and Stripe in the browser</h2>
+  <p>The Aruru web app stores strictly necessary data in browser <code>localStorage</code> (including <code>aruru_access_token</code> and onboarding flags). We do not use advertising cookies or third-party analytics scripts from our own front end. When you pay through <strong>Stripe Checkout</strong> or the Stripe customer portal, <strong>Stripe</strong> may set cookies or similar technologies on Stripe’s domains — see Stripe’s <a href="https://stripe.com/legal/cookies" target="_blank" rel="noopener">cookie policy</a> and <a href="https://stripe.com/privacy" target="_blank" rel="noopener">privacy notice</a>. The ePrivacy framework (Directive 2002/58/EC as amended) and national implementing laws apply; an EU <strong>ePrivacy Regulation</strong> has been proposed but is not yet a single binding text across the EU as of this version date.</p>
+
+  <h2>9. Your rights under GDPR</h2>
   <ul>
     <li><strong>Access (Art. 15):</strong> download your data via Settings → Security → Download my data</li>
     <li><strong>Rectification (Art. 16):</strong> update your profile in the app at any time</li>
-    <li><strong>Erasure (Art. 17):</strong> delete your account via Settings → Delete account</li>
+    <li><strong>Erasure (Art. 17):</strong> delete your account via Settings → Delete account — note that some forum content may remain as described in section 3 (technical identifiers and public archive)</li>
     <li><strong>Restriction (Art. 18):</strong> contact <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a></li>
     <li><strong>Portability (Art. 20):</strong> studio data export provided in Excel (.xlsx) format via Studio Settings. Personal account data available on request.</li>
     <li><strong>Object (Art. 21):</strong> contact us where we rely on legitimate interest</li>
@@ -142,30 +181,27 @@
   <strong>Berliner Beauftragte für Datenschutz und Informationsfreiheit</strong><br>
   Alt-Moabit 59–61, 10555 Berlin · <a href="https://www.datenschutz-berlin.de" target="_blank" rel="noopener">datenschutz-berlin.de</a></p>
 
-  <h2>6. Security</h2>
+  <h2>10. Security</h2>
   <ul>
     <li>Passwords hashed with bcrypt — never stored in plain text</li>
     <li>All communication encrypted in transit (HTTPS/TLS)</li>
     <li>Database hosted in Frankfurt (EU) with network-level access controls and tenant isolation</li>
     <li>Role-based access control — studio data isolated per tenant</li>
     <li>Two-factor authentication (TOTP and email-based)</li>
-    <li>Rate limiting on all authentication endpoints</li>
+    <li>Rate limiting on authentication-related API endpoints (IP-based)</li>
   </ul>
   <p>In the event of a personal data breach posing risk to your rights, we will notify the supervisory authority within 72 hours and affected users without undue delay (Art. 33–34 GDPR).</p>
 
-  <h2>7. Cookies and local storage</h2>
-  <p>The Aruru web app uses browser <code>localStorage</code> for your authentication token (<code>aruru_access_token</code>) and onboarding status — both strictly functional. We do not use advertising cookies, third-party tracking, or analytics cookies.</p>
-
-  <h2>8. International data transfers</h2>
+  <h2>11. International data transfers</h2>
   <p>Our database is hosted in Frankfurt (EU). Some sub-processors are US-based. For transfers outside the EEA we rely on Standard Contractual Clauses (SCCs, Decision 2021/914) or the EU-US Data Privacy Framework where applicable.</p>
 
-  <h2>9. Children's privacy</h2>
+  <h2>12. Children's privacy</h2>
   <p>Aruru is not directed at children under 16. If you believe a child under 16 has provided us with personal data, contact <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a> and we will delete it promptly.</p>
 
-  <h2>10. Changes to this policy</h2>
+  <h2>13. Changes to this policy</h2>
   <p>We will notify you of material changes via email or in-app notice at least 14 days before they take effect.</p>
 
-  <h2>11. Contact</h2>
+  <h2>14. Contact</h2>
   <p><strong>Przemysław Gołębiewski</strong><br>Sewan str 128, 10319 Berlin, Germany<br>Privacy: <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a><br>General: <a href="mailto:lelekstudio@lelekstudio.com">lelekstudio@lelekstudio.com</a></p>
 </div>
 
