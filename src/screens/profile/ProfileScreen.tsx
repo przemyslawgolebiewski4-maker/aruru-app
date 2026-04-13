@@ -415,6 +415,13 @@ export default function ProfileScreen() {
       <View style={styles.sectionGap} />
       <SectionLabel>Legal</SectionLabel>
       <Button
+        label="Help & FAQ ↗"
+        variant="ghost"
+        onPress={() => void Linking.openURL('https://aruru.xyz/help')}
+        fullWidth
+        style={styles.menuBtn}
+      />
+      <Button
         label="Privacy Policy ↗"
         variant="ghost"
         onPress={() => void Linking.openURL('https://aruru.xyz/privacy')}
