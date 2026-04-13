@@ -154,6 +154,15 @@ function trialDaysLeft(iso?: string): number {
   );
 }
 
+function isExportOverdue(tenantId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const key = `aruru_last_export_${tenantId}`;
+  const last = localStorage.getItem(key);
+  if (!last) return true;
+  const diff = Date.now() - new Date(last).getTime();
+  return diff > 7 * 24 * 60 * 60 * 1000;
+}
+
 function IconTwoCircles60() {
   return (
     <Svg width={60} height={60} viewBox="0 0 60 60">
@@ -204,6 +213,7 @@ export default function DashboardScreen() {
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [kilnRequests, setKilnRequests] = useState<KilnRequest[]>([]);
   const [exportingStudio, setExportingStudio] = useState(false);
+  const [showExportReminder, setShowExportReminder] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -232,6 +242,7 @@ export default function DashboardScreen() {
 
   const load = useCallback(async () => {
     if (studios.length === 0 || !tenantId) {
+      setShowExportReminder(false);
       setSummariesDue(0);
       setStats({
         members: 0,
@@ -452,7 +463,16 @@ export default function DashboardScreen() {
       });
       setRecentFirings(topFirings);
       setRecentTasks(topTasks);
+
+      const sub = staffStudio?.subscriptionStatus;
+      const hasSub = sub === 'active' || sub === 'trial';
+      if (hasSub && tenantId && staffStudio?.role === 'owner') {
+        setShowExportReminder(isExportOverdue(tenantId));
+      } else {
+        setShowExportReminder(false);
+      }
     } catch {
+      setShowExportReminder(false);
       setSummariesDue(0);
       setStats({
         members: 0,
@@ -637,6 +657,11 @@ export default function DashboardScreen() {
     setExportingStudio(true);
     try {
       await downloadStudioDataExport(tenantId);
+      localStorage.setItem(
+        `aruru_last_export_${tenantId}`,
+        new Date().toISOString()
+      );
+      setShowExportReminder(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Export failed.';
       alertMessage('Export studio data', msg);
@@ -971,6 +996,27 @@ export default function DashboardScreen() {
             Payment failed — update your payment method
           </Text>
           <Text style={styles.trialBannerArrow}>→</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {showExportReminder && hasSubscription ? (
+        <TouchableOpacity
+          style={styles.exportReminderRow}
+          onPress={() =>
+            navigation
+              .getParent<NativeStackNavigationProp<AppStackParamList>>()
+              ?.navigate('StudioSettings', {
+                tenantId: tenantId ?? '',
+                studioName: currentStudio?.studioName ?? '',
+              })
+          }
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Open studio settings for data backup"
+        >
+          <Text style={styles.exportReminderText}>
+            Weekly data backup recommended → Studio Settings
+          </Text>
         </TouchableOpacity>
       ) : null}
 
@@ -1662,6 +1708,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
     marginTop: spacing[2],
+  },
+  exportReminderRow: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    borderLeftWidth: 3,
+    borderLeftColor: colors.clay,
+    marginBottom: spacing[3],
+  },
+  exportReminderText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
   },
   statsRow: {
     flexDirection: 'row',

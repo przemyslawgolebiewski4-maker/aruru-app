@@ -91,6 +91,30 @@ type StudioSettingsStudio = {
   logoUrl?: string;
 };
 
+function studioExportStorageKey(tenantId: string) {
+  return `aruru_last_export_${tenantId}`;
+}
+
+function getLastStudioExportDate(tenantId: string): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(studioExportStorageKey(tenantId));
+}
+
+function markStudioExported(tenantId: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(
+    studioExportStorageKey(tenantId),
+    new Date().toISOString()
+  );
+}
+
+function isStudioExportOverdue(tenantId: string): boolean {
+  const last = getLastStudioExportDate(tenantId);
+  if (!last) return true;
+  const diff = Date.now() - new Date(last).getTime();
+  return diff > 7 * 24 * 60 * 60 * 1000;
+}
+
 function parseStudioPayload(
   data: unknown
 ): Record<string, unknown> & Partial<StudioSettingsStudio> {
@@ -136,6 +160,8 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [visibilityLoading, setVisibilityLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [lastExport, setLastExport] = useState<string | null>(null);
+  const [exportOverdue, setExportOverdue] = useState(false);
 
   useLayoutEffect(() => {
     if (!isOwner) {
@@ -192,8 +218,10 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
 
   useFocusEffect(
     useCallback(() => {
+      setLastExport(getLastStudioExportDate(tenantId));
+      setExportOverdue(isStudioExportOverdue(tenantId));
       void load();
-    }, [load])
+    }, [load, tenantId])
   );
 
   async function onSave() {
@@ -275,6 +303,10 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     setExporting(true);
     try {
       await downloadStudioDataExport(tenantId);
+      const iso = new Date().toISOString();
+      markStudioExported(tenantId);
+      setLastExport(iso);
+      setExportOverdue(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Export failed.';
       if (typeof window !== 'undefined') window.alert(msg);
@@ -706,18 +738,41 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         {subscriptionStatusUI()}
 
         <View style={styles.exportWrap}>
-          <Text style={styles.exportLabel}>Data backup</Text>
+          <View style={styles.exportHeader}>
+            <Text style={styles.exportLabel}>Data backup</Text>
+            {exportOverdue ? (
+              <View style={styles.exportBadge}>
+                <Text style={styles.exportBadgeText}>Backup recommended</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.exportHint}>
-            Download all your studio data as an Excel file - members, firings,
-            tasks, costs and events.
+            Download all your studio data as an Excel file — members,
+            firings, tasks, costs, and events. We recommend doing this once a
+            week.
           </Text>
+          {lastExport ? (
+            <Text style={styles.exportLastDate}>
+              Last backup:{' '}
+              {new Date(lastExport).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </Text>
+          ) : (
+            <Text style={styles.exportLastDate}>No backup yet</Text>
+          )}
           <Button
-            label={exporting ? 'Preparing...' : 'Export studio data'}
-            variant="secondary"
+            label={
+              exporting ? 'Preparing...' : 'Download studio data (.xlsx)'
+            }
+            variant={exportOverdue ? 'primary' : 'secondary'}
             onPress={() => void handleExport()}
             loading={exporting}
             disabled={typeof window === 'undefined'}
             fullWidth
+            style={styles.exportBtn}
           />
         </View>
 
@@ -867,13 +922,31 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: colors.border,
   },
+  exportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing[1],
+  },
+  exportBadge: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 3,
+  },
+  exportBadgeText: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.clay,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   exportLabel: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: spacing[1],
   },
   exportHint: {
     fontFamily: typography.body,
@@ -881,6 +954,15 @@ const styles = StyleSheet.create({
     color: colors.inkLight,
     lineHeight: 20,
     marginBottom: spacing[3],
+  },
+  exportLastDate: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginBottom: spacing[3],
+  },
+  exportBtn: {
+    marginTop: spacing[1],
   },
   sectionGap: { height: spacing[6] },
   visibilityBlock: { gap: spacing[3] },
