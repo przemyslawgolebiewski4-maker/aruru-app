@@ -293,7 +293,7 @@ export default function EventListScreen({ route }: { route: Route }) {
             maxParticipants: parseInt(maxP, 10) || null,
             description: description.trim() || null,
             websiteUrl: websiteUrl.trim() || null,
-            bookingUrl: bookingUrl.trim() || null,
+            booking_url: bookingUrl.trim() || null,
             public: isPublic,
           }),
         },
