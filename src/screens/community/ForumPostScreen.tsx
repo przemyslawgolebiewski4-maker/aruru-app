@@ -28,6 +28,7 @@ type Reply = {
   authorAvatarUrl?: string;
   createdAt?: string;
   authorId?: string;
+  parentReplyId?: string | null;
 };
 
 type PostDetail = {
@@ -76,6 +77,11 @@ function normalizeForumPost(raw: PostDetail & Record<string, unknown>): PostDeta
       | undefined,
     createdAt: (r.createdAt ?? r.created_at) as string | undefined,
     authorId: String(r.authorId ?? r.author_id ?? ''),
+    parentReplyId: (() => {
+      const v = r.parentReplyId ?? r.parent_reply_id;
+      if (v == null || v === '') return null;
+      return String(v);
+    })(),
   }));
   return {
     id: String(raw.id),
@@ -114,6 +120,8 @@ export default function ForumPostScreen({ route, navigation }: Props) {
   const [editTitle, setEditTitle] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [replyToName, setReplyToName] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -232,11 +240,16 @@ export default function ForumPostScreen({ route, navigation }: Props) {
         `/community/forum/${postId}/replies`,
         {
           method: 'POST',
-          body: JSON.stringify({ content: reply.trim() }),
+          body: JSON.stringify({
+            content: reply.trim(),
+            parent_reply_id: replyToId ?? null,
+          }),
         },
         tenantId
       );
       setReply('');
+      setReplyToId(null);
+      setReplyToName(null);
       await load();
     } catch (e: unknown) {
       setReplyError(
@@ -401,7 +414,13 @@ export default function ForumPostScreen({ route, navigation }: Props) {
           <View style={styles.replies}>
             <Text style={styles.repliesLabel}>Replies</Text>
             {replies.map((r) => (
-              <View key={r.id} style={styles.replyCard}>
+              <View
+                key={r.id}
+                style={[
+                  styles.replyItem,
+                  r.parentReplyId ? styles.replyItemNested : null,
+                ]}
+              >
                 <View style={styles.replyTop}>
                   <View style={styles.replyAvatarWrap}>
                     <AvatarImage
@@ -421,6 +440,29 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                       </Text>
                     </Text>
                     {renderMarkdown(r.content ?? '', styles.replyContent)}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setReplyToId(r.id);
+                        setReplyToName(r.authorName ?? 'user');
+                        const handle = (r.authorName ?? 'user').replace(
+                          /\s+/g,
+                          ''
+                        );
+                        setReply((prev) => {
+                          const mention = `@${handle} `;
+                          const t = prev.trim();
+                          if (!t) return mention;
+                          if (t.startsWith(`@${handle}`)) return prev;
+                          return `${mention}${prev}`;
+                        });
+                      }}
+                      hitSlop={8}
+                      style={styles.replyBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Reply to ${r.authorName ?? 'user'}`}
+                    >
+                      <Text style={styles.replyBtnText}>Reply</Text>
+                    </TouchableOpacity>
                     {r.authorId === currentUserId ? (
                       <TouchableOpacity
                         onPress={() => void handleDeleteReply(r.id)}
@@ -442,23 +484,43 @@ export default function ForumPostScreen({ route, navigation }: Props) {
         <Text style={styles.replyErrorText}>{replyError}</Text>
       ) : null}
 
-      <View style={styles.replyBar}>
-        <TextInput
-          style={styles.replyInput}
-          value={reply}
-          onChangeText={setReply}
-          placeholder="Write a reply..."
-          placeholderTextColor={colors.inkLight}
-          multiline
-        />
-        <Button
-          label="Send"
-          variant="primary"
-          onPress={() => void onReply()}
-          disabled={!reply.trim() || posting}
-          loading={posting}
-          style={styles.sendBtn}
-        />
+      <View style={styles.replyBarWrap}>
+        {replyToName ? (
+          <View style={styles.replyingTo}>
+            <Text style={styles.replyingToText}>
+              Replying to {replyToName}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setReplyToId(null);
+                setReplyToName(null);
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel reply to"
+            >
+              <Text style={styles.replyingToCancel}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        <View style={styles.replyBar}>
+          <TextInput
+            style={styles.replyInput}
+            value={reply}
+            onChangeText={setReply}
+            placeholder="Write a reply..."
+            placeholderTextColor={colors.inkLight}
+            multiline
+          />
+          <Button
+            label="Send"
+            variant="primary"
+            onPress={() => void onReply()}
+            disabled={!reply.trim() || posting}
+            loading={posting}
+            style={styles.sendBtn}
+          />
+        </View>
       </View>
     </View>
   );
@@ -555,11 +617,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  replyCard: {
+  replyItem: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing[3],
     gap: spacing[1],
+  },
+  replyItemNested: {
+    marginLeft: spacing[6],
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    paddingLeft: spacing[3],
   },
   replyTop: {
     flexDirection: 'row',
@@ -596,13 +664,46 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginTop: spacing[1],
   },
+  replyBtn: {
+    alignSelf: 'flex-start',
+    marginTop: spacing[1],
+  },
+  replyBtnText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textDecorationLine: 'underline',
+  },
+  replyBarWrap: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  replyingTo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.clayLight,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  replyingToText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+  },
+  replyingToCancel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    padding: spacing[1],
+  },
   replyBar: {
     flexDirection: 'row',
     gap: spacing[2],
     padding: spacing[3],
-    backgroundColor: colors.surface,
-    borderTopWidth: 0.5,
-    borderTopColor: colors.border,
     alignItems: 'flex-end',
   },
   replyInput: {
