@@ -81,3 +81,11 @@ if (fs.existsSync(robotsSrc)) {
   fs.copyFileSync(robotsSrc, robotsDest);
   console.log('copy-landing-to-dist: public/robots.txt → dist/robots.txt');
 }
+
+// Copy help.html
+const helpSrc = path.join(root, 'public', 'help.html');
+const helpDest = path.join(root, 'dist', 'help.html');
+if (fs.existsSync(helpSrc)) {
+  fs.copyFileSync(helpSrc, helpDest);
+  console.log('Copied help.html → dist/help.html');
+}
