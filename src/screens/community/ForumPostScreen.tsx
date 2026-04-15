@@ -716,7 +716,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.ink,
-    maxHeight: 80,
+    minHeight: Platform.OS === 'web' ? 100 : 44,
+    maxHeight: Platform.OS === 'web' ? 200 : 120,
+    textAlignVertical: 'top',
   },
   sendBtn: {
     flexShrink: 0,
