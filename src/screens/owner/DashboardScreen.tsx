@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -173,6 +173,18 @@ function isExportOverdue(tenantId: string): boolean {
   return diff > 7 * 24 * 60 * 60 * 1000;
 }
 
+function getTrialPromptDismissed(tenantId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    localStorage.getItem(`aruru_trial_prompt_dismissed_${tenantId}`) === 'true'
+  );
+}
+
+function setTrialPromptDismissedStorage(tenantId: string) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`aruru_trial_prompt_dismissed_${tenantId}`, 'true');
+}
+
 function IconTwoCircles60() {
   return (
     <Svg width={60} height={60} viewBox="0 0 60 60">
@@ -207,6 +219,12 @@ export default function DashboardScreen() {
     switchStudio,
   } = useAuth();
   const navigation = useNavigation<MaterialTopTabNavigationProp<MainTabParamList>>();
+  const currentStudio =
+    studios.find((s) => s.tenantId === activeTenantId) ??
+    studios.find((s) => s.status === 'active') ??
+    studios[0];
+  const tenantId = currentStudio?.tenantId;
+
   const [stats, setStats] = useState({
     members: 0,
     firingsThisMonth: 0,
@@ -219,7 +237,9 @@ export default function DashboardScreen() {
   const [income, setIncome] = useState<IncomeData | null>(null);
   const [summariesDue, setSummariesDue] = useState(0);
   const [showCommunityBanner, setShowCommunityBanner] = useState(false);
-  const [trialPromptDismissed, setTrialPromptDismissed] = useState(false);
+  const [trialPromptDismissed, setTrialPromptDismissed] = useState(
+    () => (tenantId ? getTrialPromptDismissed(tenantId) : false)
+  );
   const [showSwitcher, setShowSwitcher] = useState(false);
   const [kilnRequests, setKilnRequests] = useState<KilnRequest[]>([]);
   const [exportingStudio, setExportingStudio] = useState(false);
@@ -228,17 +248,20 @@ export default function DashboardScreen() {
     { studioName: string; tenantId: string }[]
   >([]);
 
+  useEffect(() => {
+    if (!tenantId) {
+      setTrialPromptDismissed(false);
+      return;
+    }
+    setTrialPromptDismissed(getTrialPromptDismissed(tenantId));
+  }, [tenantId]);
+
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  const currentStudio =
-    studios.find((s) => s.tenantId === activeTenantId) ??
-    studios.find((s) => s.status === 'active') ??
-    studios[0];
   const studioLabel = currentStudio?.studioName?.trim() || 'Your studio';
-  const tenantId = currentStudio?.tenantId;
   const canManageMembers =
     currentStudio?.role === 'owner' && currentStudio?.status === 'active';
   const canManageKiln =
@@ -533,6 +556,18 @@ export default function DashboardScreen() {
         setShowExportReminder(isExportOverdue(tenantId));
       } else {
         setShowExportReminder(false);
+      }
+      if (
+        (staffStudio?.subscriptionStatus === 'active' ||
+          staffStudio?.subscriptionStatus === 'trial') &&
+        tenantId
+      ) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(
+            `aruru_trial_prompt_dismissed_${tenantId}`
+          );
+        }
+        setTrialPromptDismissed(false);
       }
     } catch {
       setShowExportReminder(false);
@@ -989,7 +1024,10 @@ export default function DashboardScreen() {
             <Button
               label="Continue with free plan"
               variant="ghost"
-              onPress={() => setTrialPromptDismissed(true)}
+              onPress={() => {
+                setTrialPromptDismissed(true);
+                if (tenantId) setTrialPromptDismissedStorage(tenantId);
+              }}
               style={styles.trialPromptBtn}
             />
           </View>
