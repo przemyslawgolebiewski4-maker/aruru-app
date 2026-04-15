@@ -973,11 +973,11 @@ export default function DashboardScreen() {
       {showFreeBanner && !trialPromptDismissed ? (
         <View style={styles.trialPromptCard}>
           <Text style={styles.trialPromptTitle}>
-            Try all studio tools free for 14 days
+            Try studio manager - free for 14 days
           </Text>
           <Text style={styles.trialPromptSub}>
-            Kiln management, cost splits, billing, tasks, materials and more -
-            free for 14 days, no credit card required.
+            Kiln costs - billing - tasks - materials.{'\n'}
+            No credit card needed - cancel anytime.
           </Text>
           <View style={styles.trialPromptActions}>
             <Button
@@ -1071,9 +1071,9 @@ export default function DashboardScreen() {
           accessibilityLabel="Open subscription checkout"
         >
           <Text style={styles.trialBannerText}>
-            {`Trial — ${ownerTrialDaysLeft} day${
+            {`${ownerTrialDaysLeft} day${
               ownerTrialDaysLeft === 1 ? '' : 's'
-            } remaining · Subscribe`}
+            } left in trial - subscribe to keep access`}
           </Text>
           <Text style={styles.trialBannerArrow}>→</Text>
         </TouchableOpacity>
@@ -1404,6 +1404,24 @@ export default function DashboardScreen() {
           </View>
         ) : null}
       </View>
+      {!hasSubscription ? (
+        <View style={styles.trialCtaWrap}>
+          <TouchableOpacity
+            style={styles.trialCtaBtn}
+            onPress={() => void openCheckout()}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Try studio manager, free for 14 days"
+          >
+            <Text style={styles.trialCtaLabel}>
+              Try studio manager - free 14 days
+            </Text>
+            <Text style={styles.trialCtaSub}>
+              Kiln costs - billing - tasks - materials - no credit card needed
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {currentStudio?.role === 'assistant' &&
       hasSubscription &&
       memberSectionVisible(
@@ -1977,6 +1995,29 @@ const styles = StyleSheet.create({
   },
   trialPromptBtn: {
     width: '100%',
+  },
+  trialCtaWrap: {
+    paddingTop: spacing[3],
+    paddingBottom: spacing[2],
+  },
+  trialCtaBtn: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    borderWidth: 0.5,
+    borderColor: colors.clay,
+    gap: spacing[1],
+  },
+  trialCtaLabel: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.md,
+    color: colors.clay,
+  },
+  trialCtaSub: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    lineHeight: 18,
   },
   communityBanner: {
     backgroundColor: colors.mossLight,
