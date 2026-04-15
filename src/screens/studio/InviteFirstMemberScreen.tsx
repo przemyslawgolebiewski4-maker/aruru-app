@@ -67,6 +67,7 @@ export default function InviteFirstMemberScreen({ route }: { route: Route }) {
         <View style={styles.stepRow}>
           <View style={[styles.stepDot, styles.stepDotDone]} />
           <View style={[styles.stepDot, styles.stepDotDone]} />
+          <View style={[styles.stepDot, styles.stepDotDone]} />
           <View style={[styles.stepDot, styles.stepDotActive]} />
         </View>
 

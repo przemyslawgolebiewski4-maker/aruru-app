@@ -103,7 +103,7 @@ function PricingField({ label, value, onChange, suffix }: PricingFieldProps) {
 }
 
 export default function PricingSettingsScreen({ route }: { route: Route }) {
-  const { tenantId, studioName } = route.params;
+  const { tenantId, studioName, fromOnboarding } = route.params;
   const navigation = useNavigation<Nav>();
   const { studios } = useAuth();
 
@@ -283,6 +283,10 @@ export default function PricingSettingsScreen({ route }: { route: Route }) {
       );
       if (savedTimerRef.current != null) {
         clearTimeout(savedTimerRef.current);
+      }
+      if (fromOnboarding) {
+        navigation.replace('InviteFirstMember', { tenantId, studioName });
+        return;
       }
       setSaved(true);
       savedTimerRef.current = setTimeout(() => {

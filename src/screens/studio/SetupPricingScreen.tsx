@@ -67,8 +67,19 @@ function PricingFieldRow({
 }
 
 export default function SetupPricingScreen({ route }: { route: Route }) {
-  const { tenantId, studioName } = route.params;
+  const { tenantId, studioName, fromOnboarding } = route.params;
   const navigation = useNavigation<Nav>();
+
+  function continueAfterPricing() {
+    if (fromOnboarding) {
+      navigation.replace('InviteFirstMember', { tenantId, studioName });
+    } else {
+      navigation.replace('MemberDashboardSettingsOnboarding', {
+        tenantId,
+        studioName,
+      });
+    }
+  }
   const { studios } = useAuth();
   const studioCurrency = (
     studios.find((s) => s.tenantId === tenantId)?.currency ?? 'EUR'
@@ -93,10 +104,7 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         kilnPrivatePerFiring: parseAmount(priv),
         membershipFee: parseAmount(membership),
       });
-      navigation.replace('MemberDashboardSettingsOnboarding', {
-        tenantId,
-        studioName,
-      });
+      continueAfterPricing();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not save pricing.');
     } finally {
@@ -115,8 +123,9 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
       >
         <View style={styles.stepRow}>
           <View style={[styles.stepDot, styles.stepDotDone]} />
+          <View style={[styles.stepDot, styles.stepDotDone]} />
+          <View style={[styles.stepDot, styles.stepDotDone]} />
           <View style={[styles.stepDot, styles.stepDotActive]} />
-          <View style={styles.stepDot} />
         </View>
         <View style={styles.top}>
           <Text style={styles.title}>{studioName}</Text>
@@ -175,7 +184,9 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         ) : null}
 
         <Button
-          label="Save & go to dashboard"
+          label={
+            fromOnboarding ? 'Save & continue' : 'Save & go to dashboard'
+          }
           variant="primary"
           onPress={onSave}
           loading={loading}
@@ -185,12 +196,7 @@ export default function SetupPricingScreen({ route }: { route: Route }) {
         <Button
           label="Skip for now"
           variant="ghost"
-          onPress={() =>
-            navigation.replace('MemberDashboardSettingsOnboarding', {
-              tenantId,
-              studioName,
-            })
-          }
+          onPress={() => continueAfterPricing()}
           fullWidth
           accessibilityLabel="Skip pricing setup"
           style={styles.skipBelowPrimary}

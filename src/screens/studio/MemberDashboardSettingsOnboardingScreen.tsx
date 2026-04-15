@@ -104,7 +104,11 @@ export default function MemberDashboardSettingsOnboardingScreen({
   }
 
   function goNext() {
-    navigation.replace('InviteFirstMember', { tenantId, studioName });
+    navigation.replace('SetupPricing', {
+      tenantId,
+      studioName,
+      fromOnboarding: true,
+    });
   }
 
   const orderedKeys = useMemo(() => {
@@ -132,6 +136,7 @@ export default function MemberDashboardSettingsOnboardingScreen({
         <View style={[styles.stepDot, styles.stepDotDone]} />
         <View style={[styles.stepDot, styles.stepDotDone]} />
         <View style={[styles.stepDot, styles.stepDotActive]} />
+        <View style={styles.stepDot} />
       </View>
 
       <View style={styles.top}>

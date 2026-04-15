@@ -87,6 +87,7 @@ export default function CreateStudioScreen() {
           <View style={[styles.stepDot, styles.stepDotActive]} />
           <View style={styles.stepDot} />
           <View style={styles.stepDot} />
+          <View style={styles.stepDot} />
         </View>
         <View style={styles.top}>
           <Text style={styles.title}>Your studio</Text>

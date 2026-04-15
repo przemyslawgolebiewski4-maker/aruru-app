@@ -51,7 +51,10 @@ export default function StudioOnboardingScreen({ route }: { route: Route }) {
   }
 
   function goNext() {
-    navigation.navigate('SetupPricing', { tenantId, studioName });
+    navigation.navigate('MemberDashboardSettingsOnboarding', {
+      tenantId,
+      studioName,
+    });
   }
 
   async function handleContinue() {
@@ -88,6 +91,7 @@ export default function StudioOnboardingScreen({ route }: { route: Route }) {
         <View style={styles.stepRow}>
           <View style={[styles.stepDot, styles.stepDotDone]} />
           <View style={[styles.stepDot, styles.stepDotActive]} />
+          <View style={styles.stepDot} />
           <View style={styles.stepDot} />
         </View>
 
