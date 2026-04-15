@@ -1404,7 +1404,7 @@ export default function DashboardScreen() {
           </View>
         ) : null}
       </View>
-      {!hasSubscription ? (
+      {!hasSubscription && currentStudio?.role === 'owner' ? (
         <View style={styles.trialCtaWrap}>
           <TouchableOpacity
             style={styles.trialCtaBtn}
