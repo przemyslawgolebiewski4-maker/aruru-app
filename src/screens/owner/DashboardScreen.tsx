@@ -214,6 +214,9 @@ export default function DashboardScreen() {
   const [kilnRequests, setKilnRequests] = useState<KilnRequest[]>([]);
   const [exportingStudio, setExportingStudio] = useState(false);
   const [showExportReminder, setShowExportReminder] = useState(false);
+  const [pendingStudios, setPendingStudios] = useState<
+    { studioName: string; tenantId: string }[]
+  >([]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'there';
   const hour = new Date().getHours();
@@ -241,7 +244,57 @@ export default function DashboardScreen() {
   }
 
   const load = useCallback(async () => {
-    if (studios.length === 0 || !tenantId) {
+    if (studios.length === 0) {
+      setShowExportReminder(false);
+      setSummariesDue(0);
+      setStats({
+        members: 0,
+        firingsThisMonth: 0,
+        openTasks: 0,
+        summariesDue: 0,
+      });
+      setRecentFirings([]);
+      setRecentTasks([]);
+      setIncome(null);
+      setKilnRequests([]);
+
+      try {
+        const allStudios = await apiFetch<unknown[]>(
+          '/studios/mine',
+          {},
+          ''
+        );
+        const pending = (
+          Array.isArray(allStudios) ? allStudios : []
+        ).filter(
+          (s: unknown) =>
+            (s as Record<string, unknown>).status === 'pending' ||
+            (s as Record<string, unknown>).memberStatus === 'pending' ||
+            (s as Record<string, unknown>).member_status === 'pending'
+        ).map((s: unknown) => ({
+          studioName: String(
+            (s as Record<string, unknown>).studioName ??
+              (s as Record<string, unknown>).name ??
+              ''
+          ),
+          tenantId: String(
+            (s as Record<string, unknown>).tenantId ??
+              (s as Record<string, unknown>).tenant_id ??
+              ''
+          ),
+        }));
+        setPendingStudios(pending);
+      } catch {
+        setPendingStudios([]);
+      }
+
+      setLoading(false);
+      return;
+    }
+
+    setPendingStudios([]);
+
+    if (!tenantId) {
       setShowExportReminder(false);
       setSummariesDue(0);
       setStats({
@@ -733,24 +786,39 @@ export default function DashboardScreen() {
               </>
             ) : (
               <>
-                You&apos;re not part of any studio yet.{'\n\n'}
+                You are not part of any studio yet.{'\n\n'}
                 <Text style={styles.emptyStudiosBodyStrong}>
-                  Create a studio only if you own or run the workshop
+                  Create a studio only if you own or run it.
                 </Text>
-                — you become that studio&apos;s owner in Aruru. This is not for
-                members who only want to take classes elsewhere.{'\n\n'}
-                To join an existing studio, open{' '}
-                <Text style={styles.emptyStudiosBodyStrong}>Community</Text> and
-                use Studio Finder to send a join request where the studio is
-                listed.{'\n\n'}
-                Don&apos;t see your studio? Ask the owner to list it in the
-                Community (studio settings) so you can find it and request to
-                join — or they can still invite you by email.
+                {' '}You become the studio owner in Aruru.{'\n\n'}
+                To join an existing studio - open{' '}
+                <Text style={styles.emptyStudiosBodyStrong}>Community</Text>
+                {' '}and use Studio Finder to send a join request.{'\n\n'}
+                Don&apos;t see your studio? Ask the owner to list it in
+                Community so you can find it - or they can invite you directly
+                by email.
               </>
             )}
           </Text>
           {!onlySuspended ? (
             <>
+              {pendingStudios.length > 0 ? (
+                <View style={styles.pendingCard}>
+                  {pendingStudios.map((s) => (
+                    <View key={s.tenantId || s.studioName}>
+                      <Text style={styles.pendingTitle}>
+                        Request sent to {s.studioName || 'a studio'}
+                      </Text>
+                      <Text style={styles.pendingBody}>
+                        When the owner accepts your request - you will see the
+                        studio information shared with you here.{'\n\n'}
+                        In the meantime - enjoy the community. Discover studios,
+                        join the forum, and share your events. 🙂
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               <Button
                 label="Create a studio (I am the owner)"
                 variant="primary"
@@ -1511,6 +1579,26 @@ const styles = StyleSheet.create({
   emptyStudiosBodyStrong: {
     fontFamily: typography.bodyMedium,
     color: colors.ink,
+  },
+  pendingCard: {
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.md,
+    padding: spacing[5],
+    marginBottom: spacing[4],
+    gap: spacing[2],
+    borderWidth: 0.5,
+    borderColor: colors.moss,
+  },
+  pendingTitle: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.md,
+    color: colors.moss,
+  },
+  pendingBody: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    lineHeight: 22,
   },
   emptyStudiosCreateBtn: {
     marginTop: 24,
