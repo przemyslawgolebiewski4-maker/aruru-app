@@ -25,6 +25,17 @@ import {
 } from '../../services/api';
 import { alertMessage } from '../../utils/confirmAction';
 import { getMemberDashboardSectionInfo } from './memberDashboardSectionInfo';
+import { useAuth } from '../../hooks/useAuth';
+
+const FREE_SECTIONS = ['events', 'bookings'];
+const PAID_SECTIONS = [
+  'kiln',
+  'materials',
+  'costs',
+  'tasks',
+  'privateKilns',
+  'membershipPlans',
+];
 
 type Nav = NativeStackNavigationProp<
   AppStackParamList,
@@ -42,6 +53,11 @@ export default function MemberDashboardSettingsOnboardingScreen({
 }) {
   const { tenantId, studioName } = route.params;
   const navigation = useNavigation<Nav>();
+  const { studios } = useAuth();
+  const studioData = studios.find((s) => s.tenantId === tenantId);
+  const hasSubscription =
+    studioData?.subscriptionStatus === 'active' ||
+    studioData?.subscriptionStatus === 'trial';
 
   const [sectionKeys, setSectionKeys] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
@@ -136,41 +152,115 @@ export default function MemberDashboardSettingsOnboardingScreen({
         </Text>
       </View>
 
-      <SectionLabel>Member dashboard sections</SectionLabel>
-
       {loading ? (
         <ActivityIndicator
           color={colors.clay}
           style={{ marginTop: spacing[4] }}
         />
       ) : (
-        orderedKeys.map((key) => {
-          const on = visibility[key] !== false;
-          const busy = patchingKey === key;
-          const info = getMemberDashboardSectionInfo(key);
-          return (
-            <View key={key} style={styles.row}>
-              <View style={styles.rowText}>
-                <Text style={styles.rowTitle}>{info.label}</Text>
-                {info.desc ? (
-                  <Text style={styles.rowDesc}>{info.desc}</Text>
-                ) : null}
-              </View>
-              <TouchableOpacity
-                onPress={() => void toggleKey(key)}
-                disabled={busy}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: on }}
-                style={[styles.toggle, on && styles.toggleOn]}
-                activeOpacity={0.75}
-              >
+        <>
+          <SectionLabel>Always available - free</SectionLabel>
+          {orderedKeys
+            .filter((k) => FREE_SECTIONS.includes(k))
+            .map((key) => {
+              const on = visibility[key] !== false;
+              const busy = patchingKey === key;
+              const info = getMemberDashboardSectionInfo(key);
+              return (
+                <View key={key} style={styles.row}>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle}>{info.label}</Text>
+                    {info.desc ? (
+                      <Text style={styles.rowDesc}>{info.desc}</Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => void toggleKey(key)}
+                    disabled={busy}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: on }}
+                    style={[styles.toggle, on && styles.toggleOn]}
+                    activeOpacity={0.75}
+                  >
+                    <View
+                      style={[styles.toggleThumb, on && styles.toggleThumbOn]}
+                    />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+
+          <View style={styles.paidSectionHeader}>
+            <SectionLabel>Studio manager tools</SectionLabel>
+            {!hasSubscription ? (
+              <Text style={styles.paidSectionNote}>
+                These sections are part of the studio manager - connected to a
+                subscription. You can try them free for 14 days - no credit card
+                needed.{'\n'}
+                Start a trial from your studio dashboard to unlock them
+                gradually for your members.
+              </Text>
+            ) : null}
+          </View>
+          {orderedKeys
+            .filter(
+              (k) =>
+                PAID_SECTIONS.includes(k) ||
+                (!FREE_SECTIONS.includes(k) && !PAID_SECTIONS.includes(k))
+            )
+            .map((key) => {
+              const on = visibility[key] !== false;
+              const busy = patchingKey === key;
+              const isPaidLocked = !hasSubscription;
+              const info = getMemberDashboardSectionInfo(key);
+              return (
                 <View
-                  style={[styles.toggleThumb, on && styles.toggleThumbOn]}
-                />
-              </TouchableOpacity>
-            </View>
-          );
-        })
+                  key={key}
+                  style={[styles.row, isPaidLocked && styles.rowDisabled]}
+                >
+                  <View style={styles.rowText}>
+                    <Text
+                      style={[
+                        styles.rowTitle,
+                        isPaidLocked && styles.rowTitleDisabled,
+                      ]}
+                    >
+                      {info.label}
+                    </Text>
+                    {info.desc ? (
+                      <Text
+                        style={[
+                          styles.rowDesc,
+                          isPaidLocked && styles.rowDescDisabled,
+                        ]}
+                      >
+                        {info.desc}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => void toggleKey(key)}
+                    disabled={busy || isPaidLocked}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: on, disabled: isPaidLocked }}
+                    style={[
+                      styles.toggle,
+                      on && !isPaidLocked && styles.toggleOn,
+                      isPaidLocked && styles.toggleDisabled,
+                    ]}
+                    activeOpacity={isPaidLocked ? 1 : 0.75}
+                  >
+                    <View
+                      style={[
+                        styles.toggleThumb,
+                        on && !isPaidLocked && styles.toggleThumbOn,
+                      ]}
+                    />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+        </>
       )}
 
       <Button
@@ -280,6 +370,29 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   toggleThumbOn: { alignSelf: 'flex-end' },
+  paidSectionHeader: {
+    marginTop: spacing[5],
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  paidSectionNote: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+  },
+  rowDisabled: {
+    opacity: 0.45,
+  },
+  rowTitleDisabled: {
+    color: colors.inkLight,
+  },
+  rowDescDisabled: {
+    color: colors.inkLight,
+  },
+  toggleDisabled: {
+    backgroundColor: colors.border,
+  },
   btn: { marginTop: spacing[6] },
   skipBtn: { marginTop: spacing[2] },
 });

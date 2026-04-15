@@ -154,6 +154,16 @@ function trialDaysLeft(iso?: string): number {
   );
 }
 
+/** Same rules as member dashboard: omitted key = visible; explicit false = hidden. */
+function memberSectionVisible(
+  visibility: Record<string, boolean> | null | undefined,
+  key: string
+): boolean {
+  if (visibility == null || typeof visibility !== 'object') return true;
+  if (!Object.prototype.hasOwnProperty.call(visibility, key)) return true;
+  return visibility[key] !== false;
+}
+
 function isExportOverdue(tenantId: string): boolean {
   if (typeof window === 'undefined') return false;
   const key = `aruru_last_export_${tenantId}`;
@@ -620,22 +630,41 @@ export default function DashboardScreen() {
     }
     const stack =
       navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
-    const y = new Date().getFullYear();
-    const m = new Date().getMonth() + 1;
     if (currentStudio?.role === 'owner') {
       stack?.navigate('CostList', { tenantId });
-    } else {
-      const uid = user?.id;
-      if (!uid) return;
+      return;
+    }
+    const uid = user?.id;
+    if (!uid) return;
+    // Assistant: same as members — previous month only, no live current month.
+    if (currentStudio?.role === 'assistant') {
+      const now = new Date();
+      let prevMonth = now.getMonth();
+      let prevYear = now.getFullYear();
+      if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear -= 1;
+      }
       stack?.navigate('CostDetail', {
         tenantId,
         userId: uid,
         memberName: user?.name?.trim() || user?.email || 'You',
         memberEmail: user?.email,
-        year: y,
-        month: m,
+        year: prevYear,
+        month: prevMonth,
       });
+      return;
     }
+    const y = new Date().getFullYear();
+    const m = new Date().getMonth() + 1;
+    stack?.navigate('CostDetail', {
+      tenantId,
+      userId: uid,
+      memberName: user?.name?.trim() || user?.email || 'You',
+      memberEmail: user?.email,
+      year: y,
+      month: m,
+    });
   }
 
   function goAttendance() {
@@ -1349,7 +1378,12 @@ export default function DashboardScreen() {
             style={styles.quickActionBtn}
           />
         </View>
-        {hasSubscription ? (
+        {hasSubscription &&
+        (currentStudio?.role !== 'assistant' ||
+          memberSectionVisible(
+            currentStudio?.memberDashboardVisibility,
+            'costs'
+          )) ? (
           <View style={styles.actionQuarter}>
             <Button
               label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
@@ -1370,6 +1404,17 @@ export default function DashboardScreen() {
           </View>
         ) : null}
       </View>
+      {currentStudio?.role === 'assistant' &&
+      hasSubscription &&
+      memberSectionVisible(
+        currentStudio?.memberDashboardVisibility,
+        'costs'
+      ) ? (
+        <Text style={styles.assistantCostsHint}>
+          Your costs show the previous month only - they update at month end,
+          the same as for studio members.
+        </Text>
+      ) : null}
 
       {canManageMembers ? (
         <>
@@ -2101,5 +2146,13 @@ const styles = StyleSheet.create({
   quickActionBtn: {
     flex: 1,
     minWidth: '45%',
+  },
+  assistantCostsHint: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkLight,
+    lineHeight: 20,
+    marginTop: spacing[2],
+    textAlign: 'center',
   },
 });
