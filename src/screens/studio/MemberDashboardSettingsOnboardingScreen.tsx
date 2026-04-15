@@ -193,13 +193,26 @@ export default function MemberDashboardSettingsOnboardingScreen({
           <View style={styles.paidSectionHeader}>
             <SectionLabel>Studio manager tools</SectionLabel>
             {!hasSubscription ? (
-              <Text style={styles.paidSectionNote}>
-                These sections are part of the studio manager - connected to a
-                subscription. You can try them free for 14 days - no credit card
-                needed.{'\n'}
-                Start a trial from your studio dashboard to unlock them
-                gradually for your members.
-              </Text>
+              <View style={styles.paidNoteWrap}>
+                <Text style={styles.paidSectionNote}>
+                  These sections are part of the studio manager - connected to a
+                  subscription. You can try them free for 14 days - no credit card
+                  needed.
+                </Text>
+                <TouchableOpacity
+                  style={styles.paidTrialBtn}
+                  onPress={() =>
+                    navigation.navigate('StudioPlan', { tenantId })
+                  }
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start free trial, see plans"
+                >
+                  <Text style={styles.paidTrialBtnText}>
+                    Start free trial - see plans →
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
           </View>
           {orderedKeys
@@ -380,6 +393,23 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.inkLight,
     lineHeight: 20,
+  },
+  paidNoteWrap: {
+    gap: spacing[3],
+  },
+  paidTrialBtn: {
+    backgroundColor: colors.clayLight,
+    borderRadius: radius.sm,
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderWidth: 0.5,
+    borderColor: colors.clay,
+    alignSelf: 'flex-start',
+  },
+  paidTrialBtnText: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.clay,
   },
   rowDisabled: {
     opacity: 0.45,
