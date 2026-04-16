@@ -324,17 +324,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing[2],
     marginTop: spacing[2],
+    flexWrap: 'nowrap',
   },
   portfolioCell: {
-    flex: 1,
-    aspectRatio: 1,
+    width: Platform.OS === 'web' ? 120 : 100,
+    height: Platform.OS === 'web' ? 120 : 100,
     borderRadius: radius.md,
     overflow: 'hidden',
     backgroundColor: colors.border,
   },
   portfolioImageNative: {
     width: '100%',
-    aspectRatio: 1,
+    height: '100%',
   },
   section: { padding: spacing[4], gap: spacing[3] },
   sectionLabel: {
