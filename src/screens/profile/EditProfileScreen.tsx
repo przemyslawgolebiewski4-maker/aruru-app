@@ -17,7 +17,6 @@ import { apiFetch, patchMe, type PatchMeBody } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
 import { COUNTRY_NAMES } from '../../utils/locationData';
-import { openWebImageFilePicker, readImageFileAsBase64 } from '../../utils/webImagePick';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
@@ -108,49 +107,17 @@ export default function EditProfileScreen({ navigation }: Props) {
     );
   }
 
-  async function finishPortfolioWebUpload(
-    slot: number,
-    file: File | null
-  ): Promise<void> {
-    if (!file) return;
-    if (uploadingSlot !== null) return;
-    setUploadingSlot(slot);
-    try {
-      const picked = await readImageFileAsBase64(file);
-      if (!picked) return;
-      const res = await apiFetch<{
-        portfolioUrl?: string;
-        portfolio_url?: string;
-      }>(
-        '/uploads/portfolio-image',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            imageBase64: picked.base64,
-            mimeType: picked.mimeType,
-            slot,
-          }),
-        },
-        ''
-      );
-      const url = res.portfolioUrl ?? res.portfolio_url;
-      if (url) {
-        setPortfolioUrls((prev) => {
-          const next = padPortfolioSlots(prev);
-          next[slot] = url;
-          return next;
-        });
-        void refresh();
-      }
-    } catch {
-      /* ignore */
-    } finally {
-      setUploadingSlot(null);
-    }
-  }
-
   async function pickAndUploadPortfolioImage(slot: number): Promise<void> {
     if (uploadingSlot !== null) return;
+
+    if (Platform.OS === 'web') {
+      const input = document.getElementById(
+        `portfolio-file-input-${slot}`
+      ) as HTMLInputElement | null;
+      input?.click();
+      return;
+    }
+
     setUploadingSlot(slot);
     try {
       const { default: ImagePicker } = await import('expo-image-picker');
@@ -263,6 +230,72 @@ export default function EditProfileScreen({ navigation }: Props) {
         shape="circle"
       />
 
+      {Platform.OS === 'web' ? (
+        <Fragment>
+          {[0, 1, 2].map((slot) =>
+            createElement('input', {
+              key: `portfolio-input-${slot}`,
+              id: `portfolio-file-input-${slot}`,
+              type: 'file',
+              accept: 'image/jpeg,image/png,image/webp',
+              style: { display: 'none' },
+              onChange: (e: { target: HTMLInputElement }) => {
+                const input = e.target;
+                const file = input.files?.[0];
+                if (!file || file.size > 3_000_000) return;
+                setUploadingSlot(slot);
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const result = reader.result as string;
+                  const base64 = result.split(',')[1];
+                  if (!base64) {
+                    setUploadingSlot(null);
+                    input.value = '';
+                    return;
+                  }
+                  void apiFetch<{
+                    portfolioUrl?: string;
+                    portfolio_url?: string;
+                  }>(
+                    '/uploads/portfolio-image',
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        imageBase64: base64,
+                        mimeType: file.type,
+                        slot,
+                      }),
+                    },
+                    ''
+                  )
+                    .then((res) => {
+                      const url = res.portfolioUrl ?? res.portfolio_url;
+                      if (url) {
+                        setPortfolioUrls((prev) => {
+                          const next = padPortfolioSlots(prev);
+                          next[slot] = url;
+                          return next;
+                        });
+                        void refresh();
+                      }
+                    })
+                    .catch(() => {})
+                    .finally(() => {
+                      setUploadingSlot(null);
+                      input.value = '';
+                    });
+                };
+                reader.onerror = () => {
+                  setUploadingSlot(null);
+                  input.value = '';
+                };
+                reader.readAsDataURL(file);
+              },
+            })
+          )}
+        </Fragment>
+      ) : null}
+
       <View style={styles.portfolioEditorSection}>
         <Text style={styles.portfolioEditorLabel}>
           Portfolio photos (up to 3)
@@ -311,16 +344,7 @@ export default function EditProfileScreen({ navigation }: Props) {
                 ) : (
                   <TouchableOpacity
                     style={styles.portfolioAddBtn}
-                    onPress={() => {
-                      if (uploadingSlot !== null) return;
-                      if (Platform.OS === 'web') {
-                        openWebImageFilePicker((file) => {
-                          void finishPortfolioWebUpload(slot, file);
-                        });
-                        return;
-                      }
-                      void pickAndUploadPortfolioImage(slot);
-                    }}
+                    onPress={() => void pickAndUploadPortfolioImage(slot)}
                     activeOpacity={0.7}
                     accessibilityLabel={`Add photo ${slot + 1}`}
                   >
