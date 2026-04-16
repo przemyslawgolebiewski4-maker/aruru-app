@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { createElement, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Linking,
+  Platform,
+  Image,
 } from 'react-native';
 import type {
   NativeStackNavigationProp,
@@ -17,7 +19,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import { AvatarImage } from '../../components/AvatarImage';
 import { Divider } from '../../components/ui';
-import { colors, typography, fontSize, spacing } from '../../theme/tokens';
+import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ArtistProfile'>;
@@ -41,6 +43,7 @@ type Artist = {
   shopUrl?: string;
   studios: Studio[];
   showEvents: boolean;
+  portfolioUrls?: string[];
 };
 
 function initials(name: string): string {
@@ -68,14 +71,19 @@ export default function ArtistProfileScreen({ route }: Props) {
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch<Artist & { avatar_url?: string }>(
-        `/community/artists/${userId}`,
-        {},
-        tenantId
-      );
+      const res = await apiFetch<
+        Artist & { avatar_url?: string; portfolio_urls?: string[] }
+      >(`/community/artists/${userId}`, {}, tenantId);
       setArtist({
         ...res,
         avatarUrl: res.avatarUrl ?? res.avatar_url,
+        portfolioUrls: Array.isArray(
+          res.portfolioUrls ?? res.portfolio_urls
+        )
+          ? ((res.portfolioUrls ?? res.portfolio_urls) as string[]).filter(
+              Boolean
+            )
+          : [],
         studios: (res.studios ?? []).map((s) => ({
           ...s,
           studioLogoUrl:
@@ -132,6 +140,40 @@ export default function ArtistProfileScreen({ route }: Props) {
         {artist.bio ? <Text style={styles.bio}>{artist.bio}</Text> : null}
         {artist.city ? <Text style={styles.city}>{artist.city}</Text> : null}
       </View>
+
+      {(artist.portfolioUrls ?? []).length > 0 ? (
+        <>
+          <Divider />
+          <View style={styles.portfolioSection}>
+            <Text style={styles.sectionLabel}>Portfolio</Text>
+            <View style={styles.portfolioGrid}>
+              {(artist.portfolioUrls ?? []).map((url, i) => (
+                <View key={`${url}-${i}`} style={styles.portfolioCell}>
+                  {Platform.OS === 'web' ? (
+                    createElement('img', {
+                      src: url,
+                      style: {
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        display: 'block',
+                      },
+                      alt: `Portfolio photo ${i + 1}`,
+                    })
+                  ) : (
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.portfolioImageNative}
+                      accessibilityLabel={`Portfolio photo ${i + 1}`}
+                    />
+                  )}
+                </View>
+              ))}
+            </View>
+          </View>
+        </>
+      ) : null}
 
       {studioList.length > 0 ? (
         <>
@@ -273,6 +315,26 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  portfolioSection: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+  },
+  portfolioGrid: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    marginTop: spacing[2],
+  },
+  portfolioCell: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.border,
+  },
+  portfolioImageNative: {
+    width: '100%',
+    aspectRatio: 1,
   },
   section: { padding: spacing[4], gap: spacing[3] },
   sectionLabel: {
