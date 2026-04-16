@@ -16,6 +16,8 @@ export interface AuthUser {
   instagramUrl?: string | null;
   websiteUrl?: string | null;
   shopUrl?: string | null;
+  /** Up to 3 portfolio image URLs (empty slots as '' or null from API). */
+  portfolioUrls?: (string | null)[];
   /**
    * Keys: profile, studios, events, forum_activity, links — values: everyone | my_studios | only_me.
    * hidden_studios: tenant IDs to hide from public profile when studios visibility is shared.
@@ -64,6 +66,15 @@ export function normalizeAuthUser(raw: Record<string, unknown>): AuthUser {
     instagramUrl: (raw.instagramUrl ?? raw.instagram_url ?? null) as string | null,
     websiteUrl: (raw.websiteUrl ?? raw.website_url ?? null) as string | null,
     shopUrl: (raw.shopUrl ?? raw.shop_url ?? null) as string | null,
+    portfolioUrls: (() => {
+      const rawUrls = raw.portfolioUrls ?? raw.portfolio_urls;
+      if (!Array.isArray(rawUrls)) {
+        return ['', '', ''] as (string | null)[];
+      }
+      const a = [...(rawUrls as (string | null)[])].slice(0, 3);
+      while (a.length < 3) a.push('');
+      return a as (string | null)[];
+    })(),
     communityVisibility:
       cv && typeof cv === 'object' && !Array.isArray(cv)
         ? { ...(cv as Record<string, string | string[] | undefined>) }

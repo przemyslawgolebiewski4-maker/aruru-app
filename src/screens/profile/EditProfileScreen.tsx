@@ -1,21 +1,37 @@
-import React, { Fragment, useEffect, useState } from 'react';
+import React, { Fragment, createElement, useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
-import { patchMe, type PatchMeBody } from '../../services/api';
+import { apiFetch, patchMe, type PatchMeBody } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
 import { COUNTRY_NAMES } from '../../utils/locationData';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
+
+function padPortfolioSlots(
+  p: (string | null | undefined)[] | undefined
+): (string | null)[] {
+  const base = Array.isArray(p) ? [...p] : ['', '', ''];
+  const mapped = base
+    .slice(0, 3)
+    .map((u) =>
+      u != null && String(u).trim() !== '' ? String(u) : null
+    );
+  while (mapped.length < 3) mapped.push(null);
+  return mapped.slice(0, 3);
+}
 
 function pickStringVisibility(
   cv?: Record<string, string | string[] | undefined>
@@ -52,6 +68,14 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [portfolioUrls, setPortfolioUrls] = useState<(string | null)[]>(() =>
+    padPortfolioSlots(user?.portfolioUrls)
+  );
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
+
+  useEffect(() => {
+    setPortfolioUrls(padPortfolioSlots(user?.portfolioUrls));
+  }, [user?.portfolioUrls]);
 
   useEffect(() => {
     setAvatarUrl(user?.avatarUrl ?? '');
@@ -81,6 +105,126 @@ export default function EditProfileScreen({ navigation }: Props) {
         ? prev.filter((id) => id !== tenantId)
         : [...prev, tenantId]
     );
+  }
+
+  async function pickAndUploadPortfolioImage(slot: number): Promise<void> {
+    if (uploadingSlot !== null) return;
+    setUploadingSlot(slot);
+    try {
+      if (Platform.OS === 'web') {
+        await new Promise<void>((resolve) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'image/jpeg,image/png,image/webp';
+          input.onchange = () => {
+            const file = input.files?.[0];
+            if (!file) {
+              resolve();
+              return;
+            }
+            if (file.size > 3_000_000) {
+              resolve();
+              return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              const base64 = result.split(',')[1];
+              void (async () => {
+                try {
+                  const res = await apiFetch<{
+                    portfolioUrl?: string;
+                    portfolio_url?: string;
+                  }>(
+                    '/uploads/portfolio-image',
+                    {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        imageBase64: base64,
+                        mimeType: file.type,
+                        slot,
+                      }),
+                    },
+                    ''
+                  );
+                  const url = res.portfolioUrl ?? res.portfolio_url;
+                  if (url) {
+                    setPortfolioUrls((prev) => {
+                      const next = padPortfolioSlots(prev);
+                      next[slot] = url;
+                      return next;
+                    });
+                    void refresh();
+                  }
+                } catch {
+                  /* ignore */
+                }
+                resolve();
+              })();
+            };
+            reader.readAsDataURL(file);
+          };
+          input.click();
+        });
+      } else {
+        const { default: ImagePicker } = await import('expo-image-picker');
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return;
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          base64: true,
+          quality: 0.8,
+        });
+        if (picked.canceled || !picked.assets[0]) return;
+        const asset = picked.assets[0];
+        const res = await apiFetch<{
+          portfolioUrl?: string;
+          portfolio_url?: string;
+        }>(
+          '/uploads/portfolio-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: asset.base64 ?? '',
+              mimeType: 'image/jpeg',
+              slot,
+            }),
+          },
+          ''
+        );
+        const url = res.portfolioUrl ?? res.portfolio_url;
+        if (url) {
+          setPortfolioUrls((prev) => {
+            const next = padPortfolioSlots(prev);
+            next[slot] = url;
+            return next;
+          });
+          void refresh();
+        }
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setUploadingSlot(null);
+    }
+  }
+
+  async function deletePortfolioImage(slot: number): Promise<void> {
+    try {
+      await apiFetch(
+        `/uploads/portfolio-image/${slot}`,
+        { method: 'DELETE' },
+        ''
+      );
+      setPortfolioUrls((prev) => {
+        const next = padPortfolioSlots(prev);
+        next[slot] = null;
+        return next;
+      });
+      void refresh();
+    } catch {
+      /* ignore */
+    }
   }
 
   async function onSave() {
@@ -133,6 +277,67 @@ export default function EditProfileScreen({ navigation }: Props) {
         }}
         shape="circle"
       />
+
+      <View style={styles.portfolioEditorSection}>
+        <Text style={styles.portfolioEditorLabel}>
+          Portfolio photos (up to 3)
+        </Text>
+        <Text style={styles.portfolioEditorHint}>
+          Show your work. Max 3 photos - 3MB each.
+        </Text>
+        <View style={styles.portfolioEditorGrid}>
+          {[0, 1, 2].map((slot) => {
+            const url = portfolioUrls[slot];
+            const isUploading = uploadingSlot === slot;
+            return (
+              <View key={slot} style={styles.portfolioEditorCell}>
+                {isUploading ? (
+                  <ActivityIndicator color={colors.clay} />
+                ) : url ? (
+                  <View style={styles.portfolioFilledWrap}>
+                    {Platform.OS === 'web' ? (
+                      createElement('img', {
+                        src: url,
+                        style: {
+                          width: '100%',
+                          aspectRatio: '1',
+                          objectFit: 'cover',
+                          borderRadius: 8,
+                          display: 'block',
+                        },
+                        alt: '',
+                      })
+                    ) : (
+                      <Image
+                        source={{ uri: url }}
+                        style={styles.portfolioEditorImageNative}
+                        accessibilityLabel=""
+                      />
+                    )}
+                    <TouchableOpacity
+                      style={styles.portfolioRemoveBtn}
+                      onPress={() => void deletePortfolioImage(slot)}
+                      hitSlop={4}
+                      accessibilityLabel={`Remove photo ${slot + 1}`}
+                    >
+                      <Text style={styles.portfolioRemoveBtnText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.portfolioAddBtn}
+                    onPress={() => void pickAndUploadPortfolioImage(slot)}
+                    activeOpacity={0.7}
+                    accessibilityLabel={`Add photo ${slot + 1}`}
+                  >
+                    <Text style={styles.portfolioAddBtnText}>+</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </View>
 
       <Input
         label="Display name"
@@ -373,6 +578,78 @@ export default function EditProfileScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
   content: { padding: spacing[4], gap: spacing[4] },
+  portfolioEditorSection: {
+    width: '100%',
+    marginBottom: spacing[4],
+  },
+  portfolioEditorLabel: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    marginBottom: spacing[1],
+  },
+  portfolioEditorHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    marginBottom: spacing[3],
+  },
+  portfolioEditorGrid: {
+    flexDirection: 'row',
+    gap: spacing[2],
+  },
+  portfolioEditorCell: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.clayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    position: 'relative',
+  },
+  portfolioFilledWrap: {
+    width: '100%',
+    height: '100%',
+  },
+  portfolioEditorImageNative: {
+    width: '100%',
+    height: '100%',
+    borderRadius: radius.md,
+  },
+  portfolioAddBtn: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portfolioAddBtnText: {
+    fontFamily: typography.body,
+    fontSize: 28,
+    color: colors.clay,
+    lineHeight: 32,
+  },
+  portfolioRemoveBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  portfolioRemoveBtnText: {
+    color: colors.surface,
+    fontSize: 13,
+    lineHeight: 16,
+    fontWeight: '600',
+  },
   pickerLabel: {
     fontFamily: typography.bodyMedium,
     fontSize: fontSize.sm,
