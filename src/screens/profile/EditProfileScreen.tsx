@@ -112,60 +112,62 @@ export default function EditProfileScreen({ navigation }: Props) {
     setUploadingSlot(slot);
     try {
       if (Platform.OS === 'web') {
-        await new Promise<void>((resolve) => {
+        const picked = await new Promise<{
+          base64: string;
+          mimeType: string;
+        } | null>((resolve) => {
           const input = document.createElement('input');
           input.type = 'file';
           input.accept = 'image/jpeg,image/png,image/webp';
           input.onchange = () => {
             const file = input.files?.[0];
-            if (!file) {
-              resolve();
-              return;
-            }
-            if (file.size > 3_000_000) {
-              resolve();
+            if (!file || file.size > 3_000_000) {
+              resolve(null);
               return;
             }
             const reader = new FileReader();
             reader.onload = () => {
               const result = reader.result as string;
               const base64 = result.split(',')[1];
-              void (async () => {
-                try {
-                  const res = await apiFetch<{
-                    portfolioUrl?: string;
-                    portfolio_url?: string;
-                  }>(
-                    '/uploads/portfolio-image',
-                    {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        imageBase64: base64,
-                        mimeType: file.type,
-                        slot,
-                      }),
-                    },
-                    ''
-                  );
-                  const url = res.portfolioUrl ?? res.portfolio_url;
-                  if (url) {
-                    setPortfolioUrls((prev) => {
-                      const next = padPortfolioSlots(prev);
-                      next[slot] = url;
-                      return next;
-                    });
-                    void refresh();
-                  }
-                } catch {
-                  /* ignore */
-                }
-                resolve();
-              })();
+              resolve({ base64, mimeType: file.type });
             };
+            reader.onerror = () => resolve(null);
             reader.readAsDataURL(file);
           };
           input.click();
         });
+
+        if (!picked) return;
+
+        try {
+          const res = await apiFetch<{
+            portfolioUrl?: string;
+            portfolio_url?: string;
+          }>(
+            '/uploads/portfolio-image',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                imageBase64: picked.base64,
+                mimeType: picked.mimeType,
+                slot,
+              }),
+            },
+            ''
+          );
+          const url = res.portfolioUrl ?? res.portfolio_url;
+          if (url) {
+            setPortfolioUrls((prev) => {
+              const next = padPortfolioSlots(prev);
+              next[slot] = url;
+              return next;
+            });
+            void refresh();
+          }
+        } catch {
+          /* ignore */
+        }
+        return;
       } else {
         const { default: ImagePicker } = await import('expo-image-picker');
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();

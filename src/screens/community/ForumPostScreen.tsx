@@ -279,17 +279,16 @@ export default function ForumPostScreen({ route, navigation }: Props) {
 
   async function pickAndUploadImage(): Promise<string | null> {
     if (Platform.OS === 'web') {
-      return new Promise((resolve) => {
+      const picked = await new Promise<{
+        base64: string;
+        mimeType: string;
+      } | null>((resolve) => {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/jpeg,image/png,image/webp';
         input.onchange = () => {
           const file = input.files?.[0];
-          if (!file) {
-            resolve(null);
-            return;
-          }
-          if (file.size > 3_000_000) {
+          if (!file || file.size > 3_000_000) {
             resolve(null);
             return;
           }
@@ -297,55 +296,59 @@ export default function ForumPostScreen({ route, navigation }: Props) {
           reader.onload = () => {
             const result = reader.result as string;
             const base64 = result.split(',')[1];
-            void (async () => {
-              try {
-                const res = await apiFetch<{ imageUrl: string }>(
-                  '/uploads/forum-image',
-                  {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      imageBase64: base64,
-                      mimeType: file.type,
-                    }),
-                  },
-                  tenantId
-                );
-                resolve(res.imageUrl ?? null);
-              } catch {
-                resolve(null);
-              }
-            })();
+            resolve({ base64, mimeType: file.type });
           };
+          reader.onerror = () => resolve(null);
           reader.readAsDataURL(file);
         };
         input.click();
       });
-    }
-    try {
-      const { default: ImagePicker } = await import('expo-image-picker');
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) return null;
-      const picked = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        base64: true,
-        quality: 0.8,
-      });
-      if (picked.canceled || !picked.assets[0]) return null;
-      const asset = picked.assets[0];
-      const res = await apiFetch<{ imageUrl: string }>(
-        '/uploads/forum-image',
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            imageBase64: asset.base64 ?? '',
-            mimeType: 'image/jpeg',
-          }),
-        },
-        tenantId
-      );
-      return res.imageUrl ?? null;
-    } catch {
-      return null;
+
+      if (!picked) return null;
+
+      try {
+        const res = await apiFetch<{ imageUrl: string }>(
+          '/uploads/forum-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: picked.base64,
+              mimeType: picked.mimeType,
+            }),
+          },
+          tenantId
+        );
+        return res.imageUrl ?? null;
+      } catch {
+        return null;
+      }
+    } else {
+      try {
+        const { default: ImagePicker } = await import('expo-image-picker');
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return null;
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          base64: true,
+          quality: 0.8,
+        });
+        if (picked.canceled || !picked.assets[0]) return null;
+        const asset = picked.assets[0];
+        const res = await apiFetch<{ imageUrl: string }>(
+          '/uploads/forum-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: asset.base64 ?? '',
+              mimeType: 'image/jpeg',
+            }),
+          },
+          tenantId
+        );
+        return res.imageUrl ?? null;
+      } catch {
+        return null;
+      }
     }
   }
 
