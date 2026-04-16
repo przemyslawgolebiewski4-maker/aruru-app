@@ -19,6 +19,11 @@ import { Button, Divider } from '../../components/ui';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { renderMarkdown } from '../../utils/renderMarkdown';
+import {
+  openWebImageFilePicker,
+  readImageFileAsBase64,
+  uploadForumImage,
+} from '../../utils/webImagePick';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'ForumPost'>;
 
@@ -278,77 +283,31 @@ export default function ForumPostScreen({ route, navigation }: Props) {
   }
 
   async function pickAndUploadImage(): Promise<string | null> {
-    if (Platform.OS === 'web') {
-      const picked = await new Promise<{
-        base64: string;
-        mimeType: string;
-      } | null>((resolve) => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/jpeg,image/png,image/webp';
-        input.onchange = () => {
-          const file = input.files?.[0];
-          if (!file || file.size > 3_000_000) {
-            resolve(null);
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            const base64 = result.split(',')[1];
-            resolve({ base64, mimeType: file.type });
-          };
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        };
-        input.click();
+    try {
+      const { default: ImagePicker } = await import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return null;
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 0.8,
       });
-
-      if (!picked) return null;
-
-      try {
-        const res = await apiFetch<{ imageUrl: string }>(
-          '/uploads/forum-image',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              imageBase64: picked.base64,
-              mimeType: picked.mimeType,
-            }),
-          },
-          tenantId
-        );
-        return res.imageUrl ?? null;
-      } catch {
-        return null;
-      }
-    } else {
-      try {
-        const { default: ImagePicker } = await import('expo-image-picker');
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) return null;
-        const picked = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          base64: true,
-          quality: 0.8,
-        });
-        if (picked.canceled || !picked.assets[0]) return null;
-        const asset = picked.assets[0];
-        const res = await apiFetch<{ imageUrl: string }>(
-          '/uploads/forum-image',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              imageBase64: asset.base64 ?? '',
-              mimeType: 'image/jpeg',
-            }),
-          },
-          tenantId
-        );
-        return res.imageUrl ?? null;
-      } catch {
-        return null;
-      }
+      if (picked.canceled || !picked.assets[0]) return null;
+      const asset = picked.assets[0];
+      const res = await apiFetch<{ imageUrl: string }>(
+        '/uploads/forum-image',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            imageBase64: asset.base64 ?? '',
+            mimeType: 'image/jpeg',
+          }),
+        },
+        tenantId
+      );
+      return res.imageUrl ?? null;
+    } catch {
+      return null;
     }
   }
 
@@ -689,12 +648,40 @@ export default function ForumPostScreen({ route, navigation }: Props) {
             <TouchableOpacity
               style={styles.attachBtn}
               onPress={() => {
+                if (uploadingImage) return;
+                if (Platform.OS === 'web') {
+                  openWebImageFilePicker((file) => {
+                    void (async () => {
+                      if (!file) return;
+                      setUploadingImage(true);
+                      try {
+                        const picked = await readImageFileAsBase64(file);
+                        if (!picked) return;
+                        const url = await uploadForumImage(tenantId, picked);
+                        if (url) {
+                          setReplyImages((prev) =>
+                            [...prev, url].slice(0, 2)
+                          );
+                        }
+                      } finally {
+                        setUploadingImage(false);
+                      }
+                    })();
+                  });
+                  return;
+                }
                 void (async () => {
-                  if (uploadingImage) return;
                   setUploadingImage(true);
-                  const url = await pickAndUploadImage();
-                  if (url) setReplyImages((prev) => [...prev, url].slice(0, 2));
-                  setUploadingImage(false);
+                  try {
+                    const url = await pickAndUploadImage();
+                    if (url) {
+                      setReplyImages((prev) =>
+                        [...prev, url].slice(0, 2)
+                      );
+                    }
+                  } finally {
+                    setUploadingImage(false);
+                  }
                 })();
               }}
               disabled={uploadingImage}

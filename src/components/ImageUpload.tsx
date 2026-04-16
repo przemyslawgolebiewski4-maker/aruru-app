@@ -11,6 +11,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { colors, typography, fontSize, spacing } from '../theme/tokens';
 import { apiFetch } from '../services/api';
+import { openWebImageFilePicker, readImageFileAsBase64 } from '../utils/webImagePick';
 
 type Props = {
   currentUrl?: string | null;
@@ -25,28 +26,6 @@ type Props = {
 async function pickAndConvertToBase64(): Promise<
   { base64: string; mimeType: string } | null
 > {
-  if (Platform.OS === 'web') {
-    return new Promise((resolve) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = 'image/jpeg,image/png,image/webp';
-      input.onchange = async () => {
-        const file = input.files?.[0];
-        if (!file) {
-          resolve(null);
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          const base64 = result.split(',')[1];
-          resolve({ base64, mimeType: file.type });
-        };
-        reader.readAsDataURL(file);
-      };
-      input.click();
-    });
-  }
   try {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return null;
@@ -82,24 +61,26 @@ export default function ImageUpload({
 
   const borderRadius = shape === 'circle' ? size / 2 : 14;
 
-  async function handlePress() {
-    setError('');
-    const picked = await pickAndConvertToBase64();
-    if (!picked) return;
-
+  async function runUploadWithPicked(
+    picked: { base64: string; mimeType: string }
+  ) {
     setUploading(true);
     try {
       const res = await apiFetch<{
         avatarUrl?: string;
         logoUrl?: string;
         logo_url?: string;
-      }>(endpoint, {
-        method: 'POST',
-        body: JSON.stringify({
-          imageBase64: picked.base64,
-          mimeType: picked.mimeType,
-        }),
-      }, tenantId);
+      }>(
+        endpoint,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            imageBase64: picked.base64,
+            mimeType: picked.mimeType,
+          }),
+        },
+        tenantId
+      );
       const url = res.avatarUrl ?? res.logoUrl ?? res.logo_url ?? '';
       if (url) onSuccess(url);
     } catch (e: unknown) {
@@ -109,10 +90,31 @@ export default function ImageUpload({
     }
   }
 
+  function handlePress() {
+    setError('');
+    if (uploading) return;
+    if (Platform.OS === 'web') {
+      openWebImageFilePicker((file) => {
+        void (async () => {
+          if (!file) return;
+          const picked = await readImageFileAsBase64(file);
+          if (!picked) return;
+          await runUploadWithPicked(picked);
+        })();
+      });
+      return;
+    }
+    void (async () => {
+      const picked = await pickAndConvertToBase64();
+      if (!picked) return;
+      await runUploadWithPicked(picked);
+    })();
+  }
+
   return (
     <View style={styles.wrap}>
       <TouchableOpacity
-        onPress={() => void handlePress()}
+        onPress={handlePress}
         activeOpacity={0.8}
         disabled={uploading}
       >

@@ -17,6 +17,7 @@ import { apiFetch, patchMe, type PatchMeBody } from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import type { AppStackParamList } from '../../navigation/types';
 import { COUNTRY_NAMES } from '../../utils/locationData';
+import { openWebImageFilePicker, readImageFileAsBase64 } from '../../utils/webImagePick';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'EditProfile'>;
 
@@ -107,102 +108,84 @@ export default function EditProfileScreen({ navigation }: Props) {
     );
   }
 
+  async function finishPortfolioWebUpload(
+    slot: number,
+    file: File | null
+  ): Promise<void> {
+    if (!file) return;
+    if (uploadingSlot !== null) return;
+    setUploadingSlot(slot);
+    try {
+      const picked = await readImageFileAsBase64(file);
+      if (!picked) return;
+      const res = await apiFetch<{
+        portfolioUrl?: string;
+        portfolio_url?: string;
+      }>(
+        '/uploads/portfolio-image',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            imageBase64: picked.base64,
+            mimeType: picked.mimeType,
+            slot,
+          }),
+        },
+        ''
+      );
+      const url = res.portfolioUrl ?? res.portfolio_url;
+      if (url) {
+        setPortfolioUrls((prev) => {
+          const next = padPortfolioSlots(prev);
+          next[slot] = url;
+          return next;
+        });
+        void refresh();
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setUploadingSlot(null);
+    }
+  }
+
   async function pickAndUploadPortfolioImage(slot: number): Promise<void> {
     if (uploadingSlot !== null) return;
     setUploadingSlot(slot);
     try {
-      if (Platform.OS === 'web') {
-        const picked = await new Promise<{
-          base64: string;
-          mimeType: string;
-        } | null>((resolve) => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'image/jpeg,image/png,image/webp';
-          input.onchange = () => {
-            const file = input.files?.[0];
-            if (!file || file.size > 3_000_000) {
-              resolve(null);
-              return;
-            }
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              const base64 = result.split(',')[1];
-              resolve({ base64, mimeType: file.type });
-            };
-            reader.onerror = () => resolve(null);
-            reader.readAsDataURL(file);
-          };
-          input.click();
+      const { default: ImagePicker } = await import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 0.8,
+      });
+      if (picked.canceled || !picked.assets[0]) return;
+      const asset = picked.assets[0];
+      const res = await apiFetch<{
+        portfolioUrl?: string;
+        portfolio_url?: string;
+      }>(
+        '/uploads/portfolio-image',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            imageBase64: asset.base64 ?? '',
+            mimeType: 'image/jpeg',
+            slot,
+          }),
+        },
+        ''
+      );
+      const url = res.portfolioUrl ?? res.portfolio_url;
+      if (url) {
+        setPortfolioUrls((prev) => {
+          const next = padPortfolioSlots(prev);
+          next[slot] = url;
+          return next;
         });
-
-        if (!picked) return;
-
-        try {
-          const res = await apiFetch<{
-            portfolioUrl?: string;
-            portfolio_url?: string;
-          }>(
-            '/uploads/portfolio-image',
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                imageBase64: picked.base64,
-                mimeType: picked.mimeType,
-                slot,
-              }),
-            },
-            ''
-          );
-          const url = res.portfolioUrl ?? res.portfolio_url;
-          if (url) {
-            setPortfolioUrls((prev) => {
-              const next = padPortfolioSlots(prev);
-              next[slot] = url;
-              return next;
-            });
-            void refresh();
-          }
-        } catch {
-          /* ignore */
-        }
-        return;
-      } else {
-        const { default: ImagePicker } = await import('expo-image-picker');
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) return;
-        const picked = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          base64: true,
-          quality: 0.8,
-        });
-        if (picked.canceled || !picked.assets[0]) return;
-        const asset = picked.assets[0];
-        const res = await apiFetch<{
-          portfolioUrl?: string;
-          portfolio_url?: string;
-        }>(
-          '/uploads/portfolio-image',
-          {
-            method: 'POST',
-            body: JSON.stringify({
-              imageBase64: asset.base64 ?? '',
-              mimeType: 'image/jpeg',
-              slot,
-            }),
-          },
-          ''
-        );
-        const url = res.portfolioUrl ?? res.portfolio_url;
-        if (url) {
-          setPortfolioUrls((prev) => {
-            const next = padPortfolioSlots(prev);
-            next[slot] = url;
-            return next;
-          });
-          void refresh();
-        }
+        void refresh();
       }
     } catch {
       /* ignore */
@@ -328,7 +311,16 @@ export default function EditProfileScreen({ navigation }: Props) {
                 ) : (
                   <TouchableOpacity
                     style={styles.portfolioAddBtn}
-                    onPress={() => void pickAndUploadPortfolioImage(slot)}
+                    onPress={() => {
+                      if (uploadingSlot !== null) return;
+                      if (Platform.OS === 'web') {
+                        openWebImageFilePicker((file) => {
+                          void finishPortfolioWebUpload(slot, file);
+                        });
+                        return;
+                      }
+                      void pickAndUploadPortfolioImage(slot);
+                    }}
                     activeOpacity={0.7}
                     accessibilityLabel={`Add photo ${slot + 1}`}
                   >
