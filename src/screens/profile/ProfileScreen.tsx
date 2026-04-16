@@ -1,4 +1,4 @@
-import React, { createElement, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
-  Platform,
-  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
@@ -21,7 +19,6 @@ import type { AppStackParamList, MainTabParamList } from '../../navigation/types
 import {
   apiFetch,
   SUSPENDED_MEMBERSHIP_REASON_FALLBACK,
-  type AuthUser,
 } from '../../services/api';
 import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
 
@@ -60,23 +57,9 @@ function studioInitials(name: string) {
     .toUpperCase() || '?';
 }
 
-function profileCommunityVisibility(
-  cv: AuthUser['communityVisibility']
-): string {
-  if (!cv || typeof cv !== 'object') return 'everyone';
-  const v = cv.profile;
-  return typeof v === 'string' ? v : 'everyone';
-}
-
 export default function ProfileScreen() {
   const { user, studios, suspendedStudios, signOut } = useAuth();
   const isSponsor = user?.userRole === 'sponsor';
-  const profileVisibility = profileCommunityVisibility(
-    user?.communityVisibility
-  );
-  const showPortfolioGrid =
-    profileVisibility !== 'only_me' &&
-    (user?.portfolioUrls ?? []).some(Boolean);
   const navigation = useNavigation();
   const stackNav =
     navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
@@ -190,40 +173,6 @@ export default function ProfileScreen() {
           <Text style={styles.unverifiedHint}>Email not verified</Text>
         )}
       </View>
-
-      {/* Portfolio */}
-      {showPortfolioGrid ? (
-        <View style={styles.portfolioSection}>
-          <SectionLabel>Portfolio</SectionLabel>
-          <View style={styles.portfolioGrid}>
-            {(user?.portfolioUrls ?? []).map((url, i) =>
-              url ? (
-                <View key={i} style={styles.portfolioCell}>
-                  {Platform.OS === 'web' ? (
-                    createElement('img', {
-                      src: url,
-                      style: {
-                        width: '100%',
-                        aspectRatio: '1',
-                        objectFit: 'cover',
-                        borderRadius: 8,
-                        display: 'block',
-                      },
-                      alt: `Portfolio photo ${i + 1}`,
-                    })
-                  ) : (
-                    <Image
-                      source={{ uri: url }}
-                      style={styles.portfolioImageNative}
-                      accessibilityLabel={`Portfolio photo ${i + 1}`}
-                    />
-                  )}
-                </View>
-              ) : null
-            )}
-          </View>
-        </View>
-      ) : null}
 
       {/* ── Studios ── */}
       <SectionLabel>Studios</SectionLabel>
@@ -526,26 +475,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing[6] },
   avatarBlock: { alignItems: 'center', marginBottom: spacing[8] },
-  portfolioSection: {
-    paddingHorizontal: spacing[4],
-    marginBottom: spacing[4],
-  },
-  portfolioGrid: {
-    flexDirection: 'row',
-    gap: spacing[2],
-    marginTop: spacing[2],
-  },
-  portfolioCell: {
-    flex: 1,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-    backgroundColor: colors.border,
-  },
-  portfolioImageNative: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: radius.md,
-  },
   name: {
     fontFamily: typography.display,
     fontSize: 24,
