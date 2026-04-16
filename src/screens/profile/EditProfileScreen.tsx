@@ -1,4 +1,11 @@
-import React, { Fragment, createElement, useEffect, useState } from 'react';
+import React, {
+  Fragment,
+  createElement,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -72,6 +79,125 @@ export default function EditProfileScreen({ navigation }: Props) {
     padPortfolioSlots(user?.portfolioUrls)
   );
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
+  const [portfolioUploadError, setPortfolioUploadError] = useState<
+    string | null
+  >(null);
+
+  const portfolioWebRef = useRef({
+    setPortfolioUrls,
+    setUploadingSlot,
+    refresh,
+    setPortfolioUploadError,
+  });
+  portfolioWebRef.current = {
+    setPortfolioUrls,
+    setUploadingSlot,
+    refresh,
+    setPortfolioUploadError,
+  };
+
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+    const cleanups: Array<() => void> = [];
+
+    for (let slot = 0; slot < 3; slot++) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/webp';
+      input.id = `portfolio-file-input-${slot}`;
+      input.style.display = 'none';
+
+      const onChange = () => {
+        const r = portfolioWebRef.current;
+        r.setPortfolioUploadError(null);
+        const file = input.files?.[0] ?? null;
+        if (!file) {
+          input.value = '';
+          return;
+        }
+        if (file.size > 3_000_000) {
+          r.setPortfolioUploadError('That file is larger than 3 MB.');
+          input.value = '';
+          return;
+        }
+        const mime = file.type || '';
+        if (mime && !/^image\/(jpeg|png|webp)$/i.test(mime)) {
+          r.setPortfolioUploadError('Use JPEG, PNG, or WebP.');
+          input.value = '';
+          return;
+        }
+
+        r.setUploadingSlot(slot);
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            r.setPortfolioUploadError('Could not read that image.');
+            r.setUploadingSlot(null);
+            input.value = '';
+            return;
+          }
+          void apiFetch<{
+            portfolioUrl?: string;
+            portfolio_url?: string;
+          }>(
+            '/uploads/portfolio-image',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                imageBase64: base64,
+                mimeType: file.type || 'image/jpeg',
+                slot,
+              }),
+            },
+            ''
+          )
+            .then((res) => {
+              const url = res.portfolioUrl ?? res.portfolio_url;
+              if (url) {
+                r.setPortfolioUrls((prev) => {
+                  const next = padPortfolioSlots(prev);
+                  next[slot] = url;
+                  return next;
+                });
+                void r.refresh();
+              } else {
+                r.setPortfolioUploadError('Upload did not return a URL.');
+              }
+            })
+            .catch((e: unknown) => {
+              r.setPortfolioUploadError(
+                e instanceof Error ? e.message : 'Upload failed.'
+              );
+            })
+            .finally(() => {
+              r.setUploadingSlot(null);
+              input.value = '';
+            });
+        };
+        reader.onerror = () => {
+          r.setPortfolioUploadError('Could not read that file.');
+          r.setUploadingSlot(null);
+          input.value = '';
+        };
+        reader.readAsDataURL(file);
+      };
+
+      input.addEventListener('change', onChange);
+      document.body.appendChild(input);
+      cleanups.push(() => {
+        input.removeEventListener('change', onChange);
+        input.remove();
+      });
+    }
+
+    return () => {
+      cleanups.forEach((fn) => fn());
+    };
+  }, []);
 
   useEffect(() => {
     setPortfolioUrls(padPortfolioSlots(user?.portfolioUrls));
@@ -111,6 +237,7 @@ export default function EditProfileScreen({ navigation }: Props) {
     if (uploadingSlot !== null) return;
 
     if (Platform.OS === 'web') {
+      setPortfolioUploadError(null);
       const input = document.getElementById(
         `portfolio-file-input-${slot}`
       ) as HTMLInputElement | null;
@@ -230,72 +357,6 @@ export default function EditProfileScreen({ navigation }: Props) {
         shape="circle"
       />
 
-      {Platform.OS === 'web' ? (
-        <Fragment>
-          {[0, 1, 2].map((slot) =>
-            createElement('input', {
-              key: `portfolio-input-${slot}`,
-              id: `portfolio-file-input-${slot}`,
-              type: 'file',
-              accept: 'image/jpeg,image/png,image/webp',
-              style: { display: 'none' },
-              onChange: (e: { target: HTMLInputElement }) => {
-                const input = e.target;
-                const file = input.files?.[0];
-                if (!file || file.size > 3_000_000) return;
-                setUploadingSlot(slot);
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const result = reader.result as string;
-                  const base64 = result.split(',')[1];
-                  if (!base64) {
-                    setUploadingSlot(null);
-                    input.value = '';
-                    return;
-                  }
-                  void apiFetch<{
-                    portfolioUrl?: string;
-                    portfolio_url?: string;
-                  }>(
-                    '/uploads/portfolio-image',
-                    {
-                      method: 'POST',
-                      body: JSON.stringify({
-                        imageBase64: base64,
-                        mimeType: file.type,
-                        slot,
-                      }),
-                    },
-                    ''
-                  )
-                    .then((res) => {
-                      const url = res.portfolioUrl ?? res.portfolio_url;
-                      if (url) {
-                        setPortfolioUrls((prev) => {
-                          const next = padPortfolioSlots(prev);
-                          next[slot] = url;
-                          return next;
-                        });
-                        void refresh();
-                      }
-                    })
-                    .catch(() => {})
-                    .finally(() => {
-                      setUploadingSlot(null);
-                      input.value = '';
-                    });
-                };
-                reader.onerror = () => {
-                  setUploadingSlot(null);
-                  input.value = '';
-                };
-                reader.readAsDataURL(file);
-              },
-            })
-          )}
-        </Fragment>
-      ) : null}
-
       <View style={styles.portfolioEditorSection}>
         <Text style={styles.portfolioEditorLabel}>
           Portfolio photos (up to 3)
@@ -303,6 +364,11 @@ export default function EditProfileScreen({ navigation }: Props) {
         <Text style={styles.portfolioEditorHint}>
           Show your work. Max 3 photos - 3MB each.
         </Text>
+        {portfolioUploadError ? (
+          <Text style={styles.portfolioUploadError}>
+            {portfolioUploadError}
+          </Text>
+        ) : null}
         <View style={styles.portfolioEditorGrid}>
           {[0, 1, 2].map((slot) => {
             const url = portfolioUrls[slot];
@@ -611,6 +677,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     marginBottom: spacing[3],
+  },
+  portfolioUploadError: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.error,
+    marginBottom: spacing[2],
   },
   portfolioEditorGrid: {
     flexDirection: 'row',
