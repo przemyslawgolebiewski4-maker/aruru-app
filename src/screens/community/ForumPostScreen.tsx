@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Platform,
+  Image,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -29,6 +30,7 @@ type Reply = {
   createdAt?: string;
   authorId?: string;
   parentReplyId?: string | null;
+  imageUrls?: string[];
 };
 
 type PostDetail = {
@@ -44,6 +46,7 @@ type PostDetail = {
   replies: Reply[];
   authorId?: string;
   isPinned?: boolean;
+  imageUrls?: string[];
 };
 
 function authorInitials(name: string): string {
@@ -82,7 +85,16 @@ function normalizeForumPost(raw: PostDetail & Record<string, unknown>): PostDeta
       if (v == null || v === '') return null;
       return String(v);
     })(),
+    imageUrls: (() => {
+      const v = r.imageUrls ?? r.image_urls;
+      if (!Array.isArray(v)) return [];
+      return v.map(String).filter(Boolean).slice(0, 2);
+    })(),
   }));
+  const postImageUrlsRaw = raw.imageUrls ?? raw.image_urls;
+  const postImageUrls = Array.isArray(postImageUrlsRaw)
+    ? postImageUrlsRaw.map(String).filter(Boolean).slice(0, 2)
+    : [];
   return {
     id: String(raw.id),
     title: String(raw.title ?? ''),
@@ -98,6 +110,7 @@ function normalizeForumPost(raw: PostDetail & Record<string, unknown>): PostDeta
     replies,
     authorId: String(raw.authorId ?? raw.author_id ?? ''),
     isPinned: Boolean(raw.isPinned ?? raw.is_pinned),
+    imageUrls: postImageUrls,
   };
 }
 
@@ -122,6 +135,8 @@ export default function ForumPostScreen({ route, navigation }: Props) {
   const [editError, setEditError] = useState('');
   const [replyToId, setReplyToId] = useState<string | null>(null);
   const [replyToName, setReplyToName] = useState<string | null>(null);
+  const [replyImages, setReplyImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -232,7 +247,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
   }
 
   async function onReply() {
-    if (!reply.trim()) return;
+    if (!reply.trim() && replyImages.length === 0) return;
     setPosting(true);
     setReplyError('');
     try {
@@ -243,11 +258,13 @@ export default function ForumPostScreen({ route, navigation }: Props) {
           body: JSON.stringify({
             content: reply.trim(),
             parent_reply_id: replyToId ?? null,
+            image_urls: replyImages.slice(0, 2),
           }),
         },
         tenantId
       );
       setReply('');
+      setReplyImages([]);
       setReplyToId(null);
       setReplyToName(null);
       await load();
@@ -257,6 +274,78 @@ export default function ForumPostScreen({ route, navigation }: Props) {
       );
     } finally {
       setPosting(false);
+    }
+  }
+
+  async function pickAndUploadImage(): Promise<string | null> {
+    if (Platform.OS === 'web') {
+      return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/webp';
+        input.onchange = () => {
+          const file = input.files?.[0];
+          if (!file) {
+            resolve(null);
+            return;
+          }
+          if (file.size > 3_000_000) {
+            resolve(null);
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            const base64 = result.split(',')[1];
+            void (async () => {
+              try {
+                const res = await apiFetch<{ imageUrl: string }>(
+                  '/uploads/forum-image',
+                  {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      imageBase64: base64,
+                      mimeType: file.type,
+                    }),
+                  },
+                  tenantId
+                );
+                resolve(res.imageUrl ?? null);
+              } catch {
+                resolve(null);
+              }
+            })();
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      });
+    }
+    try {
+      const { default: ImagePicker } = await import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return null;
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 0.8,
+      });
+      if (picked.canceled || !picked.assets[0]) return null;
+      const asset = picked.assets[0];
+      const res = await apiFetch<{ imageUrl: string }>(
+        '/uploads/forum-image',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            imageBase64: asset.base64 ?? '',
+            mimeType: 'image/jpeg',
+          }),
+        },
+        tenantId
+      );
+      return res.imageUrl ?? null;
+    } catch {
+      return null;
     }
   }
 
@@ -329,6 +418,33 @@ export default function ForumPostScreen({ route, navigation }: Props) {
         {!editing ? (
           <View style={styles.postBody}>
             {renderMarkdown(post.content ?? '', styles.content2)}
+            {(post.imageUrls ?? []).length > 0 ? (
+              <View style={styles.postImages}>
+                {(post.imageUrls ?? []).map((url) =>
+                  Platform.OS === 'web' ? (
+                    createElement('img', {
+                      key: url,
+                      src: url,
+                      style: {
+                        width: '100%',
+                        maxWidth: 420,
+                        borderRadius: 8,
+                        marginBottom: 8,
+                        display: 'block',
+                      },
+                      alt: '',
+                    })
+                  ) : (
+                    <Image
+                      key={url}
+                      source={{ uri: url }}
+                      style={styles.postImageNative}
+                      accessibilityLabel=""
+                    />
+                  )
+                )}
+              </View>
+            ) : null}
           </View>
         ) : null}
 
@@ -440,6 +556,33 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                       </Text>
                     </Text>
                     {renderMarkdown(r.content ?? '', styles.replyContent)}
+                    {(r.imageUrls ?? []).length > 0 ? (
+                      <View style={styles.postImages}>
+                        {(r.imageUrls ?? []).map((url) =>
+                          Platform.OS === 'web' ? (
+                            createElement('img', {
+                              key: url,
+                              src: url,
+                              style: {
+                                width: '100%',
+                                maxWidth: 360,
+                                borderRadius: 8,
+                                marginBottom: 8,
+                                display: 'block',
+                              },
+                              alt: '',
+                            })
+                          ) : (
+                            <Image
+                              key={url}
+                              source={{ uri: url }}
+                              style={styles.replyImageNative}
+                              accessibilityLabel=""
+                            />
+                          )
+                        )}
+                      </View>
+                    ) : null}
                     <TouchableOpacity
                       onPress={() => {
                         setReplyToId(r.id);
@@ -503,7 +646,65 @@ export default function ForumPostScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
         ) : null}
+        {replyImages.length > 0 ? (
+          <View style={styles.imageStrip}>
+            {replyImages.map((url, i) => (
+              <View key={`${url}-${i}`} style={styles.imageThumbnailWrap}>
+                {Platform.OS === 'web'
+                  ? createElement('img', {
+                      src: url,
+                      style: {
+                        width: 56,
+                        height: 56,
+                        borderRadius: 6,
+                        objectFit: 'cover',
+                      },
+                      alt: '',
+                    })
+                  : (
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.replyThumbNative}
+                      accessibilityLabel=""
+                    />
+                  )}
+                <TouchableOpacity
+                  style={styles.imageThumbnailRemove}
+                  onPress={() =>
+                    setReplyImages((prev) => prev.filter((_, j) => j !== i))
+                  }
+                  hitSlop={4}
+                >
+                  <Text style={styles.imageThumbnailRemoveText}>×</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <View style={styles.replyBar}>
+          {replyImages.length < 2 ? (
+            <TouchableOpacity
+              style={styles.attachBtn}
+              onPress={() => {
+                void (async () => {
+                  if (uploadingImage) return;
+                  setUploadingImage(true);
+                  const url = await pickAndUploadImage();
+                  if (url) setReplyImages((prev) => [...prev, url].slice(0, 2));
+                  setUploadingImage(false);
+                })();
+              }}
+              disabled={uploadingImage}
+              accessibilityLabel="Add image"
+              hitSlop={8}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color={colors.clay} />
+              ) : (
+                <Text style={styles.attachBtnText}>⌅</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
           <TextInput
             style={styles.replyInput}
             value={reply}
@@ -516,7 +717,9 @@ export default function ForumPostScreen({ route, navigation }: Props) {
             label="Send"
             variant="primary"
             onPress={() => void onReply()}
-            disabled={!reply.trim() || posting}
+            disabled={
+              (!reply.trim() && replyImages.length === 0) || posting
+            }
             loading={posting}
             style={styles.sendBtn}
           />
@@ -772,5 +975,74 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.error,
+  },
+  imageStrip: {
+    flexDirection: 'row',
+    gap: spacing[2],
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[2],
+    backgroundColor: colors.surface,
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  imageThumbnailWrap: {
+    position: 'relative',
+    width: 56,
+    height: 56,
+  },
+  replyThumbNative: {
+    width: 56,
+    height: 56,
+    borderRadius: 6,
+  },
+  imageThumbnailRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageThumbnailRemoveText: {
+    color: colors.surface,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '600',
+  },
+  attachBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  attachBtnText: {
+    fontSize: 20,
+    color: colors.inkLight,
+  },
+  postImages: {
+    marginTop: spacing[3],
+    gap: spacing[2],
+  },
+  postImageNative: {
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
+    aspectRatio: 4 / 3,
+    borderRadius: 8,
+    marginBottom: 8,
+    resizeMode: 'cover',
+  },
+  replyImageNative: {
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
+    aspectRatio: 4 / 3,
+    borderRadius: 8,
+    marginBottom: 8,
+    resizeMode: 'cover',
   },
 });

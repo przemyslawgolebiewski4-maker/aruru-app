@@ -10,6 +10,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -69,6 +70,80 @@ function authorInitials(name: string): string {
   );
 }
 
+async function pickAndUploadForumImage(
+  tenantId: string
+): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/webp';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) {
+          resolve(null);
+          return;
+        }
+        if (file.size > 3_000_000) {
+          resolve(null);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          void (async () => {
+            try {
+              const res = await apiFetch<{ imageUrl: string }>(
+                '/uploads/forum-image',
+                {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    imageBase64: base64,
+                    mimeType: file.type,
+                  }),
+                },
+                tenantId
+              );
+              resolve(res.imageUrl ?? null);
+            } catch {
+              resolve(null);
+            }
+          })();
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    });
+  }
+  try {
+    const { default: ImagePicker } = await import('expo-image-picker');
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return null;
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      base64: true,
+      quality: 0.8,
+    });
+    if (picked.canceled || !picked.assets[0]) return null;
+    const asset = picked.assets[0];
+    const res = await apiFetch<{ imageUrl: string }>(
+      '/uploads/forum-image',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          imageBase64: asset.base64 ?? '',
+          mimeType: 'image/jpeg',
+        }),
+      },
+      tenantId
+    );
+    return res.imageUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
 type WebEditorProps = {
   title: string;
   content: string;
@@ -81,6 +156,9 @@ type WebEditorProps = {
   onCancel: () => void;
   posting: boolean;
   error: string;
+  postImages: string[];
+  onPostImagesChange: React.Dispatch<React.SetStateAction<string[]>>;
+  tenantId: string;
 };
 
 function WebForumEditor({
@@ -95,7 +173,12 @@ function WebForumEditor({
   onCancel,
   posting,
   error,
+  postImages,
+  onPostImagesChange,
+  tenantId,
 }: WebEditorProps) {
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   if (typeof document === 'undefined') return null;
 
   const inputStyle: React.CSSProperties = {
@@ -254,6 +337,62 @@ function WebForumEditor({
             "What's on your mind? Share a technique, ask a question, start a conversation...",
         })}
 
+        <View style={webEditorStyles.imageStrip}>
+          {postImages.map((url, i) => (
+            <View
+              key={`${url}-${i}`}
+              style={webEditorStyles.imageThumbnailWrap}
+            >
+              {createElement('img', {
+                src: url,
+                style: {
+                  width: 56,
+                  height: 56,
+                  borderRadius: 6,
+                  objectFit: 'cover',
+                },
+                alt: '',
+              })}
+              <TouchableOpacity
+                style={webEditorStyles.imageThumbnailRemove}
+                onPress={() =>
+                  onPostImagesChange((prev) => prev.filter((_, j) => j !== i))
+                }
+                hitSlop={4}
+              >
+                <Text style={webEditorStyles.imageThumbnailRemoveText}>
+                  ×
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          {postImages.length < 2 ? (
+            <TouchableOpacity
+              style={webEditorStyles.attachBtn}
+              onPress={() => {
+                void (async () => {
+                  if (uploadingImage) return;
+                  setUploadingImage(true);
+                  const url = await pickAndUploadForumImage(tenantId);
+                  if (url) {
+                    onPostImagesChange((prev) => [...prev, url].slice(0, 2));
+                  }
+                  setUploadingImage(false);
+                })();
+              }}
+              disabled={uploadingImage}
+              accessibilityLabel="Add image"
+              hitSlop={8}
+            >
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color={colors.clay} />
+              ) : (
+                <Text style={webEditorStyles.attachBtnText}>⌅</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
+        </View>
+
         {error ? <Text style={webEditorStyles.error}>{error}</Text> : null}
 
         <View style={webEditorStyles.actions}>
@@ -400,6 +539,47 @@ const webEditorStyles = StyleSheet.create({
     fontSize: fontSize.md,
     color: '#fff',
   },
+  imageStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  imageThumbnailWrap: {
+    position: 'relative',
+    width: 56,
+    height: 56,
+  },
+  imageThumbnailRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageThumbnailRemoveText: {
+    color: colors.surface,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '600',
+  },
+  attachBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachBtnText: {
+    fontSize: 20,
+    color: colors.inkLight,
+  },
 });
 
 export default function ForumTab() {
@@ -424,6 +604,8 @@ export default function ForumTab() {
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
   const contentInputRef = useRef<TextInput>(null);
+  const [postImages, setPostImages] = useState<string[]>([]);
+  const [uploadingPostImage, setUploadingPostImage] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -478,7 +660,7 @@ export default function ForumTab() {
       setPostError('Title is required.');
       return;
     }
-    if (!newContent.trim()) {
+    if (!newContent.trim() && postImages.length === 0) {
       setPostError('Content is required.');
       return;
     }
@@ -492,6 +674,7 @@ export default function ForumTab() {
             title: newTitle.trim(),
             content: newContent.trim(),
             category: newCategory,
+            image_urls: postImages.slice(0, 2),
           }),
         },
         tenantId
@@ -499,6 +682,7 @@ export default function ForumTab() {
       setNewTitle('');
       setNewContent('');
       setNewCategory('general');
+      setPostImages([]);
       setSelectionStart(0);
       setSelectionEnd(0);
       setShowNewPost(false);
@@ -673,12 +857,16 @@ export default function ForumTab() {
               setNewTitle('');
               setNewContent('');
               setNewCategory('general');
+              setPostImages([]);
               setPostError('');
               setSelectionStart(0);
               setSelectionEnd(0);
             }}
             posting={posting}
             error={postError}
+            postImages={postImages}
+            onPostImagesChange={setPostImages}
+            tenantId={tenantId}
           />
         ) : (
           <View style={styles.modalOverlay}>
@@ -766,6 +954,60 @@ export default function ForumTab() {
                     setSelectionEnd(e.nativeEvent.selection.end);
                   }}
                 />
+                <View style={styles.newPostImageStrip}>
+                  {postImages.map((url, i) => (
+                    <View
+                      key={`${url}-${i}`}
+                      style={styles.imageThumbnailWrap}
+                    >
+                      <Image
+                        source={{ uri: url }}
+                        style={styles.replyThumbNative}
+                        accessibilityLabel=""
+                      />
+                      <TouchableOpacity
+                        style={styles.imageThumbnailRemove}
+                        onPress={() =>
+                          setPostImages((prev) =>
+                            prev.filter((_, j) => j !== i)
+                          )
+                        }
+                        hitSlop={4}
+                      >
+                        <Text style={styles.imageThumbnailRemoveText}>
+                          ×
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {postImages.length < 2 ? (
+                    <TouchableOpacity
+                      style={styles.attachBtn}
+                      onPress={() => {
+                        void (async () => {
+                          if (uploadingPostImage) return;
+                          setUploadingPostImage(true);
+                          const url = await pickAndUploadForumImage(tenantId);
+                          if (url) {
+                            setPostImages((prev) =>
+                              [...prev, url].slice(0, 2)
+                            );
+                          }
+                          setUploadingPostImage(false);
+                        })();
+                      }}
+                      disabled={uploadingPostImage}
+                      accessibilityLabel="Add image"
+                      hitSlop={8}
+                    >
+                      {uploadingPostImage ? (
+                        <ActivityIndicator size="small" color={colors.clay} />
+                      ) : (
+                        <Text style={styles.attachBtnText}>⌅</Text>
+                      )}
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
                 {postError ? (
                   <Text style={styles.errorText}>{postError}</Text>
                 ) : null}
@@ -775,6 +1017,7 @@ export default function ForumTab() {
                     variant="ghost"
                     onPress={() => {
                       setShowNewPost(false);
+                      setPostImages([]);
                       setSelectionStart(0);
                       setSelectionEnd(0);
                     }}
@@ -1029,5 +1272,51 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing[2],
     justifyContent: 'flex-end',
+  },
+  newPostImageStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing[2],
+    paddingVertical: spacing[2],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  imageThumbnailWrap: {
+    position: 'relative',
+    width: 56,
+    height: 56,
+  },
+  replyThumbNative: {
+    width: 56,
+    height: 56,
+    borderRadius: 6,
+  },
+  imageThumbnailRemove: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageThumbnailRemoveText: {
+    color: colors.surface,
+    fontSize: 12,
+    lineHeight: 14,
+    fontWeight: '600',
+  },
+  attachBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachBtnText: {
+    fontSize: 20,
+    color: colors.inkLight,
   },
 });
