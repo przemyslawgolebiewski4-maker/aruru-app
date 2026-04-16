@@ -597,10 +597,12 @@ const styles = StyleSheet.create({
   portfolioEditorGrid: {
     flexDirection: 'row',
     gap: spacing[2],
+    maxWidth: Platform.OS === 'web' ? 320 : undefined,
   },
   portfolioEditorCell: {
     flex: 1,
     aspectRatio: 1,
+    maxWidth: Platform.OS === 'web' ? 96 : undefined,
     borderRadius: radius.md,
     overflow: 'hidden',
     backgroundColor: colors.clayLight,
