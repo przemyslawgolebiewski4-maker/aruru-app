@@ -868,9 +868,10 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   replyBarWrap: {
-    backgroundColor: colors.surface,
     borderTopWidth: 0.5,
     borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingBottom: Platform.OS === 'ios' ? spacing[6] : spacing[2],
   },
   replyingTo: {
     flexDirection: 'row',
@@ -909,8 +910,8 @@ const styles = StyleSheet.create({
     fontFamily: typography.body,
     fontSize: fontSize.md,
     color: colors.ink,
-    minHeight: Platform.OS === 'web' ? 100 : 44,
-    maxHeight: Platform.OS === 'web' ? 200 : 120,
+    minHeight: Platform.OS === 'web' ? 80 : 44,
+    maxHeight: Platform.OS === 'web' ? 180 : 120,
     textAlignVertical: 'top',
   },
   sendBtn: {
