@@ -1102,25 +1102,60 @@ export async function postStudioMiscCharge(
   );
 }
 
-/** Web only: browser download of studio Excel export. No-op on native. */
+/** Download studio Excel export on web, or save and share it on native. */
 export async function downloadStudioDataExport(tenantId: string): Promise<void> {
-  if (typeof window === 'undefined') return;
   const token = await getToken();
   const url = `${BASE_URL}/studios/${tenantId}/export`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token ?? ''}` },
   });
   if (!res.ok) throw new Error('Export failed');
-  const blob = await res.blob();
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+
   const cd = res.headers.get('Content-Disposition') ?? '';
   const match = cd.match(/filename=([^;]+)/);
-  a.download = match ? match[1].trim() : 'aruru_export.xlsx';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
+  const filename = match ? match[1].trim() : 'aruru_export.xlsx';
+
+  if (typeof window !== 'undefined' && window.document) {
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    return;
+  }
+
+  try {
+    const FileSystem = await import('expo-file-system');
+    const Sharing = await import('expo-sharing');
+
+    const arrayBuffer = await res.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    bytes.forEach((b) => (binary += String.fromCharCode(b)));
+    const base64 = btoa(binary);
+
+    const fileUri = FileSystem.cacheDirectory + filename;
+
+    await FileSystem.writeAsStringAsync(fileUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    const canShare = await Sharing.isAvailableAsync();
+    if (canShare) {
+      await Sharing.shareAsync(fileUri, {
+        mimeType:
+          'application/vnd.openxmlformats-officedocument' +
+          '.spreadsheetml.sheet',
+        dialogTitle: 'Save studio export',
+        UTI: 'com.microsoft.excel.xlsx',
+      });
+    }
+  } catch {
+    throw new Error('Mobile export failed');
+  }
 }
 
 export async function patchStudioVisibility(
