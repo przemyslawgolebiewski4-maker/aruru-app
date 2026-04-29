@@ -43,6 +43,7 @@ export type StudioEvent = {
   createdAt?: string;
   bookingUrl?: string;
   bookingClicks?: number;
+  coverUrl?: string;
 };
 
 const KIND_OPTIONS: { value: EventKind; label: string }[] = [
@@ -105,6 +106,9 @@ export function parseEvents(data: unknown): StudioEvent[] {
         ? String(r.bookingUrl ?? r.booking_url)
         : undefined,
       bookingClicks: Number(r.bookingClicks ?? r.booking_clicks ?? 0),
+      coverUrl: (r.coverUrl ?? r.cover_url)
+        ? String(r.coverUrl ?? r.cover_url)
+        : undefined,
     };
   });
 }

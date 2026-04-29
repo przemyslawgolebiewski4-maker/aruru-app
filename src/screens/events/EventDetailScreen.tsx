@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { createElement, useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Linking,
+  Platform,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
@@ -69,6 +71,8 @@ export default function EventDetailScreen({ route }: { route: Route }) {
   const [signingUp, setSigningUp] = useState(false);
   const [signedUp, setSignedUp] = useState(false);
   const [signUpError, setSignUpError] = useState('');
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   useEffect(() => {
     setSignedUp(false);
@@ -87,6 +91,7 @@ export default function EventDetailScreen({ route }: { route: Route }) {
       );
       const parsed = parseEventDetail(data);
       setEv(parsed);
+      setCoverUrl(parsed?.coverUrl ?? null);
       if (parsed?.title) {
         navigation.setOptions({ title: parsed.title });
       }
@@ -140,6 +145,7 @@ export default function EventDetailScreen({ route }: { route: Route }) {
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load event.');
       setEv(null);
+      setCoverUrl(null);
     } finally {
       setLoading(false);
     }
@@ -199,6 +205,83 @@ export default function EventDetailScreen({ route }: { route: Route }) {
     }
   }
 
+  function pickAndUploadCover(): void {
+    if (uploadingCover || !eventId) return;
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/webp';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file || file.size > 3_000_000) return;
+        setUploadingCover(true);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            setUploadingCover(false);
+            return;
+          }
+          apiFetch<{ coverUrl?: string; cover_url?: string }>(
+            '/uploads/event-image',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                imageBase64: base64,
+                mimeType: file.type,
+                eventId,
+              }),
+            },
+            tenantId
+          )
+            .then((res) => {
+              const url = res.coverUrl ?? res.cover_url;
+              if (url) setCoverUrl(url);
+            })
+            .catch(() => {})
+            .finally(() => setUploadingCover(false));
+        };
+        reader.onerror = () => setUploadingCover(false);
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
+    setUploadingCover(true);
+    void (async () => {
+      try {
+        const { default: ImagePicker } = await import('expo-image-picker');
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return;
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          base64: true,
+          quality: 0.8,
+        });
+        if (picked.canceled || !picked.assets[0]) return;
+        const asset = picked.assets[0];
+        const res = await apiFetch<{ coverUrl?: string; cover_url?: string }>(
+          '/uploads/event-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: asset.base64 ?? '',
+              mimeType: 'image/jpeg',
+              eventId,
+            }),
+          },
+          tenantId
+        );
+        const url = res.coverUrl ?? res.cover_url;
+        if (url) setCoverUrl(url);
+      } catch {
+      } finally {
+        setUploadingCover(false);
+      }
+    })();
+  }
+
   if (loading && !ev) {
     return (
       <View style={styles.centered}>
@@ -230,6 +313,61 @@ export default function EventDetailScreen({ route }: { route: Route }) {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.headerCard}>
+        {coverUrl || isStaff ? (
+          <View style={styles.coverWrap}>
+            {coverUrl ? (
+              <>
+                {Platform.OS === 'web' ? (
+                  createElement('img', {
+                    src: coverUrl,
+                    style: {
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    },
+                    alt: 'Event cover',
+                  })
+                ) : (
+                  <Image
+                    source={{ uri: coverUrl }}
+                    style={styles.coverImage}
+                    resizeMode="cover"
+                  />
+                )}
+                {isStaff ? (
+                  <TouchableOpacity
+                    style={styles.coverEditBtn}
+                    onPress={pickAndUploadCover}
+                    disabled={uploadingCover}
+                    accessibilityLabel="Change cover photo"
+                  >
+                    {uploadingCover ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.coverEditBtnText}>Change cover</Text>
+                    )}
+                  </TouchableOpacity>
+                ) : null}
+              </>
+            ) : isStaff ? (
+              <TouchableOpacity
+                style={styles.coverPlaceholder}
+                onPress={pickAndUploadCover}
+                disabled={uploadingCover}
+                activeOpacity={0.8}
+              >
+                {uploadingCover ? (
+                  <ActivityIndicator color={colors.clay} />
+                ) : (
+                  <Text style={styles.coverPlaceholderText}>
+                    + Add cover photo
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        ) : null}
         <Text style={styles.title}>{ev.title || 'Event'}</Text>
         <View style={styles.badgeWrap}>
           <Badge
@@ -397,6 +535,45 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 16,
     marginBottom: 20,
+  },
+  coverWrap: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: colors.clayLight,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: spacing[4],
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  coverEditBtn: {
+    position: 'absolute',
+    bottom: spacing[2],
+    right: spacing[2],
+    backgroundColor: 'rgba(30,26,22,0.6)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+  },
+  coverEditBtnText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: '#fff',
+  },
+  coverPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+  },
+  coverPlaceholderText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
   },
   title: {
     fontFamily: typography.display,

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { createElement, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
+  Platform,
+  Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -32,6 +34,7 @@ type FeedEvent = {
   description?: string;
   bookingUrl?: string;
   websiteUrl?: string;
+  coverUrl?: string;
   kind: string;
   startsAt?: string;
   endsAt?: string;
@@ -135,6 +138,9 @@ function normalizeFeedEvent(ev: unknown): FeedEvent {
       (r.websiteUrl ?? r.website_url) != null
         ? String(r.websiteUrl ?? r.website_url)
         : undefined,
+    coverUrl: (r.coverUrl ?? r.cover_url)
+      ? String(r.coverUrl ?? r.cover_url)
+      : undefined,
     kind: String(r.kind ?? 'other'),
     startsAt:
       (r.startsAt ?? r.starts_at) != null
@@ -401,6 +407,28 @@ export default function EventFeedTab() {
       }
       renderItem={({ item: e }) => (
         <View style={styles.card}>
+          {e.coverUrl ? (
+            <View style={styles.feedCoverWrap}>
+              {Platform.OS === 'web' ? (
+                createElement('img', {
+                  src: e.coverUrl,
+                  style: {
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                  },
+                  alt: '',
+                })
+              ) : (
+                <Image
+                  source={{ uri: e.coverUrl }}
+                  style={{ width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
+              )}
+            </View>
+          ) : null}
           {e.isPersonal ? (
             <View style={styles.studioRow}>
               <View style={styles.avatar}>
@@ -585,6 +613,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: spacing[4],
     gap: spacing[2],
+  },
+  feedCoverWrap: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: colors.clayLight,
+    overflow: 'hidden',
+    borderRadius: radius.md,
+    marginBottom: spacing[3],
   },
   studioRow: {
     flexDirection: 'row',
