@@ -190,6 +190,8 @@ export default function EventFeedTab() {
   const [pPublic, setPPublic] = useState(true);
   const [pCreating, setPCreating] = useState(false);
   const [pError, setPError] = useState('');
+  const [pCoverUrl, setPCoverUrl] = useState<string | null>(null);
+  const [pUploadingCover, setPUploadingCover] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -239,6 +241,7 @@ export default function EventFeedTab() {
             location: pLocation.trim() || null,
             description: pDescription.trim() || null,
             website_url: pWebsite.trim() || null,
+            cover_url: pCoverUrl ?? null,
             public: pPublic,
           }),
         },
@@ -249,6 +252,8 @@ export default function EventFeedTab() {
       setPLocation('');
       setPDescription('');
       setPWebsite('');
+      setPCoverUrl(null);
+      setPUploadingCover(false);
       setPError('');
       void load();
     } catch (e: unknown) {
@@ -258,6 +263,86 @@ export default function EventFeedTab() {
     } finally {
       setPCreating(false);
     }
+  }
+
+  function pickEventCover(): void {
+    if (pUploadingCover) return;
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/webp';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file || file.size > 3_000_000) return;
+        setPUploadingCover(true);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            setPUploadingCover(false);
+            return;
+          }
+          apiFetch<{ coverUrl?: string; cover_url?: string }>(
+            '/uploads/event-image',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                imageBase64: base64,
+                mimeType: file.type,
+                eventId: 'pending',
+              }),
+            },
+            ''
+          )
+            .then((res) => {
+              const url = res.coverUrl ?? res.cover_url;
+              if (url) setPCoverUrl(url);
+            })
+            .catch(() => {})
+            .finally(() => setPUploadingCover(false));
+        };
+        reader.onerror = () => setPUploadingCover(false);
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
+    setPUploadingCover(true);
+    void (async () => {
+      try {
+        const { default: ImagePicker } = await import('expo-image-picker');
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return;
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          base64: true,
+          quality: 0.8,
+        });
+        if (picked.canceled || !picked.assets[0]) return;
+        const asset = picked.assets[0];
+        const res = await apiFetch<{
+          coverUrl?: string;
+          cover_url?: string;
+        }>(
+          '/uploads/event-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: asset.base64 ?? '',
+              mimeType: 'image/jpeg',
+              eventId: 'pending',
+            }),
+          },
+          ''
+        );
+        const url = res.coverUrl ?? res.cover_url;
+        if (url) setPCoverUrl(url);
+      } catch {
+      } finally {
+        setPUploadingCover(false);
+      }
+    })();
   }
 
   function goStudio(slug: string, studioName: string) {
@@ -299,6 +384,53 @@ export default function EventFeedTab() {
           ) : (
             <View style={styles.personalForm}>
               <Text style={styles.personalFormTitle}>New personal event</Text>
+              <TouchableOpacity
+                style={styles.coverPickerWrap}
+                onPress={pickEventCover}
+                disabled={pUploadingCover}
+                activeOpacity={0.8}
+                accessibilityLabel="Add cover photo"
+              >
+                {pUploadingCover ? (
+                  <ActivityIndicator color={colors.clay} />
+                ) : pCoverUrl ? (
+                  <>
+                    {Platform.OS === 'web'
+                      ? createElement('img', {
+                          src: pCoverUrl,
+                          style: {
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                            borderRadius: 8,
+                          },
+                          alt: 'Event cover',
+                        })
+                      : (() => (
+                          <Image
+                            source={{ uri: pCoverUrl }}
+                            style={{ width: '100%', height: '100%' }}
+                            resizeMode="cover"
+                          />
+                        ))()}
+                    <View style={styles.coverPickerOverlay}>
+                      <Text style={styles.coverPickerOverlayText}>
+                        Change cover
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.coverPickerEmpty}>
+                    <Text style={styles.coverPickerEmptyText}>
+                      + Add cover photo
+                    </Text>
+                    <Text style={styles.coverPickerEmptyHint}>
+                      Optional - 3MB max
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <Input
                 label="Title"
                 value={pTitle}
@@ -390,6 +522,8 @@ export default function EventFeedTab() {
                   setPError('');
                   setPDescription('');
                   setPWebsite('');
+                  setPCoverUrl(null);
+                  setPUploadingCover(false);
                 }}
                 fullWidth
               />
@@ -567,6 +701,47 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.ink,
     marginBottom: spacing[1],
+  },
+  coverPickerWrap: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.clayLight,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    marginBottom: spacing[4],
+  },
+  coverPickerEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[1],
+  },
+  coverPickerEmptyText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+  },
+  coverPickerEmptyHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  coverPickerOverlay: {
+    position: 'absolute',
+    bottom: spacing[2],
+    right: spacing[2],
+    backgroundColor: 'rgba(30,26,22,0.55)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+  },
+  coverPickerOverlayText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: '#fff',
   },
   dtRow: {
     flexDirection: 'row',

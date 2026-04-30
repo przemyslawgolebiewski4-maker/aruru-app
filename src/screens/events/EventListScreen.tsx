@@ -1,4 +1,10 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, {
+  createElement,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from 'react';
 import {
   View,
   Text,
@@ -7,6 +13,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -183,6 +190,8 @@ export default function EventListScreen({ route }: { route: Route }) {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [isPublic, setIsPublic] = useState(false);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
@@ -258,7 +267,89 @@ export default function EventListScreen({ route }: { route: Route }) {
     setBookingUrl('');
     setCreateError('');
     setIsPublic(false);
+    setCoverUrl(null);
+    setUploadingCover(false);
     setShowForm(false);
+  }
+
+  function pickEventCover(): void {
+    if (uploadingCover) return;
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/jpeg,image/png,image/webp';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file || file.size > 3_000_000) return;
+        setUploadingCover(true);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            setUploadingCover(false);
+            return;
+          }
+          apiFetch<{ coverUrl?: string; cover_url?: string }>(
+            '/uploads/event-image',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                imageBase64: base64,
+                mimeType: file.type,
+                eventId: 'pending',
+              }),
+            },
+            tenantId
+          )
+            .then((res) => {
+              const url = res.coverUrl ?? res.cover_url;
+              if (url) setCoverUrl(url);
+            })
+            .catch(() => {})
+            .finally(() => setUploadingCover(false));
+        };
+        reader.onerror = () => setUploadingCover(false);
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
+    setUploadingCover(true);
+    void (async () => {
+      try {
+        const { default: ImagePicker } = await import('expo-image-picker');
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) return;
+        const picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          base64: true,
+          quality: 0.8,
+        });
+        if (picked.canceled || !picked.assets[0]) return;
+        const asset = picked.assets[0];
+        const res = await apiFetch<{
+          coverUrl?: string;
+          cover_url?: string;
+        }>(
+          '/uploads/event-image',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              imageBase64: asset.base64 ?? '',
+              mimeType: 'image/jpeg',
+              eventId: 'pending',
+            }),
+          },
+          tenantId
+        );
+        const url = res.coverUrl ?? res.cover_url;
+        if (url) setCoverUrl(url);
+      } catch {
+      } finally {
+        setUploadingCover(false);
+      }
+    })();
   }
 
   async function onCreate() {
@@ -298,6 +389,7 @@ export default function EventListScreen({ route }: { route: Route }) {
             description: description.trim() || null,
             websiteUrl: websiteUrl.trim() || null,
             booking_url: bookingUrl.trim() || null,
+            cover_url: coverUrl ?? null,
             public: isPublic,
           }),
         },
@@ -338,6 +430,56 @@ export default function EventListScreen({ route }: { route: Route }) {
 
       {showForm && isStaff ? (
         <View style={styles.formCard}>
+          <TouchableOpacity
+            style={styles.coverPickerWrap}
+            onPress={pickEventCover}
+            disabled={uploadingCover}
+            activeOpacity={0.8}
+            accessibilityLabel="Add cover photo"
+          >
+            {uploadingCover ? (
+              <ActivityIndicator color={colors.clay} />
+            ) : coverUrl ? (
+              <>
+                {Platform.OS === 'web'
+                  ? createElement('img', {
+                      src: coverUrl,
+                      style: {
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        display: 'block',
+                        borderRadius: 8,
+                      },
+                      alt: 'Event cover',
+                    })
+                  : (() => {
+                      const RNImage = require('react-native').Image;
+                      return (
+                        <RNImage
+                          source={{ uri: coverUrl }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      );
+                    })()}
+                <View style={styles.coverPickerOverlay}>
+                  <Text style={styles.coverPickerOverlayText}>
+                    Change cover
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.coverPickerEmpty}>
+                <Text style={styles.coverPickerEmptyText}>
+                  + Add cover photo
+                </Text>
+                <Text style={styles.coverPickerEmptyHint}>
+                  Optional - 3MB max
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Input
             label="Title *"
             value={title}
@@ -558,6 +700,47 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: 16,
     marginBottom: 16,
+  },
+  coverPickerWrap: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.clayLight,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    marginBottom: spacing[4],
+  },
+  coverPickerEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[1],
+  },
+  coverPickerEmptyText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.sm,
+    color: colors.clay,
+  },
+  coverPickerEmptyHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+  },
+  coverPickerOverlay: {
+    position: 'absolute',
+    bottom: spacing[2],
+    right: spacing[2],
+    backgroundColor: 'rgba(30,26,22,0.55)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[1],
+  },
+  coverPickerOverlayText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: '#fff',
   },
   kindLegend: {
     fontFamily: typography.mono,
