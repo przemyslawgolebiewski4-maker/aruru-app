@@ -22,10 +22,10 @@ export default function CommunityScreen() {
             { key: 'sponsors', label: 'Sponsors' },
           ]
         : [
+            { key: 'forum', label: 'Forum' },
             { key: 'feed', label: 'Feed' },
             { key: 'studios', label: 'Studios' },
             { key: 'artists', label: 'Artists' },
-            { key: 'forum', label: 'Forum' },
             { key: 'sponsors', label: 'Sponsors' },
           ],
     [isSponsor]

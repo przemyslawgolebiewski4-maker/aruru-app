@@ -850,17 +850,11 @@ export default function DashboardScreen() {
               </>
             ) : (
               <>
-                You are not part of any studio yet.{'\n\n'}
-                <Text style={styles.emptyStudiosBodyStrong}>
-                  Create a studio only if you own or run it.
-                </Text>
-                {' '}You become the studio owner in Aruru.{'\n\n'}
-                To join an existing studio - open{' '}
+                {'Not a studio owner? Open '}
                 <Text style={styles.emptyStudiosBodyStrong}>Community</Text>
-                {' '}and use Studio Finder to send a join request.{'\n\n'}
-                Don&apos;t see your studio? Ask the owner to list it in
-                Community so you can find it - or they can invite you directly
-                by email.
+                {' - use Studio Finder to send a join request.\n\n'}
+                {'Running a studio? Create it below - you\n'}
+                {'become the owner in Aruru.'}
               </>
             )}
           </Text>

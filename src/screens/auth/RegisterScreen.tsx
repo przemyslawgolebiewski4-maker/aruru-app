@@ -283,9 +283,10 @@ export default function RegisterScreen({ navigation }: Props) {
           {isSponsor ? (
             <View style={styles.sponsorInfo}>
               <Text style={styles.sponsorInfoText}>
-                Your account will be reviewed before appearing
-                in the Sponsors section. You'll receive an email
-                once approved.
+                You are registering as a partner organisation - a clay supplier,
+                brand, gallery, or retreat. This is not for ceramicists joining
+                studios. Your account will be reviewed before appearing in the
+                partner directory.
               </Text>
             </View>
           ) : null}

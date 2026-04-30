@@ -1,10 +1,11 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import {
   useFocusEffect,
@@ -95,6 +96,29 @@ export default function MemberDashboardScreen() {
   const [events, setEvents] = useState<Event[]>([]);
   const [todayBookings, setTodayBookings] = useState(0);
   const [loading, setLoading] = useState(true);
+  const WELCOME_KEY = `aruru_member_welcome_${tenantId}`;
+
+  function isWelcomeDismissed(): boolean {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(WELCOME_KEY) === 'true';
+  }
+
+  function dismissWelcome() {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(WELCOME_KEY, 'true');
+    }
+    setShowWelcome(false);
+  }
+
+  const [showWelcome, setShowWelcome] = useState(
+    () => Boolean(tenantId) && !isWelcomeDismissed()
+  );
+
+  useEffect(() => {
+    if (tenantId) {
+      setShowWelcome(!isWelcomeDismissed());
+    }
+  }, [tenantId]);
 
   const load = useCallback(async () => {
     if (!tenantId || !user?.id) {
@@ -221,6 +245,57 @@ export default function MemberDashboardScreen() {
         </View>
         <Badge label="Member" variant="moss" />
       </View>
+
+      {showWelcome && isMemberRole && tenantId ? (
+        <View style={styles.welcomeBanner}>
+          <TouchableOpacity
+            style={styles.welcomeBannerClose}
+            onPress={dismissWelcome}
+            hitSlop={8}
+            accessibilityLabel="Dismiss welcome message"
+          >
+            <Text style={styles.welcomeBannerCloseText}>×</Text>
+          </TouchableOpacity>
+          <Text style={styles.welcomeBannerLabel}>
+            Welcome to {studioLabel}
+          </Text>
+          <Text style={styles.welcomeBannerTitle}>
+            You&apos;re in. Here&apos;s what you can do.
+          </Text>
+          <Text style={styles.welcomeBannerBody}>
+            Your studio has set up these sections for you.
+          </Text>
+          <View style={styles.welcomeBannerItems}>
+            {showBookings ? (
+              <View style={styles.welcomeBannerItem}>
+                <View style={styles.welcomeCheck} />
+                <Text style={styles.welcomeBannerItemText}>
+                  Book studio time
+                </Text>
+              </View>
+            ) : null}
+            {showEvents ? (
+              <View style={styles.welcomeBannerItem}>
+                <View style={styles.welcomeCheck} />
+                <Text style={styles.welcomeBannerItemText}>
+                  See upcoming events
+                </Text>
+              </View>
+            ) : null}
+            <View style={styles.welcomeBannerItem}>
+              <View style={styles.welcomeCheck} />
+              <Text style={styles.welcomeBannerItemText}>
+                Join the community forum
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity onPress={dismissWelcome} hitSlop={4}>
+            <Text style={styles.welcomeBannerDismiss}>
+              Got it - don&apos;t show again
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {showEventsBlock ? (
         <>
@@ -386,5 +461,76 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     width: '100%',
+  },
+  welcomeBanner: {
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    borderWidth: 0.5,
+    borderColor: colors.moss,
+    position: 'relative',
+    marginBottom: spacing[2],
+  },
+  welcomeBannerClose: {
+    position: 'absolute',
+    top: spacing[2],
+    right: spacing[3],
+    zIndex: 1,
+  },
+  welcomeBannerCloseText: {
+    fontSize: 20,
+    color: colors.moss,
+    lineHeight: 24,
+    opacity: 0.6,
+  },
+  welcomeBannerLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.moss,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing[1],
+  },
+  welcomeBannerTitle: {
+    fontFamily: typography.bodySemiBold,
+    fontSize: fontSize.md,
+    color: colors.ink,
+    marginBottom: spacing[1],
+    lineHeight: 22,
+  },
+  welcomeBannerBody: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    lineHeight: 20,
+    marginBottom: spacing[3],
+  },
+  welcomeBannerItems: {
+    gap: spacing[2],
+    marginBottom: spacing[3],
+  },
+  welcomeBannerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  welcomeCheck: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.moss,
+  },
+  welcomeBannerItemText: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.ink,
+    lineHeight: 20,
+  },
+  welcomeBannerDismiss: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.moss,
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.moss,
   },
 });
