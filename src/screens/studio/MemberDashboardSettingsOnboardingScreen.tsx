@@ -25,17 +25,8 @@ import {
 } from '../../services/api';
 import { alertMessage } from '../../utils/confirmAction';
 import { getMemberDashboardSectionInfo } from './memberDashboardSectionInfo';
-import { useAuth } from '../../hooks/useAuth';
 
 const FREE_SECTIONS = ['events', 'bookings'];
-const PAID_SECTIONS = [
-  'kiln',
-  'materials',
-  'costs',
-  'tasks',
-  'privateKilns',
-  'membershipPlans',
-];
 
 type Nav = NativeStackNavigationProp<
   AppStackParamList,
@@ -53,11 +44,6 @@ export default function MemberDashboardSettingsOnboardingScreen({
 }) {
   const { tenantId, studioName } = route.params;
   const navigation = useNavigation<Nav>();
-  const { studios } = useAuth();
-  const studioData = studios.find((s) => s.tenantId === tenantId);
-  const hasSubscription =
-    studioData?.subscriptionStatus === 'active' ||
-    studioData?.subscriptionStatus === 'trial';
 
   const [sectionKeys, setSectionKeys] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
@@ -104,11 +90,14 @@ export default function MemberDashboardSettingsOnboardingScreen({
   }
 
   function goNext() {
-    navigation.replace('SetupPricing', {
+    navigation.replace('InviteFirstMember', {
       tenantId,
       studioName,
-      fromOnboarding: true,
     });
+  }
+
+  async function handleSaveAndContinue() {
+    goNext();
   }
 
   const orderedKeys = useMemo(() => {
@@ -136,15 +125,13 @@ export default function MemberDashboardSettingsOnboardingScreen({
         <View style={[styles.stepDot, styles.stepDotDone]} />
         <View style={[styles.stepDot, styles.stepDotDone]} />
         <View style={[styles.stepDot, styles.stepDotActive]} />
-        <View style={styles.stepDot} />
       </View>
 
       <View style={styles.top}>
-        <Text style={styles.title}>What can members see?</Text>
+        <Text style={styles.title}>What members see</Text>
         <Text style={styles.subtitle}>
-          Choose which tools and sections appear on your members&apos; dashboard.
-          You can change this at any time in Studio settings. Start simple — add
-          more when you&apos;re ready.
+          Choose what appears on your members&apos; dashboard. Start with the
+          basics - you can adjust this any time from Studio Settings.
         </Text>
       </View>
 
@@ -164,7 +151,7 @@ export default function MemberDashboardSettingsOnboardingScreen({
         />
       ) : (
         <>
-          <SectionLabel>Always available - free</SectionLabel>
+          <SectionLabel>What members can see</SectionLabel>
           {orderedKeys
             .filter((k) => FREE_SECTIONS.includes(k))
             .map((key) => {
@@ -194,97 +181,17 @@ export default function MemberDashboardSettingsOnboardingScreen({
                 </View>
               );
             })}
-
-          <View style={styles.paidSectionHeader}>
-            <SectionLabel>Studio manager tools</SectionLabel>
-            {!hasSubscription ? (
-              <View style={styles.paidNoteWrap}>
-                <Text style={styles.paidSectionNote}>
-                  These sections are part of the studio manager - connected to a
-                  subscription. You can try them free for 14 days - no credit card
-                  needed.
-                </Text>
-                <TouchableOpacity
-                  style={styles.paidTrialBtn}
-                  onPress={() =>
-                    navigation.navigate('StudioPlan', { tenantId })
-                  }
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Start free trial, see plans"
-                >
-                  <Text style={styles.paidTrialBtnText}>
-                    Start free trial - see plans →
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </View>
-          {orderedKeys
-            .filter(
-              (k) =>
-                PAID_SECTIONS.includes(k) ||
-                (!FREE_SECTIONS.includes(k) && !PAID_SECTIONS.includes(k))
-            )
-            .map((key) => {
-              const on = visibility[key] !== false;
-              const busy = patchingKey === key;
-              const isPaidLocked = !hasSubscription;
-              const info = getMemberDashboardSectionInfo(key);
-              return (
-                <View
-                  key={key}
-                  style={[styles.row, isPaidLocked && styles.rowDisabled]}
-                >
-                  <View style={styles.rowText}>
-                    <Text
-                      style={[
-                        styles.rowTitle,
-                        isPaidLocked && styles.rowTitleDisabled,
-                      ]}
-                    >
-                      {info.label}
-                    </Text>
-                    {info.desc ? (
-                      <Text
-                        style={[
-                          styles.rowDesc,
-                          isPaidLocked && styles.rowDescDisabled,
-                        ]}
-                      >
-                        {info.desc}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => void toggleKey(key)}
-                    disabled={busy || isPaidLocked}
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: on, disabled: isPaidLocked }}
-                    style={[
-                      styles.toggle,
-                      on && !isPaidLocked && styles.toggleOn,
-                      isPaidLocked && styles.toggleDisabled,
-                    ]}
-                    activeOpacity={isPaidLocked ? 1 : 0.75}
-                  >
-                    <View
-                      style={[
-                        styles.toggleThumb,
-                        on && !isPaidLocked && styles.toggleThumbOn,
-                      ]}
-                    />
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+          <Text style={styles.freeNote}>
+            Events and bookings are always free for every member. More tools
+            available in Studio Settings when you&apos;re ready.
+          </Text>
         </>
       )}
 
       <Button
-        label="Done →"
+        label="Continue →"
         variant="primary"
-        onPress={goNext}
+        onPress={() => void handleSaveAndContinue()}
         fullWidth
         style={styles.btn}
       />
@@ -388,45 +295,13 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   toggleThumbOn: { alignSelf: 'flex-end' },
-  paidSectionHeader: {
-    marginTop: spacing[5],
-    gap: spacing[2],
-    marginBottom: spacing[2],
-  },
-  paidSectionNote: {
+  freeNote: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.inkLight,
     lineHeight: 20,
-  },
-  paidNoteWrap: {
-    gap: spacing[3],
-  },
-  paidTrialBtn: {
-    backgroundColor: colors.clayLight,
-    borderRadius: radius.sm,
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-    borderWidth: 0.5,
-    borderColor: colors.clay,
-    alignSelf: 'flex-start',
-  },
-  paidTrialBtnText: {
-    fontFamily: typography.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.clay,
-  },
-  rowDisabled: {
-    opacity: 0.45,
-  },
-  rowTitleDisabled: {
-    color: colors.inkLight,
-  },
-  rowDescDisabled: {
-    color: colors.inkLight,
-  },
-  toggleDisabled: {
-    backgroundColor: colors.border,
+    marginTop: spacing[3],
+    marginBottom: spacing[2],
   },
   btn: { marginTop: spacing[6] },
   skipBtn: { marginTop: spacing[2] },

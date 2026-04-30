@@ -92,14 +92,13 @@ export default function StudioOnboardingScreen({ route }: { route: Route }) {
           <View style={[styles.stepDot, styles.stepDotDone]} />
           <View style={[styles.stepDot, styles.stepDotActive]} />
           <View style={styles.stepDot} />
-          <View style={styles.stepDot} />
         </View>
 
         <View style={styles.top}>
-          <Text style={styles.title}>Tell the community</Text>
+          <Text style={styles.title}>Your studio in the community</Text>
           <Text style={styles.subtitle}>
-            Add a public description and tags so ceramicists can find{'\n'}
-            {studioName} in the Studio Finder. You can edit this later.
+            Help ceramicists find {studioName}. Add a short description and pick
+            tags - you can always update this later.
           </Text>
         </View>
 
