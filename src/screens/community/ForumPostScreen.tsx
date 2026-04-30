@@ -336,7 +336,23 @@ export default function ForumPostScreen({ route, navigation }: Props) {
           <Text style={styles.category}>
             {post.category.replace(/_/g, ' ')}
           </Text>
-          <View style={styles.postAuthorRow}>
+          <TouchableOpacity
+            style={styles.postAuthorRow}
+            onPress={() => {
+              if (post.authorId) {
+                navigation.navigate('ArtistProfile', {
+                  userId: post.authorId,
+                });
+              }
+            }}
+            activeOpacity={post.authorId ? 0.7 : 1}
+            accessibilityRole={post.authorId ? 'button' : 'none'}
+            accessibilityLabel={
+              post.authorId
+                ? `View ${post.authorName}'s profile`
+                : undefined
+            }
+          >
             <View style={styles.postAvatarWrap}>
               <AvatarImage
                 url={post.authorAvatarUrl}
@@ -353,7 +369,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                 {post.authorName} · {timeAgo(post.createdAt)}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
           <View style={styles.stats}>
             <Text style={styles.stat}>{post.replyCount} replies</Text>
             <Text style={styles.stat}>{post.viewCount} views</Text>
@@ -500,23 +516,43 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                 ]}
               >
                 <View style={styles.replyTop}>
-                  <View style={styles.replyAvatarWrap}>
-                    <AvatarImage
-                      url={r.authorAvatarUrl}
-                      initials={authorInitials(r.authorName)}
-                      size={32}
-                      borderRadius={16}
-                      bgColor={colors.mossLight}
-                      textColor={colors.moss}
-                    />
-                  </View>
-                  <View style={styles.replyHeadText}>
-                    <Text style={styles.replyAuthor}>
-                      {r.authorName}{' '}
-                      <Text style={styles.replyTime}>
-                        {timeAgo(r.createdAt)}
+                  <TouchableOpacity
+                    style={styles.replyAuthorRow}
+                    onPress={() => {
+                      if (r.authorId) {
+                        navigation.navigate('ArtistProfile', {
+                          userId: r.authorId,
+                        });
+                      }
+                    }}
+                    activeOpacity={r.authorId ? 0.7 : 1}
+                    accessibilityRole={r.authorId ? 'button' : 'none'}
+                    accessibilityLabel={
+                      r.authorId
+                        ? `View ${r.authorName}'s profile`
+                        : undefined
+                    }
+                  >
+                    <View style={styles.replyAvatarWrap}>
+                      <AvatarImage
+                        url={r.authorAvatarUrl}
+                        initials={authorInitials(r.authorName)}
+                        size={32}
+                        borderRadius={16}
+                        bgColor={colors.mossLight}
+                        textColor={colors.moss}
+                      />
+                    </View>
+                    <View style={styles.replyHeadText}>
+                      <Text style={styles.replyAuthor}>
+                        {r.authorName}{' '}
+                        <Text style={styles.replyTime}>
+                          {timeAgo(r.createdAt)}
+                        </Text>
                       </Text>
-                    </Text>
+                    </View>
+                  </TouchableOpacity>
+                  <View style={styles.replyBody}>
                     {renderMarkdown(r.content ?? '', styles.replyContent)}
                     {(r.imageUrls ?? []).length > 0 ? (
                       <View style={styles.postImages}>
@@ -823,6 +859,9 @@ const styles = StyleSheet.create({
     paddingLeft: spacing[3],
   },
   replyTop: {
+    gap: spacing[2],
+  },
+  replyAuthorRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing[2],
@@ -835,6 +874,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.mossLight,
   },
   replyHeadText: { flex: 1, minWidth: 0, gap: spacing[1] },
+  replyBody: {
+    gap: spacing[1],
+  },
   replyAuthor: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,

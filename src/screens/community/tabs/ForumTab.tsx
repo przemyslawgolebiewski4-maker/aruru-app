@@ -63,6 +63,24 @@ function categoryLabel(key: string): string {
   return CATEGORIES.find((c) => c.key === key)?.label ?? key;
 }
 
+function categoryColor(key: string): {
+  bg: string;
+  text: string;
+} {
+  switch (key) {
+    case 'technique':
+      return { bg: colors.clayLight, text: colors.clay };
+    case 'kiln':
+      return { bg: colors.mossLight, text: colors.moss };
+    case 'clay_glazes':
+      return { bg: colors.mossLight, text: colors.moss };
+    case 'business':
+      return { bg: colors.surface, text: colors.inkMid };
+    default:
+      return { bg: colors.surface, text: colors.inkLight };
+  }
+}
+
 function authorInitials(name: string): string {
   return (
     name
@@ -573,6 +591,7 @@ export default function ForumTab() {
   const [sort, setSort] = useState<'latest' | 'active' | 'popular'>('latest');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
   const contentInputRef = useRef<TextInput>(null);
@@ -738,7 +757,16 @@ export default function ForumTab() {
           value={searchInput}
           onChangeText={(v) => {
             setSearchInput(v);
-            if (!v) setSearch('');
+            if (searchDebounceRef.current) {
+              clearTimeout(searchDebounceRef.current);
+            }
+            if (!v) {
+              setSearch('');
+              return;
+            }
+            searchDebounceRef.current = setTimeout(() => {
+              setSearch(v);
+            }, 500);
           }}
           placeholder="Search posts..."
           placeholderTextColor={colors.inkLight}
@@ -806,9 +834,25 @@ export default function ForumTab() {
                     <Text style={styles.pinnedBadge}>Pinned</Text>
                   ) : null}
                   <Text style={styles.postMeta}>
-                    {p.authorName} · {timeAgo(p.createdAt)} ·{' '}
-                    {categoryLabel(p.category)}
+                    {p.authorName} · {timeAgo(p.createdAt)}
                   </Text>
+                  {p.category ? (
+                    <View
+                      style={[
+                        styles.catBadge,
+                        { backgroundColor: categoryColor(p.category).bg },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.catBadgeText,
+                          { color: categoryColor(p.category).text },
+                        ]}
+                      >
+                        {categoryLabel(p.category)}
+                      </Text>
+                    </View>
+                  ) : null}
                   <View style={styles.statsRow}>
                     <Text style={styles.stat}>{p.replyCount} replies</Text>
                     <Text style={styles.stat}>{p.viewCount} views</Text>
@@ -1189,14 +1233,26 @@ const styles = StyleSheet.create({
   },
   cardBody: { flex: 1, minWidth: 0, gap: spacing[1] },
   postTitle: {
-    fontFamily: typography.body,
+    fontFamily: typography.bodySemiBold,
     fontSize: fontSize.md,
     color: colors.ink,
+    lineHeight: 22,
   },
   postMeta: {
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  catBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 2,
+  },
+  catBadgeText: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
   statsRow: {
     flexDirection: 'row',

@@ -373,7 +373,7 @@ export default function SponsorsTab() {
     sponsorStats == null
       ? ''
       : sponsorStats.prevMonthClicks <= 0
-        ? 'vs last month: —'
+        ? 'vs last month: -'
         : sponsorStats.monthClicks >= sponsorStats.prevMonthClicks
           ? `vs last month: +${sponsorStats.monthClicks - sponsorStats.prevMonthClicks}`
           : `vs last month: ${sponsorStats.monthClicks - sponsorStats.prevMonthClicks}`;
@@ -463,7 +463,7 @@ export default function SponsorsTab() {
               <View style={styles.statCard}>
                 <Text style={styles.statLabel}>Partner updates</Text>
                 <Text style={styles.statValue}>
-                  {sponsorStats.postsThisMonth}/{sponsorStats.postsPerMonth || '—'}
+                  {sponsorStats.postsThisMonth}/{sponsorStats.postsPerMonth || '-'}
                 </Text>
                 <Text style={styles.statSub}>This month / limit</Text>
               </View>
@@ -669,6 +669,11 @@ export default function SponsorsTab() {
                 ) : null}
                 {s.latestPost ? (
                   <View style={styles.publicPostBlock}>
+                    <View style={styles.partnerUpdateLabel}>
+                      <Text style={styles.partnerUpdateLabelText}>
+                        Partner update
+                      </Text>
+                    </View>
                     <Text style={styles.publicPostTitle} numberOfLines={1}>
                       {s.latestPost.title}
                     </Text>
@@ -1005,6 +1010,21 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: colors.border,
     gap: spacing[1],
+  },
+  partnerUpdateLabel: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.mossLight,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing[2],
+    paddingVertical: 2,
+    marginBottom: spacing[1],
+  },
+  partnerUpdateLabelText: {
+    fontFamily: typography.mono,
+    fontSize: 9,
+    color: colors.moss,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   publicPostTitle: {
     fontFamily: typography.bodyMedium,
