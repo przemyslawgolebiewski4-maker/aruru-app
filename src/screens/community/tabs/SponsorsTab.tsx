@@ -636,7 +636,16 @@ export default function SponsorsTab() {
       ) : (
         <View style={styles.cards}>
           {filteredPublic.map((s) => (
-            <View key={s.id} style={styles.card}>
+            <TouchableOpacity
+              key={s.id}
+              style={styles.card}
+              onPress={() =>
+                stackNav?.navigate('SponsorProfile', { sponsorId: s.id })
+              }
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${s.name || 'partner'} profile`}
+            >
               <View style={styles.logoWrap}>
                 <AvatarImage
                   url={s.logoUrl}
@@ -688,7 +697,7 @@ export default function SponsorsTab() {
                   </View>
                 ) : null}
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}

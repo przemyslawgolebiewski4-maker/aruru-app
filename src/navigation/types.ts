@@ -111,6 +111,7 @@ export type AppStackParamList = {
   ArtistProfile: { userId: string };
   ForumPost: { postId: string };
   StudioPublicProfile: { studioSlug: string; studioName: string };
+  SponsorProfile: { sponsorId: string };
   /** Applicant: open join requests (GET /community/me/join-requests). */
   MyJoinRequests: undefined;
   AdminStudios: undefined;

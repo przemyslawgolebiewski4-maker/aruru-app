@@ -72,6 +72,7 @@ import StudioPlanScreen from '../screens/studio/StudioPlanScreen';
 import StudioFreeTierScreen from '../screens/studio/StudioFreeTierScreen';
 import SponsorPlanScreen from '../screens/sponsor/SponsorPlanScreen';
 import SponsorEditProfileScreen from '../screens/sponsor/SponsorEditProfileScreen';
+import SponsorProfileScreen from '../screens/sponsor/SponsorProfileScreen';
 import type {
   AuthStackParamList,
   AppStackParamList,
@@ -347,6 +348,15 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Edit partner profile',
+        }}
+      />
+      <AppStack.Screen
+        name="SponsorProfile"
+        component={SponsorProfileScreen}
+        options={{
+          ...appModalHeaderOptions,
+          headerShown: true,
+          title: 'Partner',
         }}
       />
       <AppStack.Screen
