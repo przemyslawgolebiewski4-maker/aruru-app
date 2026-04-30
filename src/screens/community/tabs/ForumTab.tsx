@@ -81,6 +81,14 @@ function categoryColor(key: string): {
   }
 }
 
+function isNewPost(post: Post, lv: number): boolean {
+  if (post.isPinned) return false;
+  if (!lv) return false;
+  const ts = post.lastReplyAt ?? post.createdAt;
+  if (!ts) return false;
+  return new Date(ts).getTime() > lv;
+}
+
 function authorInitials(name: string): string {
   return (
     name
@@ -592,13 +600,28 @@ export default function ForumTab() {
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const LAST_VISIT_KEY = `aruru_forum_last_visit_${category || 'all'}`;
+  const [lastVisit, setLastVisit] = useState<number>(0);
   const [selectionStart, setSelectionStart] = useState(0);
   const [selectionEnd, setSelectionEnd] = useState(0);
   const contentInputRef = useRef<TextInput>(null);
   const [postImages, setPostImages] = useState<string[]>([]);
   const [uploadingPostImage, setUploadingPostImage] = useState(false);
 
+  const getLastVisit = useCallback(function getLastVisit(): number {
+    if (typeof window === 'undefined') return 0;
+    const val = localStorage.getItem(LAST_VISIT_KEY);
+    return val ? parseInt(val, 10) : 0;
+  }, [LAST_VISIT_KEY]);
+
+  const markVisited = useCallback(function markVisited() {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(LAST_VISIT_KEY, String(Date.now()));
+  }, [LAST_VISIT_KEY]);
+
   const load = useCallback(async () => {
+    const lv = getLastVisit();
+    setLastVisit(lv);
     setLoading(true);
     setError('');
     try {
@@ -626,12 +649,13 @@ export default function ForumTab() {
             (p as { last_reply_at?: string }).last_reply_at,
         }))
       );
+      markVisited();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load forum.');
     } finally {
       setLoading(false);
     }
-  }, [category, tenantId, sort, search]);
+  }, [category, tenantId, sort, search, getLastVisit, markVisited]);
 
   useFocusEffect(
     useCallback(() => {
@@ -817,6 +841,9 @@ export default function ForumTab() {
               onPress={() => goPost(p.id)}
               activeOpacity={0.75}
             >
+              {isNewPost(p, lastVisit) ? (
+                <View style={styles.newDot} />
+              ) : null}
               <View style={styles.cardRow}>
                 <View style={styles.postAvatarWrap}>
                   <AvatarImage
@@ -1215,9 +1242,20 @@ const styles = StyleSheet.create({
   },
   sep: { height: 0.5, backgroundColor: colors.border },
   card: {
+    position: 'relative',
     backgroundColor: colors.surface,
     padding: spacing[4],
     gap: spacing[1],
+  },
+  newDot: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+    backgroundColor: colors.clay,
+    borderTopLeftRadius: radius.sm,
+    borderBottomLeftRadius: radius.sm,
   },
   cardRow: {
     flexDirection: 'row',
