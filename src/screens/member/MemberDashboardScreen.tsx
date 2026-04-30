@@ -313,12 +313,6 @@ export default function MemberDashboardScreen() {
           </View>
         </>
       ) : null}
-      {!studioSubscriptionActive ? (
-        <Text style={styles.noSubHint}>
-          Costs, kiln history and materials are available when your studio
-          activates a subscription.
-        </Text>
-      ) : null}
     </ScrollView>
   );
 }
@@ -392,14 +386,5 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     width: '100%',
-  },
-  noSubHint: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-    textAlign: 'center',
-    lineHeight: 20,
-    paddingHorizontal: spacing[4],
-    marginTop: spacing[3],
   },
 });

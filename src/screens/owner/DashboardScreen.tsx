@@ -1171,23 +1171,33 @@ export default function DashboardScreen() {
             <StatCard label="Members" value={membersVal} accent="clay" />
           )}
         </View>
-        <View style={styles.statCardWrap}>
-          <StatCard label="Firings" value={firingsVal} accent="moss" />
-        </View>
-        <View style={styles.statCardWrap}>
-          <StatCard label="Open tasks" value={tasksVal} accent="none" />
-        </View>
-        <View style={styles.statCardWrap}>
-          <TouchableOpacity
-            style={styles.statCardTap}
-            onPress={goCosts}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Open cost summaries"
-          >
-            <StatCard label="Pending bills" value={summariesVal} accent="none" />
-          </TouchableOpacity>
-        </View>
+        {hasSubscription ? (
+          <View style={styles.statCardWrap}>
+            <StatCard label="Firings" value={firingsVal} accent="moss" />
+          </View>
+        ) : null}
+        {hasSubscription ? (
+          <View style={styles.statCardWrap}>
+            <StatCard label="Open tasks" value={tasksVal} accent="none" />
+          </View>
+        ) : null}
+        {hasSubscription ? (
+          <View style={styles.statCardWrap}>
+            <TouchableOpacity
+              style={styles.statCardTap}
+              onPress={goCosts}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Open cost summaries"
+            >
+              <StatCard
+                label="Pending bills"
+                value={summariesVal}
+                accent="none"
+              />
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
 
       {kilnRequests.length > 0 ? (
