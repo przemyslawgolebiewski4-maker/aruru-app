@@ -36,6 +36,7 @@ type Reply = {
   authorId?: string;
   parentReplyId?: string | null;
   imageUrls?: string[];
+  _optimistic?: boolean;
 };
 
 type PostDetail = {
@@ -255,28 +256,67 @@ export default function ForumPostScreen({ route, navigation }: Props) {
     if (!reply.trim() && replyImages.length === 0) return;
     setPosting(true);
     setReplyError('');
+
+    const optimisticId = `optimistic-${Date.now()}`;
+    const optimisticReply: Reply = {
+      id: optimisticId,
+      content: reply.trim(),
+      authorName: user?.name ?? 'You',
+      authorAvatarUrl: user?.avatarUrl ?? undefined,
+      createdAt: new Date().toISOString(),
+      authorId: user?.id ?? '',
+      parentReplyId: replyToId ?? null,
+      imageUrls: [...replyImages],
+      _optimistic: true,
+    };
+
+    setPost((prev) =>
+      prev
+        ? {
+            ...prev,
+            replies: [...(prev.replies ?? []), optimisticReply],
+            replyCount: (prev.replyCount ?? 0) + 1,
+          }
+        : prev
+    );
+
+    const replyText = reply.trim();
+    const images = [...replyImages];
+    setReply('');
+    setReplyImages([]);
+    setReplyToId(null);
+    setReplyToName(null);
+
     try {
       await apiFetch(
         `/community/forum/${postId}/replies`,
         {
           method: 'POST',
           body: JSON.stringify({
-            content: reply.trim(),
+            content: replyText,
             parent_reply_id: replyToId ?? null,
-            image_urls: replyImages.slice(0, 2),
+            image_urls: images,
           }),
         },
         tenantId
       );
-      setReply('');
-      setReplyImages([]);
-      setReplyToId(null);
-      setReplyToName(null);
-      await load();
+      void load();
     } catch (e: unknown) {
-      setReplyError(
-        e instanceof Error ? e.message : 'Could not post reply.'
+      setPost((prev) =>
+        prev
+          ? {
+              ...prev,
+              replies: (prev.replies ?? []).filter(
+                (r) => r.id !== optimisticId
+              ),
+              replyCount: Math.max((prev.replyCount ?? 0) - 1, 0),
+            }
+          : prev
       );
+      setReplyError(
+        e instanceof Error ? e.message : 'Could not send reply.'
+      );
+      setReply(replyText);
     } finally {
       setPosting(false);
     }
@@ -513,6 +553,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                 style={[
                   styles.replyItem,
                   r.parentReplyId ? styles.replyItemNested : null,
+                  r._optimistic ? styles.replyItemOptimistic : null,
                 ]}
               >
                 <View style={styles.replyTop}>
@@ -857,6 +898,9 @@ const styles = StyleSheet.create({
     borderLeftWidth: 2,
     borderLeftColor: colors.border,
     paddingLeft: spacing[3],
+  },
+  replyItemOptimistic: {
+    opacity: 0.6,
   },
   replyTop: {
     gap: spacing[2],
