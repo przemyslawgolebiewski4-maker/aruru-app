@@ -183,6 +183,10 @@ export default function StudioFinderTab() {
       ) : studioList.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.emptyText}>No studios found.</Text>
+          <Text style={styles.emptyHint}>
+            Try a different city or country - or invite your studio owner to
+            list their studio on Aruru.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -281,6 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing[4],
+    gap: spacing[2],
   },
   errorText: {
     fontFamily: typography.body,
@@ -291,6 +296,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
+    color: colors.inkLight,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
     color: colors.inkLight,
     textAlign: 'center',
   },

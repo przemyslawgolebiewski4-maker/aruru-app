@@ -756,11 +756,26 @@ export default function ForumTab() {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : posts.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyText}>No posts yet.</Text>
-          <Text style={styles.emptyHint}>
-            Be the first to start a discussion.
+        <View style={styles.emptyGuided}>
+          <Text style={styles.emptyGuidedTitle}>
+            The forum is quiet - be the first.
           </Text>
+          <Text style={styles.emptyGuidedBody}>
+            This is where ceramicists ask questions, share techniques, and find
+            collaborators. Pick a category and start a thread.
+          </Text>
+          <View style={styles.emptyGuidedSuggestions}>
+            <Text style={styles.emptyGuidedSugLabel}>Ideas to get started</Text>
+            <Text style={styles.emptyGuidedSugItem}>
+              Technique - "What clay body do you use for throwing?"
+            </Text>
+            <Text style={styles.emptyGuidedSugItem}>
+              General - "Where are you based and what do you make?"
+            </Text>
+            <Text style={styles.emptyGuidedSugItem}>
+              Kiln - "Bisque or single fire - what do you prefer?"
+            </Text>
+          </View>
         </View>
       ) : (
         <FlatList
@@ -1113,6 +1128,46 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     textAlign: 'center',
+  },
+  emptyGuided: {
+    padding: spacing[6],
+    alignItems: 'flex-start',
+  },
+  emptyGuidedTitle: {
+    fontFamily: typography.display,
+    fontSize: 22,
+    color: colors.ink,
+    letterSpacing: -0.3,
+    marginBottom: spacing[3],
+    lineHeight: 28,
+  },
+  emptyGuidedBody: {
+    fontFamily: typography.body,
+    fontSize: fontSize.md,
+    color: colors.inkMid,
+    lineHeight: 24,
+    marginBottom: spacing[5],
+  },
+  emptyGuidedSuggestions: {
+    width: '100%',
+    gap: spacing[2],
+  },
+  emptyGuidedSugLabel: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.inkLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing[1],
+  },
+  emptyGuidedSugItem: {
+    fontFamily: typography.body,
+    fontSize: fontSize.sm,
+    color: colors.inkMid,
+    lineHeight: 20,
+    paddingLeft: spacing[3],
+    borderLeftWidth: 2,
+    borderLeftColor: colors.clayLight,
   },
   sep: { height: 0.5, backgroundColor: colors.border },
   card: {

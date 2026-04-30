@@ -31,7 +31,7 @@ export default function CommunityScreen() {
     [isSponsor]
   );
 
-  const [activeTab, setActiveTab] = useState<Tab>('feed');
+  const [activeTab, setActiveTab] = useState<Tab>('forum');
 
   useEffect(() => {
     if (isSponsor) {

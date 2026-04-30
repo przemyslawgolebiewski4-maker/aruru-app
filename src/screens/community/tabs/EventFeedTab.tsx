@@ -399,9 +399,10 @@ export default function EventFeedTab() {
       }
       ListEmptyComponent={
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>No upcoming public events.</Text>
+          <Text style={styles.emptyText}>No events yet.</Text>
           <Text style={styles.emptyHint}>
-            Studios can publish events from their event screen.
+            Studios and ceramicists publish workshops, open studios, and
+            exhibitions here. Check back soon - or share your own.
           </Text>
         </View>
       }

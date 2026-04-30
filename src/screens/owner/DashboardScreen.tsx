@@ -671,7 +671,7 @@ export default function DashboardScreen() {
     }
     const uid = user?.id;
     if (!uid) return;
-    // Assistant: same as members — previous month only, no live current month.
+    // Assistant: same as members - previous month only, no live current month.
     if (currentStudio?.role === 'assistant') {
       const now = new Date();
       let prevMonth = now.getMonth();
@@ -794,10 +794,10 @@ export default function DashboardScreen() {
       ?.navigate('AssistantsOverview', { tenantId });
   }
 
-  const membersVal = loading ? '—' : String(stats.members);
-  const firingsVal = loading ? '—' : String(stats.firingsThisMonth);
-  const tasksVal = loading ? '—' : String(stats.openTasks);
-  const summariesVal = loading ? '—' : String(summariesDue);
+  const membersVal = loading ? '-' : String(stats.members);
+  const firingsVal = loading ? '-' : String(stats.firingsThisMonth);
+  const tasksVal = loading ? '-' : String(stats.openTasks);
+  const summariesVal = loading ? '-' : String(summariesDue);
 
   const ownerTrialDaysLeft =
     currentStudio?.role === 'owner' &&
@@ -916,7 +916,7 @@ export default function DashboardScreen() {
             <Text style={styles.emptyStudiosInfoText}>
               {onlySuspended
                 ? 'Need help? Use Contact support in Profile, or reach out to your studio owner. You can also browse Community → Studio Finder to request joining another listed studio.'
-                : 'Waiting for an email invite? Check your inbox — the owner can add you directly without the directory.'}
+                : 'Waiting for an email invite? Check your inbox - the owner can add you directly without the directory.'}
             </Text>
           </View>
           <TouchableOpacity
@@ -927,7 +927,7 @@ export default function DashboardScreen() {
           >
             <Text style={styles.emptyStudiosLink}>
               {onlySuspended
-                ? 'Open Profile — suspended studios →'
+                ? 'Open Profile - suspended studios →'
                 : 'Already have an account in another studio? →'}
             </Text>
           </TouchableOpacity>
@@ -1005,7 +1005,7 @@ export default function DashboardScreen() {
         <Text style={styles.studioSub}>{studioLabel.toUpperCase()}</Text>
       </View>
 
-      {showFreeBanner && !trialPromptDismissed ? (
+      {false && showFreeBanner && !trialPromptDismissed ? (
         <View style={styles.trialPromptCard}>
           <Text style={styles.trialPromptTitle}>
             Try studio manager - free for 14 days
@@ -1032,16 +1032,16 @@ export default function DashboardScreen() {
             />
           </View>
         </View>
-      ) : showFreeBanner && trialPromptDismissed ? (
+      ) : showFreeBanner ? (
         <View style={styles.communityBanner}>
           <View style={styles.communityBannerRow}>
             <View style={styles.communityBannerText}>
               <Text style={styles.communityBannerTitle}>
-                You can already build your community - for free.
+                Your studio is live in the community.
               </Text>
               <Text style={styles.communityBannerSub}>
-                Invite members, publish events and join the forum - no
-                subscription needed.
+                Members can find you in Studio Finder, book studio time, and see
+                your events - all free.
               </Text>
             </View>
             {!showCommunityBanner ? (
@@ -1100,7 +1100,7 @@ export default function DashboardScreen() {
         </View>
       ) : null}
 
-      {ownerTrialDaysLeft !== null && ownerTrialDaysLeft > 0 ? (
+      {false && ownerTrialDaysLeft !== null && ownerTrialDaysLeft > 0 ? (
         <TouchableOpacity
           style={styles.trialBanner}
           onPress={() => void openCheckout()}
@@ -1128,7 +1128,7 @@ export default function DashboardScreen() {
           accessibilityLabel="Update payment method"
         >
           <Text style={styles.trialBannerText}>
-            Payment failed — update your payment method
+            Payment failed - update your payment method
           </Text>
           <Text style={styles.trialBannerArrow}>→</Text>
         </TouchableOpacity>
@@ -1316,7 +1316,7 @@ export default function DashboardScreen() {
 
       <SectionLabel>Recent firings</SectionLabel>
       {!tenantId ? (
-        <Text style={styles.emptyList}>—</Text>
+        <Text style={styles.emptyList}>-</Text>
       ) : loading ? (
         <View style={styles.listLoading}>
           <ActivityIndicator color={colors.clay} />
@@ -1355,7 +1355,7 @@ export default function DashboardScreen() {
 
       <SectionLabel>Tasks</SectionLabel>
       {!tenantId ? (
-        <Text style={styles.emptyList}>—</Text>
+        <Text style={styles.emptyList}>-</Text>
       ) : loading ? (
         <View style={styles.listLoading}>
           <ActivityIndicator color={colors.clay} />
@@ -1442,7 +1442,7 @@ export default function DashboardScreen() {
           </View>
         ) : null}
       </View>
-      {!hasSubscription && currentStudio?.role === 'owner' ? (
+      {false ? (
         <View style={styles.trialCtaWrap}>
           <TouchableOpacity
             style={styles.trialCtaBtn}
