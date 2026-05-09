@@ -252,6 +252,7 @@ export default function MemberDashboardScreen() {
             style={styles.welcomeBannerClose}
             onPress={dismissWelcome}
             hitSlop={8}
+            accessibilityRole="button"
             accessibilityLabel="Dismiss welcome message"
           >
             <Text style={styles.welcomeBannerCloseText}>×</Text>
@@ -289,7 +290,11 @@ export default function MemberDashboardScreen() {
               </Text>
             </View>
           </View>
-          <TouchableOpacity onPress={dismissWelcome} hitSlop={4}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={dismissWelcome}
+            hitSlop={4}
+          >
             <Text style={styles.welcomeBannerDismiss}>
               Got it - don&apos;t show again
             </Text>
@@ -473,9 +478,13 @@ const styles = StyleSheet.create({
   },
   welcomeBannerClose: {
     position: 'absolute',
-    top: spacing[2],
-    right: spacing[3],
+    top: spacing[1],
+    right: spacing[2],
     zIndex: 1,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   welcomeBannerCloseText: {
     fontSize: 20,

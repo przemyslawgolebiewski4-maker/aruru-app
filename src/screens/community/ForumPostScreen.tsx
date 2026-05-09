@@ -762,6 +762,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                 })();
               }}
               disabled={uploadingImage}
+              accessibilityRole="button"
               accessibilityLabel="Add image"
               hitSlop={8}
             >
@@ -946,6 +947,10 @@ const styles = StyleSheet.create({
   replyBtn: {
     alignSelf: 'flex-start',
     marginTop: spacing[1],
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[1],
   },
   replyBtnText: {
     fontFamily: typography.mono,
@@ -1090,8 +1095,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   attachBtn: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
