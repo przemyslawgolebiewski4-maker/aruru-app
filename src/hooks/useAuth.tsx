@@ -11,6 +11,7 @@ import {
   clearAuth,
   getToken,
   setToken,
+  setRefreshToken,
   apiFetch,
   authLoginPassword,
   finalizeLoginSession,
@@ -287,7 +288,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!('access_token' in data)) {
         throw new Error('Unexpected login response');
       }
-      await finalizeLoginSession(data.access_token);
+      await finalizeLoginSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
       await refreshOrThrow();
     } catch (e: unknown) {
       if (e instanceof TwoFactorRequiredError) throw e;
@@ -314,7 +318,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         method,
         code,
       });
-      await finalizeLoginSession(data.access_token);
+      await finalizeLoginSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
       await refreshOrThrow();
     } catch (e: unknown) {
       const msg =
@@ -336,7 +343,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) {
     setError(null);
     try {
-      const data = await apiFetch<{ message?: string; access_token?: string }>(
+      const data = await apiFetch<{ message?: string; access_token?: string; refresh_token?: string }>(
         '/auth/register',
         {
           method: 'POST',
@@ -351,6 +358,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       if (data?.access_token) {
         await setToken(data.access_token);
+        if (data.refresh_token) {
+          await setRefreshToken(data.refresh_token);
+        }
         try {
           const me = await getMe();
           setUser(me.user);

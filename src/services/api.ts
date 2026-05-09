@@ -307,6 +307,7 @@ export function mapStudioMembershipFromMeRow(
 
 const TOKEN_KEY = 'aruru_access_token';
 const USER_KEY = 'aruru_user';
+const REFRESH_TOKEN_KEY = 'aruru_refresh_token';
 
 // ─── Token helpers ─────────────────────────────────────────────────────────
 
@@ -318,8 +319,16 @@ export async function setToken(token: string): Promise<void> {
   await AsyncStorage.setItem(TOKEN_KEY, token);
 }
 
+export async function getRefreshToken(): Promise<string | null> {
+  return AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export async function setRefreshToken(token: string): Promise<void> {
+  await AsyncStorage.setItem(REFRESH_TOKEN_KEY, token);
+}
+
 export async function clearAuth(): Promise<void> {
-  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+  await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY, REFRESH_TOKEN_KEY]);
 }
 
 // ─── API fetch wrapper ─────────────────────────────────────────────────────
@@ -347,64 +356,10 @@ export const AUTH_RATE_LIMIT_MESSAGE =
 export const AUTH_DATA_EXPORT_FORBIDDEN_MESSAGE =
   'This account is no longer available.';
 
-export async function apiFetch<T>(
-  path: string,
-  options: ApiFetchInit = {},
-  tenantId?: string
-): Promise<T> {
-  const isPublic = options.public === true;
-  const { public: _pub, ...fetchInit } = options;
-  const token = isPublic ? null : await getToken();
+export const SESSION_EXPIRED_MESSAGE =
+  'Session expired. Please log in again.';
 
-  const headers: Record<string, string> = {
-    ...(token && !isPublic ? { Authorization: `Bearer ${token}` } : {}),
-    ...(tenantId && !isPublic ? { 'X-Tenant-ID': tenantId } : {}),
-    ...(fetchInit.body !== undefined
-      ? { 'Content-Type': 'application/json' }
-      : {}),
-  };
-
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...fetchInit,
-    headers: { ...headers, ...(fetchInit.headers as Record<string, string> ?? {}) },
-  });
-
-  if (!res.ok) {
-    const raw = await res.text().catch(() => '');
-    const trimmed = raw.trim();
-
-    if (res.status === 429) {
-      throw new ApiError(AUTH_RATE_LIMIT_MESSAGE, 429);
-    }
-
-    let message = `HTTP ${res.status}`;
-
-    if (trimmed) {
-      try {
-        const err = JSON.parse(trimmed) as Record<string, unknown>;
-        if (typeof err.detail === 'string') {
-          message = err.detail;
-        } else if (Array.isArray(err.detail)) {
-          message = err.detail
-            .map((e: { msg?: string } | string) =>
-              typeof e === 'object' && e && 'msg' in e && e.msg
-                ? String(e.msg)
-                : JSON.stringify(e)
-            )
-            .join(', ');
-        } else if (typeof err.message === 'string') {
-          message = err.message;
-        } else {
-          message = trimmed;
-        }
-      } catch {
-        message = trimmed;
-      }
-    }
-
-    throw new ApiError(message, res.status);
-  }
-
+async function parseSuccessJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   const trimmed = text.trim();
   if (!trimmed) {
@@ -415,6 +370,111 @@ export async function apiFetch<T>(
   } catch {
     throw new Error('Invalid response from server');
   }
+}
+
+async function throwApiError(res: Response): Promise<never> {
+  const raw = await res.text().catch(() => '');
+  const trimmed = raw.trim();
+
+  if (res.status === 429) {
+    throw new ApiError(AUTH_RATE_LIMIT_MESSAGE, 429);
+  }
+
+  let message = `HTTP ${res.status}`;
+
+  if (trimmed) {
+    try {
+      const err = JSON.parse(trimmed) as Record<string, unknown>;
+      if (typeof err.detail === 'string') {
+        message = err.detail;
+      } else if (Array.isArray(err.detail)) {
+        message = err.detail
+          .map((e: { msg?: string } | string) =>
+            typeof e === 'object' && e && 'msg' in e && e.msg
+              ? String(e.msg)
+              : JSON.stringify(e)
+          )
+          .join(', ');
+      } else if (typeof err.message === 'string') {
+        message = err.message;
+      } else {
+        message = trimmed;
+      }
+    } catch {
+      message = trimmed;
+    }
+  }
+
+  throw new ApiError(message, res.status);
+}
+
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchInit = {},
+  tenantId?: string
+): Promise<T> {
+  const isPublic = options.public === true;
+  const { public: _pub, ...fetchInit } = options;
+
+  const execFetch = async (accessToken: string | null) => {
+    const headers: Record<string, string> = {
+      ...(accessToken && !isPublic ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(tenantId && !isPublic ? { 'X-Tenant-ID': tenantId } : {}),
+      ...(fetchInit.body !== undefined
+        ? { 'Content-Type': 'application/json' }
+        : {}),
+      ...(fetchInit.headers as Record<string, string> ?? {}),
+    };
+    return fetch(`${BASE_URL}${path}`, {
+      ...fetchInit,
+      headers,
+    });
+  };
+
+  let token = isPublic ? null : await getToken();
+  let res = await execFetch(token);
+
+  if (res.status === 401 && !isPublic) {
+    const refreshToken = await getRefreshToken();
+    if (refreshToken) {
+      try {
+        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const data = (await refreshRes.json()) as {
+            access_token: string;
+            refresh_token?: string;
+          };
+          await setToken(data.access_token);
+          if (data.refresh_token) {
+            await setRefreshToken(data.refresh_token);
+          }
+          res = await execFetch(data.access_token);
+          if (!res.ok) {
+            await clearAuth();
+            throw new Error(SESSION_EXPIRED_MESSAGE);
+          }
+          return parseSuccessJson<T>(res);
+        }
+      } catch (e: unknown) {
+        await clearAuth();
+        if (e instanceof Error && e.message === SESSION_EXPIRED_MESSAGE) {
+          throw e;
+        }
+      }
+    }
+    await clearAuth();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
+
+  if (!res.ok) {
+    return throwApiError(res);
+  }
+
+  return parseSuccessJson<T>(res);
 }
 
 // ─── Auth endpoints ────────────────────────────────────────────────────────
@@ -468,6 +528,7 @@ export async function resetPassword(payload: {
 export type LoginPasswordSuccess = {
   access_token: string;
   token_type: string;
+  refresh_token?: string;
 };
 
 export type LoginPasswordTwoFactor = {
@@ -526,8 +587,15 @@ export async function authLogin2faComplete(args: {
   });
 }
 
-export async function finalizeLoginSession(accessToken: string): Promise<void> {
-  await setToken(accessToken);
+export async function finalizeLoginSession(payload: {
+  access_token: string;
+  refresh_token?: string;
+  user?: unknown;
+}): Promise<void> {
+  await setToken(payload.access_token);
+  if (payload.refresh_token) {
+    await setRefreshToken(payload.refresh_token);
+  }
 }
 
 /** GDPR-style export: Bearer only, no X-Tenant-ID. */
@@ -616,6 +684,18 @@ export async function disableAll2fa(password: string): Promise<{ message?: strin
 }
 
 export async function logout(): Promise<void> {
+  const refreshToken = await getRefreshToken();
+  if (refreshToken) {
+    try {
+      await fetch(`${BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+    } catch {
+      // ignore — clear locally regardless
+    }
+  }
   await clearAuth();
 }
 
