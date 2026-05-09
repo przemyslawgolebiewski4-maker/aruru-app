@@ -8,6 +8,7 @@ import {
   Linking,
   Modal,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -273,6 +274,9 @@ export default function DashboardScreen() {
   const [pendingStudios, setPendingStudios] = useState<
     { studioName: string; tenantId: string }[]
   >([]);
+
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
 
   useEffect(() => {
     if (!tenantId) {
@@ -837,6 +841,23 @@ export default function DashboardScreen() {
   const summariesVal =
     loading && !showStatsSkeleton ? '-' : String(summariesDue);
 
+  const statsRowStyle = [
+    styles.statsRow,
+    isTablet ? { flexWrap: 'nowrap' as const, gap: spacing[3] } : null,
+  ];
+  const statCardWrapStyle = [
+    styles.statCardWrap,
+    isTablet ? styles.statCardWrapTablet : null,
+  ];
+  const actionsRowStyle = [
+    styles.actionsRow,
+    isTablet ? styles.actionsRowTablet : null,
+  ];
+  const actionQuarterStyle = [
+    styles.actionQuarter,
+    isTablet ? styles.actionQuarterTablet : null,
+  ];
+
   const ownerTrialDaysLeft =
     currentStudio?.role === 'owner' &&
     currentStudio?.status === 'active' &&
@@ -1188,9 +1209,9 @@ export default function DashboardScreen() {
       ) : null}
 
       {showStatsSkeleton ? (
-        <View style={styles.statsRow}>
+        <View style={statsRowStyle}>
           {[0, 1].map((i) => (
-            <View key={i} style={styles.statCardWrap}>
+            <View key={i} style={statCardWrapStyle}>
               <View style={styles.skeletonStatCard}>
                 <SkeletonBox
                   width={40}
@@ -1204,8 +1225,8 @@ export default function DashboardScreen() {
           ))}
         </View>
       ) : (
-        <View style={styles.statsRow}>
-          <View style={styles.statCardWrap}>
+        <View style={statsRowStyle}>
+          <View style={statCardWrapStyle}>
             {canManageMembers ? (
               <TouchableOpacity
                 style={styles.statCardTap}
@@ -1221,17 +1242,17 @@ export default function DashboardScreen() {
             )}
           </View>
           {hasSubscription ? (
-            <View style={styles.statCardWrap}>
+            <View style={statCardWrapStyle}>
               <StatCard label="Firings" value={firingsVal} accent="moss" />
             </View>
           ) : null}
           {hasSubscription ? (
-            <View style={styles.statCardWrap}>
+            <View style={statCardWrapStyle}>
               <StatCard label="Open tasks" value={tasksVal} accent="none" />
             </View>
           ) : null}
           {hasSubscription ? (
-            <View style={styles.statCardWrap}>
+            <View style={statCardWrapStyle}>
               <TouchableOpacity
                 style={styles.statCardTap}
                 onPress={goCosts}
@@ -1469,9 +1490,9 @@ export default function DashboardScreen() {
       <View style={{ height: spacing[6] }} />
 
       <SectionLabel>QUICK ACTIONS</SectionLabel>
-      <View style={styles.actionsRow}>
+      <View style={actionsRowStyle}>
         {hasSubscription ? (
-          <View style={styles.actionQuarter}>
+          <View style={actionQuarterStyle}>
             <Button
               label="Firings"
               variant="secondary"
@@ -1481,7 +1502,7 @@ export default function DashboardScreen() {
           </View>
         ) : null}
         {hasSubscription ? (
-          <View style={styles.actionQuarter}>
+          <View style={actionQuarterStyle}>
             <Button
               label="Tasks"
               variant="secondary"
@@ -1490,7 +1511,7 @@ export default function DashboardScreen() {
             />
           </View>
         ) : null}
-        <View style={styles.actionQuarter}>
+        <View style={actionQuarterStyle}>
           <Button
             label="Events"
             variant="secondary"
@@ -1504,7 +1525,7 @@ export default function DashboardScreen() {
             currentStudio?.memberDashboardVisibility,
             'costs'
           )) ? (
-          <View style={styles.actionQuarter}>
+          <View style={actionQuarterStyle}>
             <Button
               label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
               variant="secondary"
@@ -1514,7 +1535,7 @@ export default function DashboardScreen() {
           </View>
         ) : null}
         {currentStudio?.role === 'assistant' && hasSubscription ? (
-          <View style={styles.actionQuarter}>
+          <View style={actionQuarterStyle}>
             <Button
               label="Attendance"
               variant="secondary"
@@ -1557,9 +1578,9 @@ export default function DashboardScreen() {
       {canManageMembers ? (
         <>
           <SectionLabel>STUDIO</SectionLabel>
-          <View style={styles.actionsRow}>
+          <View style={actionsRowStyle}>
             {hasSubscription ? (
-              <View style={styles.actionQuarter}>
+              <View style={actionQuarterStyle}>
                 <Button
                   label="Catalog"
                   variant="secondary"
@@ -1569,7 +1590,7 @@ export default function DashboardScreen() {
               </View>
             ) : null}
             {hasSubscription ? (
-              <View style={styles.actionQuarter}>
+              <View style={actionQuarterStyle}>
                 <Button
                   label="Attendance"
                   variant="secondary"
@@ -1579,7 +1600,7 @@ export default function DashboardScreen() {
               </View>
             ) : null}
             {hasSubscription ? (
-              <View style={styles.actionQuarter}>
+              <View style={actionQuarterStyle}>
                 <Button
                   label="Assistants"
                   variant="secondary"
@@ -1589,7 +1610,7 @@ export default function DashboardScreen() {
               </View>
             ) : null}
             {hasSubscription ? (
-              <View style={styles.actionQuarter}>
+              <View style={actionQuarterStyle}>
                 <Button
                   label="Pricing"
                   variant="secondary"
@@ -1598,7 +1619,7 @@ export default function DashboardScreen() {
                 />
               </View>
             ) : null}
-            <View style={styles.actionQuarter}>
+            <View style={actionQuarterStyle}>
               <Button
                 label="Members"
                 variant="secondary"
@@ -1606,7 +1627,7 @@ export default function DashboardScreen() {
                 style={styles.quickActionBtn}
               />
             </View>
-            <View style={styles.actionQuarter}>
+            <View style={actionQuarterStyle}>
               <Button
                 label="Studio settings"
                 variant="secondary"
@@ -1614,7 +1635,7 @@ export default function DashboardScreen() {
                 style={styles.quickActionBtn}
               />
             </View>
-            <View style={styles.actionQuarter}>
+            <View style={actionQuarterStyle}>
               <Button
                 label={
                   exportingStudio ? 'Preparing...' : 'Export studio data'
@@ -2196,6 +2217,13 @@ const styles = StyleSheet.create({
   statCardWrap: {
     width: '48%',
   },
+  statCardWrapTablet: {
+    flexGrow: 1,
+    flexBasis: 0,
+    flexShrink: 1,
+    minWidth: 0,
+    width: 'auto',
+  },
   incomeCards: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2311,10 +2339,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing[2],
   },
+  actionsRowTablet: {
+    gap: spacing[3],
+  },
   actionQuarter: {
     flexGrow: 1,
     flexBasis: '22%',
     minWidth: 88,
+  },
+  actionQuarterTablet: {
+    flexGrow: 0,
+    flexBasis: '31%',
+    minWidth: 120,
   },
   quickActionBtn: {
     flex: 1,

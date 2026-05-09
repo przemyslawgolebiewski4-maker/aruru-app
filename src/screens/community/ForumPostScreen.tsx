@@ -386,12 +386,9 @@ export default function ForumPostScreen({ route, navigation }: Props) {
               }
             }}
             activeOpacity={post.authorId ? 0.7 : 1}
+            accessible={Boolean(post.authorId)}
             accessibilityRole={post.authorId ? 'button' : 'none'}
-            accessibilityLabel={
-              post.authorId
-                ? `View ${post.authorName}'s profile`
-                : undefined
-            }
+            accessibilityLabel={`View ${post.authorName}'s profile`}
           >
             <View style={styles.postAvatarWrap}>
               <AvatarImage
@@ -428,6 +425,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                 label="Report"
                 variant="ghost"
                 onPress={() => void handleReport()}
+                accessibilityLabel="Report post"
               />
             )}
           </View>
@@ -713,6 +711,8 @@ export default function ForumPostScreen({ route, navigation }: Props) {
                     setReplyImages((prev) => prev.filter((_, j) => j !== i))
                   }
                   hitSlop={4}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove image attachment"
                 >
                   <Text style={styles.imageThumbnailRemoveText}>×</Text>
                 </TouchableOpacity>
@@ -763,7 +763,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
               }}
               disabled={uploadingImage}
               accessibilityRole="button"
-              accessibilityLabel="Add image"
+              accessibilityLabel="Attach image"
               hitSlop={8}
             >
               {uploadingImage ? (
@@ -790,6 +790,7 @@ export default function ForumPostScreen({ route, navigation }: Props) {
             }
             loading={posting}
             style={styles.sendBtn}
+            accessibilityLabel="Send reply"
           />
         </View>
       </View>

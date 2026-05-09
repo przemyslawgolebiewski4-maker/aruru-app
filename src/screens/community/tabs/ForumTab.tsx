@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Image,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -608,6 +609,10 @@ function SkeletonBox({
 }
 
 export default function ForumTab() {
+  const { width: windowWidth } = useWindowDimensions();
+  const isTablet = windowWidth >= 768;
+  const contentMaxWidth = isTablet ? 680 : undefined;
+
   const { studios } = useAuth();
   const navigation = useNavigation<Nav>();
   const tenantId =
@@ -762,7 +767,15 @@ export default function ForumTab() {
   }
 
   return (
-    <View style={styles.root}>
+    <View
+      style={[styles.root, isTablet ? { alignItems: 'center' } : undefined]}
+    >
+      <View
+        style={[
+          { flex: 1, width: '100%' },
+          contentMaxWidth != null ? { maxWidth: contentMaxWidth } : undefined,
+        ]}
+      >
       <View style={styles.sortRow}>
         {(['latest', 'active', 'popular'] as const).map((s) => (
           <TouchableOpacity
@@ -1135,6 +1148,7 @@ export default function ForumTab() {
           </View>
         )
       ) : null}
+      </View>
     </View>
   );
 }
