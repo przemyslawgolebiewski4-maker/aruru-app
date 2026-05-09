@@ -23,7 +23,79 @@ type User = {
   adminRole?: string;
   status?: string;
   createdAt?: string;
+  communityVisibility?: Record<string, string | string[] | undefined>;
 };
+
+const COMMUNITY_VISIBILITY_KEYS = [
+  'profile',
+  'studios',
+  'events',
+  'forum_activity',
+  'links',
+] as const;
+
+const COMMUNITY_VISIBILITY_LABELS: Record<string, string> = {
+  profile: 'Profile',
+  studios: 'Studios',
+  events: 'Events',
+  forum_activity: 'Forum',
+  links: 'Links',
+};
+
+function formatCommunityVisibilitySummary(
+  cv?: Record<string, string | string[] | undefined>
+): string {
+  if (cv == null || Object.keys(cv).length === 0) {
+    return 'Community visibility: not set';
+  }
+  const parts: string[] = [];
+  for (const key of COMMUNITY_VISIBILITY_KEYS) {
+    const v = cv[key];
+    if (typeof v !== 'string' || !v.trim()) continue;
+    const label = COMMUNITY_VISIBILITY_LABELS[key] ?? key;
+    const val =
+      v === 'only_me' ? 'only me' : v === 'everyone' ? 'everyone' : v;
+    parts.push(`${label}: ${val}`);
+  }
+  const hs = cv.hidden_studios;
+  if (Array.isArray(hs) && hs.some((x) => x != null && String(x).trim())) {
+    const n = hs.filter((x) => x != null && String(x).trim()).length;
+    parts.push(
+      `${n} hidden studio${n === 1 ? '' : 's'}`
+    );
+  }
+  if (parts.length === 0) return 'Community visibility: not set';
+  return `Community: ${parts.join(' · ')}`;
+}
+
+function parseAdminUser(row: unknown): User {
+  const r = row as Record<string, unknown>;
+  const cvRaw = r.communityVisibility ?? r.community_visibility;
+  const communityVisibility =
+    cvRaw && typeof cvRaw === 'object' && !Array.isArray(cvRaw)
+      ? (cvRaw as Record<string, string | string[] | undefined>)
+      : undefined;
+  return {
+    id: String(r.id ?? ''),
+    name: String(r.name ?? ''),
+    email: String(r.email ?? ''),
+    emailVerified: Boolean(r.emailVerified ?? r.email_verified),
+    adminRole:
+      r.adminRole != null
+        ? String(r.adminRole)
+        : r.admin_role != null
+          ? String(r.admin_role)
+          : undefined,
+    status: r.status != null ? String(r.status) : undefined,
+    createdAt:
+      r.createdAt != null
+        ? String(r.createdAt)
+        : r.created_at != null
+          ? String(r.created_at)
+          : undefined,
+    communityVisibility,
+  };
+}
 
 export default function AdminUsersScreen() {
   const { studios } = useAuth();
@@ -65,7 +137,7 @@ export default function AdminUsersScreen() {
         {},
         tenantId
       );
-      setUsers(res.users ?? []);
+      setUsers((res.users ?? []).map(parseAdminUser));
       setTotal(res.total ?? 0);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load users.');
@@ -223,7 +295,7 @@ export default function AdminUsersScreen() {
                 </Text>
               </View>
               <View style={styles.info}>
-                <Text style={styles.userName}>{u.name || '—'}</Text>
+                <Text style={styles.userName}>{u.name || '-'}</Text>
                 <Text style={styles.userEmail}>{u.email}</Text>
                 <Text
                   style={[
@@ -234,6 +306,9 @@ export default function AdminUsersScreen() {
                   {u.status === 'deleted' ? 'Deleted · ' : ''}
                   {u.emailVerified ? 'Verified' : 'Unverified'}
                   {u.adminRole ? ' · Admin' : ''}
+                </Text>
+                <Text style={styles.communityVisibilityLine}>
+                  {formatCommunityVisibilitySummary(u.communityVisibility)}
                 </Text>
               </View>
               <Button
@@ -370,6 +445,13 @@ const styles = StyleSheet.create({
     fontFamily: typography.mono,
     fontSize: fontSize.xs,
     color: colors.inkLight,
+  },
+  communityVisibilityLine: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkMid,
+    lineHeight: 16,
+    marginTop: spacing[1],
   },
   deleteBtn: {
     paddingHorizontal: spacing[2],
