@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Linking,
   Modal,
   Pressable,
@@ -206,6 +205,33 @@ function IconTwoCircles60() {
         opacity={0.95}
       />
     </Svg>
+  );
+}
+
+function SkeletonBox({
+  width = '100%',
+  height = 16,
+  borderRadius = 6,
+  style,
+}: {
+  width?: number | string;
+  height?: number;
+  borderRadius?: number;
+  style?: object;
+}) {
+  return (
+    <View
+      style={[
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor: colors.border,
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    />
   );
 }
 
@@ -794,10 +820,22 @@ export default function DashboardScreen() {
       ?.navigate('AssistantsOverview', { tenantId });
   }
 
-  const membersVal = loading ? '-' : String(stats.members);
-  const firingsVal = loading ? '-' : String(stats.firingsThisMonth);
-  const tasksVal = loading ? '-' : String(stats.openTasks);
-  const summariesVal = loading ? '-' : String(summariesDue);
+  const showStatsSkeleton =
+    loading &&
+    Boolean(tenantId) &&
+    stats.members === 0 &&
+    stats.firingsThisMonth === 0 &&
+    stats.openTasks === 0 &&
+    summariesDue === 0;
+
+  const membersVal =
+    loading && !showStatsSkeleton ? '-' : String(stats.members);
+  const firingsVal =
+    loading && !showStatsSkeleton ? '-' : String(stats.firingsThisMonth);
+  const tasksVal =
+    loading && !showStatsSkeleton ? '-' : String(stats.openTasks);
+  const summariesVal =
+    loading && !showStatsSkeleton ? '-' : String(summariesDue);
 
   const ownerTrialDaysLeft =
     currentStudio?.role === 'owner' &&
@@ -1149,50 +1187,68 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       ) : null}
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCardWrap}>
-          {canManageMembers ? (
-            <TouchableOpacity
-              style={styles.statCardTap}
-              onPress={goMembers}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="Open members"
-            >
-              <StatCard label="Members" value={membersVal} accent="clay" />
-            </TouchableOpacity>
-          ) : (
-            <StatCard label="Members" value={membersVal} accent="clay" />
-          )}
+      {showStatsSkeleton ? (
+        <View style={styles.statsRow}>
+          {[0, 1].map((i) => (
+            <View key={i} style={styles.statCardWrap}>
+              <View style={styles.skeletonStatCard}>
+                <SkeletonBox
+                  width={40}
+                  height={28}
+                  borderRadius={4}
+                  style={{ marginBottom: spacing[1] }}
+                />
+                <SkeletonBox width={60} height={10} borderRadius={4} />
+              </View>
+            </View>
+          ))}
         </View>
-        {hasSubscription ? (
+      ) : (
+        <View style={styles.statsRow}>
           <View style={styles.statCardWrap}>
-            <StatCard label="Firings" value={firingsVal} accent="moss" />
+            {canManageMembers ? (
+              <TouchableOpacity
+                style={styles.statCardTap}
+                onPress={goMembers}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="Open members"
+              >
+                <StatCard label="Members" value={membersVal} accent="clay" />
+              </TouchableOpacity>
+            ) : (
+              <StatCard label="Members" value={membersVal} accent="clay" />
+            )}
           </View>
-        ) : null}
-        {hasSubscription ? (
-          <View style={styles.statCardWrap}>
-            <StatCard label="Open tasks" value={tasksVal} accent="none" />
-          </View>
-        ) : null}
-        {hasSubscription ? (
-          <View style={styles.statCardWrap}>
-            <TouchableOpacity
-              style={styles.statCardTap}
-              onPress={goCosts}
-              activeOpacity={0.75}
-              accessibilityRole="button"
-              accessibilityLabel="Open cost summaries"
-            >
-              <StatCard
-                label="Pending bills"
-                value={summariesVal}
-                accent="none"
-              />
-            </TouchableOpacity>
-          </View>
-        ) : null}
-      </View>
+          {hasSubscription ? (
+            <View style={styles.statCardWrap}>
+              <StatCard label="Firings" value={firingsVal} accent="moss" />
+            </View>
+          ) : null}
+          {hasSubscription ? (
+            <View style={styles.statCardWrap}>
+              <StatCard label="Open tasks" value={tasksVal} accent="none" />
+            </View>
+          ) : null}
+          {hasSubscription ? (
+            <View style={styles.statCardWrap}>
+              <TouchableOpacity
+                style={styles.statCardTap}
+                onPress={goCosts}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel="Open cost summaries"
+              >
+                <StatCard
+                  label="Pending bills"
+                  value={summariesVal}
+                  accent="none"
+                />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+      )}
 
       {kilnRequests.length > 0 ? (
         <View style={styles.kilnRequestsWrap}>
@@ -1322,8 +1378,19 @@ export default function DashboardScreen() {
       {!tenantId ? (
         <Text style={styles.emptyList}>-</Text>
       ) : loading ? (
-        <View style={styles.listLoading}>
-          <ActivityIndicator color={colors.clay} />
+        <View style={styles.dashboardListSkeleton}>
+          {[0, 1, 2].map((i) => (
+            <View key={i}>
+              <View style={styles.listRow}>
+                <View style={styles.dashboardListSkeletonText}>
+                  <SkeletonBox height={16} width="72%" borderRadius={4} />
+                  <SkeletonBox height={12} width="46%" borderRadius={4} />
+                </View>
+                <SkeletonBox width={52} height={22} borderRadius={4} />
+              </View>
+              {i < 2 ? <Divider /> : null}
+            </View>
+          ))}
         </View>
       ) : recentFirings.length === 0 ? (
         <Text style={styles.emptyList}>No completed firings yet</Text>
@@ -1361,8 +1428,19 @@ export default function DashboardScreen() {
       {!tenantId ? (
         <Text style={styles.emptyList}>-</Text>
       ) : loading ? (
-        <View style={styles.listLoading}>
-          <ActivityIndicator color={colors.clay} />
+        <View style={styles.dashboardListSkeleton}>
+          {[0, 1, 2].map((i) => (
+            <View key={i}>
+              <View style={styles.taskRow}>
+                <SkeletonBox width={8} height={8} borderRadius={4} />
+                <View style={styles.dashboardListSkeletonText}>
+                  <SkeletonBox height={16} width="70%" borderRadius={4} />
+                  <SkeletonBox height={12} width="52%" borderRadius={4} />
+                </View>
+              </View>
+              {i < 2 ? <Divider /> : null}
+            </View>
+          ))}
         </View>
       ) : recentTasks.length === 0 ? (
         <Text style={styles.emptyList}>No tasks yet</Text>
@@ -2170,10 +2248,22 @@ const styles = StyleSheet.create({
   statCardTap: {
     width: '100%',
   },
-  listLoading: {
-    paddingVertical: spacing[6],
-    alignItems: 'center',
+  skeletonStatCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    padding: spacing[4],
+    minHeight: 72,
     justifyContent: 'center',
+  },
+  dashboardListSkeleton: {
+    marginTop: spacing[2],
+    marginBottom: spacing[2],
+  },
+  dashboardListSkeletonText: {
+    flex: 1,
+    gap: spacing[1],
   },
   emptyList: {
     fontFamily: typography.mono,

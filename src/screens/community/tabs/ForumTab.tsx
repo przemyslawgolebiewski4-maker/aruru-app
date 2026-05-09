@@ -580,6 +580,33 @@ const webEditorStyles = StyleSheet.create({
   },
 });
 
+function SkeletonBox({
+  width = '100%',
+  height = 16,
+  borderRadius = 6,
+  style,
+}: {
+  width?: number | string;
+  height?: number;
+  borderRadius?: number;
+  style?: object;
+}) {
+  return (
+    <View
+      style={[
+        {
+          width,
+          height,
+          borderRadius,
+          backgroundColor: colors.border,
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    />
+  );
+}
+
 export default function ForumTab() {
   const { studios } = useAuth();
   const navigation = useNavigation<Nav>();
@@ -800,8 +827,25 @@ export default function ForumTab() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.clay} />
+        <View style={styles.skeletonWrap}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.skeletonCard}>
+              <View style={styles.skeletonCardTop}>
+                <SkeletonBox width={60} height={18} borderRadius={4} />
+                <SkeletonBox width={80} height={10} borderRadius={4} />
+              </View>
+              <SkeletonBox
+                height={20}
+                style={{ marginBottom: spacing[2] }}
+              />
+              <SkeletonBox width="60%" height={20} borderRadius={4} />
+              <View style={styles.skeletonCardMeta}>
+                <SkeletonBox width={40} height={10} borderRadius={4} />
+                <SkeletonBox width={40} height={10} borderRadius={4} />
+                <SkeletonBox width={40} height={10} borderRadius={4} />
+              </View>
+            </View>
+          ))}
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -1199,6 +1243,30 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     textAlign: 'center',
+  },
+  skeletonWrap: {
+    flex: 1,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing[4],
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    gap: spacing[2],
+  },
+  skeletonCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing[2],
+  },
+  skeletonCardMeta: {
+    flexDirection: 'row',
+    gap: spacing[3],
+    marginTop: spacing[2],
   },
   emptyGuided: {
     padding: spacing[6],
