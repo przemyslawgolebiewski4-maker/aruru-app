@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,8 @@ type Artist = {
   studios: { tenantId: string; studioName: string; role: string }[];
 };
 
+const PAGE_SIZE = 50;
+
 function initials(name: string): string {
   return name
     .split(' ')
@@ -58,34 +60,61 @@ export default function ArtistsTab() {
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
   const [inviteError, setInviteError] = useState('');
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const skipRef = useRef(0);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (reset = true) => {
+    if (reset) {
+      setLoading(true);
+      setSkip(0);
+      skipRef.current = 0;
+    } else {
+      setLoadingMore(true);
+    }
     setError('');
     try {
-      const res = await apiFetch<{ artists: Artist[] }>(
-        '/community/artists',
+      const currentSkip = reset ? 0 : skipRef.current;
+      const res = await apiFetch<{
+        artists: Artist[];
+        total: number;
+        hasMore: boolean;
+        skip: number;
+        limit: number;
+      }>(
+        `/community/artists?skip=${currentSkip}&limit=${PAGE_SIZE}`,
         {},
         tenantId
       );
       const raw = res.artists ?? [];
-      setArtists(
-        raw.map((item) => ({
-          ...item,
-          avatarUrl:
-            item.avatarUrl ?? (item as { avatar_url?: string }).avatar_url,
-        }))
-      );
+      const mapped = raw.map((item) => ({
+        ...item,
+        avatarUrl:
+          item.avatarUrl ?? (item as { avatar_url?: string }).avatar_url,
+      }));
+      if (reset) {
+        setArtists(mapped);
+      } else {
+        setArtists((prev) => [...prev, ...mapped]);
+      }
+      setHasMore(res.hasMore ?? false);
+      setTotal(res.total ?? 0);
+      const nextSkip = currentSkip + PAGE_SIZE;
+      skipRef.current = nextSkip;
+      setSkip(nextSkip);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not load artists.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [tenantId]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void load(true);
     }, [load])
   );
 
@@ -191,67 +220,99 @@ export default function ArtistsTab() {
   );
 
   return (
-    <FlatList
-      data={artists}
-      keyExtractor={(a) => a.id}
-      style={styles.list}
-      contentContainerStyle={
-        artists.length === 0 ? styles.listContentEmpty : styles.listContent
-      }
-      ListHeaderComponent={inviteSection}
-      ListEmptyComponent={
-        <View style={styles.emptyInList}>
-          <Text style={styles.emptyText}>No artists found.</Text>
-          <Text style={styles.emptyHint}>
-            Artists appear here when their profile is set to public.
-          </Text>
-        </View>
-      }
-      ItemSeparatorComponent={() => <View style={styles.sep} />}
-      renderItem={({ item: a }) => (
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => goArtist(a.id)}
-          activeOpacity={0.75}
-        >
-          <View style={styles.cardRow}>
-            <View style={styles.avatar}>
-              <AvatarImage
-                url={a.avatarUrl}
-                initials={initials(a.name || '?')}
-                size={44}
-                borderRadius={22}
-                bgColor={colors.clayLight}
-                textColor={colors.clay}
-              />
-            </View>
-            <View style={styles.cardInfo}>
-              <Text style={styles.artistName}>{a.name}</Text>
-              {a.bio ? (
-                <Text style={styles.bio} numberOfLines={2}>
-                  {a.bio}
-                </Text>
-              ) : null}
-              {a.city ? <Text style={styles.city}>{a.city}</Text> : null}
-              {a.studios.length > 0 && (
-                <View style={styles.studioTags}>
-                  {a.studios.slice(0, 2).map((s) => (
-                    <View key={s.tenantId} style={styles.studioTag}>
-                      <Text style={styles.studioTagLabel}>{s.studioName}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
+    <View style={styles.screen}>
+      <FlatList
+        data={artists}
+        keyExtractor={(a) => a.id}
+        style={styles.list}
+        contentContainerStyle={
+          artists.length === 0 ? styles.listContentEmpty : styles.listContent
+        }
+        ListHeaderComponent={inviteSection}
+        ListEmptyComponent={
+          <View style={styles.emptyInList}>
+            <Text style={styles.emptyText}>No artists found.</Text>
+            <Text style={styles.emptyHint}>
+              Artists appear here when their profile is set to public.
+            </Text>
           </View>
+        }
+        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        renderItem={({ item: a }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => goArtist(a.id)}
+            activeOpacity={0.75}
+          >
+            <View style={styles.cardRow}>
+              <View style={styles.avatar}>
+                <AvatarImage
+                  url={a.avatarUrl}
+                  initials={initials(a.name || '?')}
+                  size={44}
+                  borderRadius={22}
+                  bgColor={colors.clayLight}
+                  textColor={colors.clay}
+                />
+              </View>
+              <View style={styles.cardInfo}>
+                <Text style={styles.artistName}>{a.name}</Text>
+                {a.bio ? (
+                  <Text style={styles.bio} numberOfLines={2}>
+                    {a.bio}
+                  </Text>
+                ) : null}
+                {a.city ? <Text style={styles.city}>{a.city}</Text> : null}
+                {a.studios.length > 0 && (
+                  <View style={styles.studioTags}>
+                    {a.studios.slice(0, 2).map((s) => (
+                      <View key={s.tenantId} style={styles.studioTag}>
+                        <Text style={styles.studioTagLabel}>{s.studioName}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+      {hasMore ? (
+        <TouchableOpacity
+          style={styles.loadMoreBtn}
+          onPress={() => void load(false)}
+          disabled={loadingMore}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+        >
+          {loadingMore ? (
+            <ActivityIndicator size="small" color={colors.clay} />
+          ) : (
+            <Text style={styles.loadMoreText}>
+              Load more · {artists.length} of {total}
+            </Text>
+          )}
         </TouchableOpacity>
-      )}
-    />
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.cream },
   list: { flex: 1, backgroundColor: colors.cream },
+  loadMoreBtn: {
+    alignItems: 'center',
+    paddingVertical: spacing[4],
+    borderTopWidth: 0.5,
+    borderTopColor: colors.border,
+  },
+  loadMoreText: {
+    fontFamily: typography.mono,
+    fontSize: fontSize.xs,
+    color: colors.clay,
+    letterSpacing: 0.4,
+  },
   listContent: { paddingBottom: spacing[2] },
   listContentEmpty: { flexGrow: 1, paddingBottom: spacing[2] },
   emptyInList: {
