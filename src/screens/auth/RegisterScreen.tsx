@@ -52,6 +52,7 @@ export default function RegisterScreen({ navigation }: Props) {
     FieldKey | 'password' | 'confirmPassword' | null
   >(null);
   const [isSponsor, setIsSponsor] = useState(false);
+  const [roleFixed, setRoleFixed] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [termsError, setTermsError] = useState('');
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -60,7 +61,17 @@ export default function RegisterScreen({ navigation }: Props) {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('invite_token');
+      const typeParam = params.get('type');
+      const sponsorLegacy = params.get('sponsor');
       if (token) setInviteToken(token);
+      if (typeParam === 'sponsor' || sponsorLegacy === 'true') {
+        setIsSponsor(true);
+        setRoleFixed(true);
+      }
+      if (typeParam === 'community') {
+        setIsSponsor(false);
+        setRoleFixed(true);
+      }
     }
   }, []);
 
@@ -256,31 +267,40 @@ export default function RegisterScreen({ navigation }: Props) {
             <Text style={styles.passwordErrorText}>{passwordError}</Text>
           ) : null}
 
-          <TouchableOpacity
-            style={styles.sponsorToggle}
-            onPress={() => setIsSponsor(!isSponsor)}
-            activeOpacity={0.8}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: isSponsor }}
-          >
-            <View style={styles.sponsorToggleLeft}>
-              <Text style={styles.sponsorToggleLabel}>
-                I represent a supplier
-              </Text>
-              <Text style={styles.sponsorToggleSub}>
-                Clay, glazes, tools or equipment
-              </Text>
-            </View>
-            <View
-              style={[styles.toggleTrack, isSponsor && styles.toggleTrackOn]}
+          {!roleFixed && (
+            <TouchableOpacity
+              style={styles.sponsorToggle}
+              onPress={() => setIsSponsor(!isSponsor)}
+              activeOpacity={0.8}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: isSponsor }}
             >
+              <View style={styles.sponsorToggleLeft}>
+                <Text style={styles.sponsorToggleLabel}>
+                  I represent a supplier
+                </Text>
+                <Text style={styles.sponsorToggleSub}>
+                  Clay, glazes, tools or equipment
+                </Text>
+              </View>
               <View
-                style={[styles.toggleThumb, isSponsor && styles.toggleThumbOn]}
-              />
-            </View>
-          </TouchableOpacity>
+                style={[styles.toggleTrack, isSponsor && styles.toggleTrackOn]}
+              >
+                <View
+                  style={[styles.toggleThumb, isSponsor && styles.toggleThumbOn]}
+                />
+              </View>
+            </TouchableOpacity>
+          )}
 
-          {isSponsor ? (
+          {roleFixed && isSponsor ? (
+            <Text style={styles.fixedSponsorInfo}>
+              You're registering as a partner. Your profile will be reviewed
+              before going live.
+            </Text>
+          ) : null}
+
+          {!roleFixed && isSponsor ? (
             <View style={styles.sponsorInfo}>
               <Text style={styles.sponsorInfoText}>
                 You are registering as a partner organisation - a clay supplier,
@@ -486,6 +506,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.inkLight,
     lineHeight: 18,
+  },
+  fixedSponsorInfo: {
+    fontSize: 13,
+    color: colors.inkMid,
+    marginBottom: spacing[3],
   },
   consentRow: {
     flexDirection: 'row',
