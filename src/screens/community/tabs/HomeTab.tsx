@@ -3,10 +3,12 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -88,7 +90,37 @@ function formatEventDay(iso: string): { day: string; month: string } {
   return { day, month };
 }
 
+function SeeAllButton({
+  label = 'See all',
+  onPress,
+}: {
+  label?: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={styles.seeAllBtn}
+      accessibilityRole="button"
+      activeOpacity={0.75}
+    >
+      <Text style={styles.seeAllText}>{label}</Text>
+      <Text style={styles.seeAllArrow}>→</Text>
+    </TouchableOpacity>
+  );
+}
+
+function EmptySection({ onPress }: { onPress: () => void }) {
+  return (
+    <View style={styles.emptySection}>
+      <Text style={styles.emptyText}>Nothing here yet.</Text>
+      <SeeAllButton label="Explore" onPress={onPress} />
+    </View>
+  );
+}
+
 export default function HomeTab({ onSelectTab }: Props) {
+  const { width } = useWindowDimensions();
   const { studios: authStudios } = useAuth();
   const navigation = useNavigation<StackNav>();
   const stackNav = navigation.getParent<StackNav>() ?? navigation;
@@ -102,6 +134,15 @@ export default function HomeTab({ onSelectTab }: Props) {
   const [studios, setStudios] = useState<HomeStudio[]>([]);
   const [sponsors, setSponsors] = useState<HomeSponsor[]>([]);
   const [loading, setLoading] = useState(true);
+  const SIDEBAR_WIDTH = Platform.OS === 'web' ? 160 : 0;
+  const GALLERY_PADDING = spacing[1] * 2;
+  const GAP = 2;
+  const COLS = 3;
+  const photoSize = Math.floor(
+    (width - SIDEBAR_WIDTH - GALLERY_PADDING - GAP * (COLS - 1)) / COLS
+  );
+  const clampedSize =
+    Platform.OS === 'web' ? Math.min(photoSize, 140) : photoSize;
 
   useFocusEffect(
     useCallback(() => {
@@ -135,7 +176,11 @@ export default function HomeTab({ onSelectTab }: Props) {
           const nextPhotos: GalleryPhoto[] = [];
           for (const artist of artistsRes.value.artists ?? []) {
             const a = asRecord(artist);
-            const rawUrls = a.portfolioUrls ?? a.portfolio_urls;
+            const rawUrls =
+              a.portfolioUrls ??
+              a.portfolio_urls ??
+              a.portfolioPhotos ??
+              a.portfolio_photos;
             const portfolioUrls = Array.isArray(rawUrls) ? rawUrls : [];
             const rawStudios = Array.isArray(a.studios) ? a.studios : [];
             const firstStudio = asRecord(rawStudios[0]);
@@ -152,7 +197,7 @@ export default function HomeTab({ onSelectTab }: Props) {
               });
             }
           }
-          setPhotos(nextPhotos.slice(0, 18));
+          setPhotos(nextPhotos);
         } else {
           setPhotos([]);
         }
@@ -249,163 +294,167 @@ export default function HomeTab({ onSelectTab }: Props) {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Gallery</Text>
-        <TouchableOpacity onPress={() => onSelectTab('artists')}>
-          <Text style={styles.sectionLink}>See all →</Text>
-        </TouchableOpacity>
-      </View>
       {photos.length > 0 ? (
-        <FlatList
-          data={photos}
-          keyExtractor={(item, index) => `${item.userId}-${item.photoUrl}-${index}`}
-          numColumns={3}
-          scrollEnabled={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.galleryCell}
-              onPress={() =>
-                stackNav.navigate('ArtistProfile', { userId: item.userId })
-              }
-              activeOpacity={0.82}
-            >
-              {item.photoUrl ? (
-                <Image
-                  source={{ uri: item.photoUrl }}
-                  style={styles.galleryImage}
-                />
-              ) : (
-                <View style={styles.galleryFallback} />
-              )}
-            </TouchableOpacity>
-          )}
-        />
-      ) : (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>No portfolio photos yet.</Text>
-        </View>
-      )}
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Upcoming events</Text>
-        <TouchableOpacity onPress={() => onSelectTab('feed')}>
-          <Text style={styles.sectionLink}>See all →</Text>
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={events}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalList}
-        renderItem={({ item }) => {
-          const date = formatEventDay(item.startsAt);
-          return (
-            <TouchableOpacity
-              style={styles.eventCard}
-              onPress={() =>
-                item.tenantId
-                  ? stackNav.navigate('EventList', { tenantId: item.tenantId })
-                  : onSelectTab('feed')
-              }
-              activeOpacity={0.78}
-            >
-              <Text style={styles.eventDay}>{date.day}</Text>
-              <Text style={styles.eventMonth}>{date.month}</Text>
-              <Text style={styles.cardTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.cardMeta} numberOfLines={2}>
-                {[item.studioName, item.city].filter(Boolean).join(' · ')}
-              </Text>
-            </TouchableOpacity>
-          );
-        }}
-      />
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Studios</Text>
-        <TouchableOpacity onPress={() => onSelectTab('studios')}>
-          <Text style={styles.sectionLink}>Find a studio →</Text>
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        data={studios}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalList}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.studioCard}
-            onPress={() =>
-              item.slug
-                ? stackNav.navigate('StudioPublicProfile', {
-                    studioSlug: item.slug,
-                    studioName: item.name,
-                  })
-                : onSelectTab('studios')
-            }
-            activeOpacity={0.78}
-          >
-            <View style={styles.studioLogo} />
-            <Text style={styles.cardTitle} numberOfLines={2}>
-              {item.name}
-            </Text>
-            <Text style={styles.studioLocation} numberOfLines={1}>
-              {[item.city, item.country].filter(Boolean).join(', ')}
-            </Text>
-            <Text style={styles.memberCount}>{item.memberCount} members</Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      {sponsors.length > 0 ? (
         <>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>From our partners</Text>
-            <TouchableOpacity onPress={() => onSelectTab('sponsors')}>
-              <Text style={styles.sectionLink}>All partners →</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Gallery</Text>
+            <SeeAllButton onPress={() => onSelectTab('artists')} />
           </View>
           <FlatList
-            data={sponsors}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalList}
+            data={photos}
+            keyExtractor={(item, index) =>
+              `${item.userId}_${item.photoUrl}_${index}`
+            }
+            numColumns={3}
+            scrollEnabled={false}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.sponsorCard}
+                style={[
+                  styles.galleryCell,
+                  { width: clampedSize, height: clampedSize },
+                ]}
                 onPress={() =>
-                  item.id
-                    ? stackNav.navigate('SponsorProfile', { sponsorId: item.id })
-                    : onSelectTab('sponsors')
+                  stackNav.navigate('ArtistProfile', { userId: item.userId })
                 }
-                activeOpacity={0.78}
+                activeOpacity={0.82}
               >
-                <View style={styles.sponsorHeader}>
-                  <AvatarImage
-                    url={item.logoUrl}
-                    initials={(item.name || '?').slice(0, 2).toUpperCase()}
-                    size={32}
-                    borderRadius={6}
-                    bgColor={colors.mossLight}
-                    textColor={colors.moss}
+                {item.photoUrl ? (
+                  <Image
+                    source={{ uri: item.photoUrl }}
+                    style={styles.galleryImage}
                   />
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                </View>
-                {item.latestUpdate ? (
-                  <Text style={styles.sponsorUpdate} numberOfLines={4}>
-                    {item.latestUpdate.slice(0, 100)}
-                  </Text>
-                ) : null}
+                ) : (
+                  <View style={styles.galleryFallback} />
+                )}
               </TouchableOpacity>
             )}
           />
         </>
+      ) : null}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Upcoming events</Text>
+        <SeeAllButton onPress={() => onSelectTab('feed')} />
+      </View>
+      {events.length > 0 ? (
+        <FlatList
+          data={events}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          renderItem={({ item }) => {
+            const date = formatEventDay(item.startsAt);
+            return (
+              <TouchableOpacity
+                style={styles.eventCard}
+                onPress={() =>
+                  item.tenantId
+                    ? stackNav.navigate('EventList', { tenantId: item.tenantId })
+                    : onSelectTab('feed')
+                }
+                activeOpacity={0.78}
+              >
+                <Text style={styles.eventDay}>{date.day}</Text>
+                <Text style={styles.eventMonth}>{date.month}</Text>
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                <Text style={styles.cardMeta} numberOfLines={2}>
+                  {[item.studioName, item.city].filter(Boolean).join(' · ')}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      ) : (
+        <EmptySection onPress={() => onSelectTab('feed')} />
+      )}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Studios</Text>
+        <SeeAllButton onPress={() => onSelectTab('studios')} />
+      </View>
+      {studios.length > 0 ? (
+        <FlatList
+          data={studios}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.studioCard}
+              onPress={() =>
+                item.slug
+                  ? stackNav.navigate('StudioPublicProfile', {
+                      studioSlug: item.slug,
+                      studioName: item.name,
+                    })
+                  : onSelectTab('studios')
+              }
+              activeOpacity={0.78}
+            >
+              <View style={styles.studioLogo} />
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <Text style={styles.studioLocation} numberOfLines={1}>
+                {[item.city, item.country].filter(Boolean).join(', ')}
+              </Text>
+              <Text style={styles.memberCount}>{item.memberCount} members</Text>
+            </TouchableOpacity>
+          )}
+        />
+      ) : (
+        <EmptySection onPress={() => onSelectTab('studios')} />
+      )}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>From our partners</Text>
+        <SeeAllButton onPress={() => onSelectTab('sponsors')} />
+      </View>
+      {sponsors.length > 0 ? (
+        <FlatList
+          data={sponsors}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.sponsorCard}
+              onPress={() =>
+                item.id
+                  ? stackNav.navigate('SponsorProfile', { sponsorId: item.id })
+                  : onSelectTab('sponsors')
+              }
+              activeOpacity={0.78}
+            >
+              <View style={styles.sponsorHeader}>
+                <AvatarImage
+                  url={item.logoUrl}
+                  initials={(item.name || '?').slice(0, 2).toUpperCase()}
+                  size={32}
+                  borderRadius={6}
+                  bgColor={colors.mossLight}
+                  textColor={colors.moss}
+                />
+                <Text style={styles.cardTitle} numberOfLines={2}>
+                  {item.name}
+                </Text>
+              </View>
+              {item.latestUpdate ? (
+                <Text style={styles.sponsorUpdate} numberOfLines={4}>
+                  {item.latestUpdate.slice(0, 100)}
+                </Text>
+              ) : null}
+            </TouchableOpacity>
+          )}
+        />
+      ) : null}
+      {sponsors.length === 0 ? (
+        <EmptySection onPress={() => onSelectTab('sponsors')} />
       ) : null}
     </ScrollView>
   );
@@ -435,20 +484,35 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  sectionLink: {
-    fontFamily: typography.body,
-    fontSize: 12,
-    color: colors.clay,
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: colors.clay,
   },
+  seeAllText: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.clay,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  seeAllArrow: { fontSize: 11, color: colors.clay },
   galleryCell: {
-    flex: 1,
-    aspectRatio: 1,
     margin: 1,
     backgroundColor: colors.clayLight,
   },
   galleryImage: { flex: 1 },
   galleryFallback: { flex: 1, backgroundColor: colors.clayLight },
-  emptyWrap: { padding: spacing[4] },
+  emptySection: {
+    padding: spacing[4],
+    alignItems: 'center',
+    gap: spacing[3],
+  },
   emptyText: {
     fontFamily: typography.body,
     fontSize: 13,
