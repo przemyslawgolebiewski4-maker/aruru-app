@@ -6,13 +6,14 @@ import { colors, typography, fontSize, spacing } from '../../theme/tokens';
 import { useAuth } from '../../hooks/useAuth';
 import { apiFetch } from '../../services/api';
 import type { AppStackParamList } from '../../navigation/types';
+import HomeTab from './tabs/HomeTab';
 import EventFeedTab from './tabs/EventFeedTab';
 import StudioFinderTab from './tabs/StudioFinderTab';
 import ArtistsTab from './tabs/ArtistsTab';
 import ForumTab from './tabs/ForumTab';
 import SponsorsTab from './tabs/SponsorsTab';
 
-type Tab = 'feed' | 'studios' | 'artists' | 'forum' | 'sponsors';
+type Tab = 'home' | 'feed' | 'studios' | 'artists' | 'forum' | 'sponsors';
 
 export default function CommunityScreen() {
   const { user, studios } = useAuth();
@@ -34,6 +35,7 @@ export default function CommunityScreen() {
             { key: 'sponsors', label: 'Sponsors' },
           ]
         : [
+            { key: 'home', label: 'Home' },
             { key: 'forum', label: 'Forum' },
             { key: 'feed', label: 'Feed' },
             { key: 'studios', label: 'Studios' },
@@ -43,7 +45,7 @@ export default function CommunityScreen() {
     [isSponsor]
   );
 
-  const [activeTab, setActiveTab] = useState<Tab>('forum');
+  const [activeTab, setActiveTab] = useState<Tab>('home');
   const [unreadCount, setUnreadCount] = useState(0);
 
   useFocusEffect(
@@ -132,6 +134,7 @@ export default function CommunityScreen() {
         ))}
       </View>
       <View style={styles.content}>
+        {activeTab === 'home' && <HomeTab onSelectTab={setActiveTab} />}
         {activeTab === 'feed' && <EventFeedTab />}
         {activeTab === 'studios' && <StudioFinderTab />}
         {activeTab === 'artists' && <ArtistsTab />}
