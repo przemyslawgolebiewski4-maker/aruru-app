@@ -30,7 +30,6 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Studio: undefined;
   Community: undefined;
-  Notifications: undefined;
   Profile: undefined;
   Admin: undefined;
   /** Sponsor hub (same stack as Community → Sponsors sub-tab; top-level tab for sponsor accounts). */
@@ -42,6 +41,8 @@ export type AppStackParamList = {
   PaymentSuccess: { type: 'studio' | 'sponsor'; tenantId?: string };
   PaymentCancelled: undefined;
   EditProfile: undefined;
+  Notifications: undefined;
+  Settings: undefined;
   AccountSecurity: undefined;
   Support: undefined;
   CreateStudio: undefined;

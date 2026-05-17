@@ -28,6 +28,8 @@ import PaymentCancelledScreen from '../screens/payment/PaymentCancelledScreen';
 import { MainTabNavigator } from './MainTabs';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import AccountSecurityScreen from '../screens/profile/AccountSecurityScreen';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
 import CreateStudioScreen from '../screens/studio/CreateStudioScreen';
 import StudioOnboardingScreen from '../screens/studio/StudioOnboardingScreen';
 import InviteFirstMemberScreen from '../screens/studio/InviteFirstMemberScreen';
@@ -244,6 +246,8 @@ function AppNavigator() {
       <AppStack.Screen name="Main" component={MainTabNavigator} />
       <AppStack.Screen name="PaymentSuccess" component={PaymentSuccessScreen} />
       <AppStack.Screen name="PaymentCancelled" component={PaymentCancelledScreen} />
+      <AppStack.Screen name="Notifications" component={NotificationsScreen} />
+      <AppStack.Screen name="Settings" component={SettingsScreen} />
       <AppStack.Screen
         name="ArtistProfile"
         component={ArtistProfileScreen}

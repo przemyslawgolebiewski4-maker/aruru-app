@@ -6,7 +6,6 @@ import { useAuth } from '../hooks/useAuth';
 import { userHasAdminTabAccess } from '../services/api';
 import DashboardScreen from '../screens/owner/DashboardScreen';
 import CommunityScreen from '../screens/community/CommunityScreen';
-import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import AdminScreen from '../screens/admin/AdminScreen';
 import SponsorsTab from '../screens/community/tabs/SponsorsTab';
@@ -81,11 +80,6 @@ export function MainTabNavigator() {
         name="Community"
         component={CommunityScreen}
         options={{ title: 'Community' }}
-      />
-      <Tab.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{ title: 'Alerts' }}
       />
       <Tab.Screen
         name="Profile"

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
@@ -20,21 +19,6 @@ import {
   apiFetch,
   SUSPENDED_MEMBERSHIP_REASON_FALLBACK,
 } from '../../services/api';
-import { alertMessageThen, confirmDestructive } from '../../utils/confirmAction';
-
-async function confirmDeleteAccountFlow(): Promise<boolean> {
-  const step1 = await confirmDestructive(
-    'Delete your Aruru account?',
-    'This will permanently remove your profile and all your data. This cannot be undone.',
-    'Continue'
-  );
-  if (!step1) return false;
-  return confirmDestructive(
-    'Are you absolutely sure?',
-    'This action is permanent and cannot be reversed.',
-    'Delete account'
-  );
-}
 
 function roleToBadgeVariant(
   role: string
@@ -58,13 +42,11 @@ function studioInitials(name: string) {
 }
 
 export default function ProfileScreen() {
-  const { user, studios, suspendedStudios, signOut } = useAuth();
+  const { user, studios, suspendedStudios } = useAuth();
   const isSponsor = user?.userRole === 'sponsor';
   const navigation = useNavigation();
   const stackNav =
     navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
-  const [deleteError, setDeleteError] = useState('');
-  const [deleting, setDeleting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
   const [inviteError, setInviteError] = useState('');
@@ -96,36 +78,6 @@ export default function ProfileScreen() {
       );
     } finally {
       setInviteSending(false);
-    }
-  }
-
-  async function handleDeleteAccount() {
-    setDeleteError('');
-    const ok = await confirmDeleteAccountFlow();
-    if (!ok) return;
-    setDeleting(true);
-    try {
-      try {
-        await apiFetch('/auth/account', { method: 'DELETE' });
-      } catch {
-        await apiFetch('/auth/delete-account', {
-          method: 'POST',
-          body: JSON.stringify({}),
-        });
-      }
-      alertMessageThen(
-        'Account deleted',
-        'Your account has been removed. Data held in Aruru — including sponsor profile, notifications, forum activity, and other records tied to your account — is deleted in line with our backend policy.',
-        () => {
-          void signOut();
-        }
-      );
-    } catch (e: unknown) {
-      setDeleteError(
-        e instanceof Error ? e.message : 'Could not delete account.'
-      );
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -361,20 +313,6 @@ export default function ProfileScreen() {
         <Text style={styles.visibilityArrow}>→</Text>
       </TouchableOpacity>
       <Button
-        label="Security & two-factor"
-        variant="ghost"
-        onPress={() => stackNav?.navigate('AccountSecurity')}
-        fullWidth
-        style={styles.menuBtn}
-      />
-      <Button
-        label="Contact support"
-        variant="ghost"
-        onPress={() => stackNav?.navigate('Support')}
-        fullWidth
-        style={styles.menuBtn}
-      />
-      <Button
         label="Invite a friend to Aruru"
         variant="ghost"
         onPress={() => setShowInviteForm((v) => !v)}
@@ -412,58 +350,6 @@ export default function ProfileScreen() {
             fullWidth
           />
         </View>
-      ) : null}
-
-      {/* ── Legal ── */}
-      <View style={styles.sectionGap} />
-      <SectionLabel>Legal</SectionLabel>
-      <Button
-        label="Help & FAQ ↗"
-        variant="ghost"
-        onPress={() => void Linking.openURL('https://aruru.xyz/help')}
-        fullWidth
-        style={styles.menuBtn}
-      />
-      <Button
-        label="Privacy Policy ↗"
-        variant="ghost"
-        onPress={() => void Linking.openURL('https://aruru.xyz/privacy')}
-        fullWidth
-        style={styles.menuBtn}
-      />
-      <Button
-        label="Terms of Service ↗"
-        variant="ghost"
-        onPress={() => void Linking.openURL('https://aruru.xyz/terms')}
-        fullWidth
-        style={styles.menuBtn}
-      />
-
-      {/* ── Danger zone ── */}
-      <View style={styles.sectionGap} />
-      <SectionLabel>Account actions</SectionLabel>
-      <Button
-        label="Sign out"
-        variant="ghost"
-        onPress={() => signOut()}
-        fullWidth
-        style={styles.menuBtn}
-      />
-      <View style={styles.deleteHint}>
-        <Text style={styles.deleteHintText}>
-          Download your data before deleting: Security & two-factor → Your data.
-        </Text>
-      </View>
-      <Button
-        label="Delete account"
-        variant="danger"
-        onPress={() => void handleDeleteAccount()}
-        loading={deleting}
-        fullWidth
-        style={styles.menuBtn}
-      />
-      {deleteError ? (
-        <Text style={styles.deleteErrorText}>{deleteError}</Text>
       ) : null}
 
       <View style={{ height: spacing[10] }} />
@@ -652,24 +538,5 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.moss,
     marginBottom: spacing[2],
-  },
-  deleteHint: {
-    paddingHorizontal: spacing[2],
-    marginTop: spacing[3],
-    marginBottom: spacing[1],
-  },
-  deleteHintText: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.inkLight,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  deleteErrorText: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: spacing[2],
   },
 });
