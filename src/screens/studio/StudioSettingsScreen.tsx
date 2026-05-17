@@ -544,8 +544,9 @@ export default function StudioSettingsScreen({
         onBack={
           embedded && onBackToStudio
             ? onBackToStudio
-            : () => navigation.goBack()
+            : undefined
         }
+        actionsOnly={!embedded}
         right={
           <TouchableOpacity
             style={savePill.pill}

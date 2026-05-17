@@ -7,6 +7,8 @@ type Props = {
   onBack?: () => void;
   backLabel?: string;
   right?: React.ReactNode;
+  /** Stack already shows title/back; only render the right toolbar (e.g. + New). */
+  actionsOnly?: boolean;
 };
 
 export function StudioSubHeader({
@@ -14,7 +16,17 @@ export function StudioSubHeader({
   onBack,
   backLabel = '← Studio',
   right,
+  actionsOnly = false,
 }: Props) {
+  if (actionsOnly) {
+    return (
+      <View style={styles.row}>
+        <View style={{ flex: 1 }} />
+        <View style={styles.right}>{right}</View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.row}>
       <TouchableOpacity

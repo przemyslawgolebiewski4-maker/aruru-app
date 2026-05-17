@@ -342,14 +342,9 @@ export default function CostListScreen({
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <StudioSubHeader
-        title="Revenue"
-        onBack={
-          embedded && onBackToStudio
-            ? onBackToStudio
-            : () => navigation.goBack()
-        }
-      />
+      {embedded && onBackToStudio ? (
+        <StudioSubHeader title="Revenue" onBack={onBackToStudio} />
+      ) : null}
 
       <View style={styles.periodBox}>
         <View style={styles.periodTop}>

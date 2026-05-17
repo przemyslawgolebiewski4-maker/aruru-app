@@ -406,11 +406,11 @@ export default function EventListScreen({ route }: { route: Route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <StudioSubHeader
-        title="Events"
-        onBack={() => navigation.goBack()}
-        right={
-          isStaff ? (
+      {isStaff ? (
+        <StudioSubHeader
+          title="Events"
+          actionsOnly
+          right={
             <TouchableOpacity
               onPress={() => {
                 setShowForm((v) => !v);
@@ -422,9 +422,9 @@ export default function EventListScreen({ route }: { route: Route }) {
             >
               <Text style={newPill.pillText}>+ New</Text>
             </TouchableOpacity>
-          ) : null
-        }
-      />
+          }
+        />
+      ) : null}
 
       <View style={styles.pillRow}>
         <Text style={styles.pillText}>

@@ -4,6 +4,8 @@ import {
   Text,
   ActivityIndicator,
   StyleSheet,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -13,6 +15,10 @@ import {
 } from '@react-navigation/native';
 import type { NavigationState, PartialState } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type {
+  NativeStackScreenProps,
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
 import { useAuth } from '../hooks/useAuth';
 import { colors, typography, fontSize, spacing } from '../theme/tokens';
 
@@ -80,10 +86,40 @@ import type {
   AuthStackParamList,
   AppStackParamList,
   RootStackParamList,
+  MainTabParamList,
 } from './types';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-const appModalHeaderOptions = {
+type TabKey = 'Studio' | 'Community' | 'Profile';
+
+function makeBackButton(
+  tabTarget: TabKey,
+  navigation: NativeStackNavigationProp<AppStackParamList>
+) {
+  if (Platform.OS !== 'web') return undefined;
+  return () => (
+    <TouchableOpacity
+      onPress={() => {
+        navigation.navigate('Main', { screen: tabTarget });
+      }}
+      style={{ paddingHorizontal: 16, paddingVertical: 8 }}
+      accessibilityRole="button"
+      accessibilityLabel={`Back to ${tabTarget}`}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+    >
+      <Text
+        style={{
+          fontFamily: typography.mono,
+          fontSize: 13,
+          color: colors.clay,
+        }}
+      >
+        ← {tabTarget}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+const baseHeaderOptions = {
   headerStyle: { backgroundColor: colors.surface },
   headerTintColor: colors.clay,
   headerTitleStyle: {
@@ -91,6 +127,41 @@ const appModalHeaderOptions = {
     fontSize: 16,
   },
   headerShadowVisible: false,
+} as const;
+
+function studioHeaderOptions(
+  navigation: NativeStackNavigationProp<AppStackParamList>
+) {
+  return {
+    ...baseHeaderOptions,
+    headerBackTitle: 'Studio',
+    headerLeft: makeBackButton('Studio', navigation),
+  };
+}
+
+function communityHeaderOptions(
+  navigation: NativeStackNavigationProp<AppStackParamList>
+) {
+  return {
+    ...baseHeaderOptions,
+    headerBackTitle: 'Community',
+    headerLeft: makeBackButton('Community', navigation),
+  };
+}
+
+function profileHeaderOptions(
+  navigation: NativeStackNavigationProp<AppStackParamList>
+) {
+  return {
+    ...baseHeaderOptions,
+    headerBackTitle: 'Profile',
+    headerLeft: makeBackButton('Profile', navigation),
+  };
+}
+
+const appModalHeaderOptions = {
+  ...baseHeaderOptions,
+  headerBackTitle: 'Back',
 } as const;
 
 const ONBOARDING_KEY = 'aruru_onboarding_done';
@@ -260,35 +331,35 @@ function AppNavigator() {
       <AppStack.Screen
         name="NotificationPreferences"
         component={NotificationPreferencesScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...profileHeaderOptions(navigation),
           headerShown: true,
           title: 'Notifications',
-        }}
+        })}
       />
       <AppStack.Screen
         name="ArtistProfile"
         component={ArtistProfileScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...communityHeaderOptions(navigation),
           headerShown: true,
           title: 'Artist',
-        }}
+        })}
       />
       <AppStack.Screen
         name="ForumPost"
         component={ForumPostScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...communityHeaderOptions(navigation),
           headerShown: true,
           title: 'Discussion',
-        }}
+        })}
       />
       <AppStack.Screen
         name="StudioPublicProfile"
         component={StudioPublicProfileScreen}
-        options={({ route }) => ({
-          ...appModalHeaderOptions,
+        options={({ route, navigation }) => ({
+          ...communityHeaderOptions(navigation),
           headerShown: true,
           title: route.params.studioName || 'Studio',
         })}
@@ -296,45 +367,38 @@ function AppNavigator() {
       <AppStack.Screen
         name="MyJoinRequests"
         component={MyJoinRequestsScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...communityHeaderOptions(navigation),
           headerShown: true,
           title: 'My join requests',
-        }}
+        })}
       />
       <AppStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...profileHeaderOptions(navigation),
           headerShown: true,
           title: 'Edit profile',
-          headerTintColor: colors.ink,
-          headerStyle: { backgroundColor: colors.surface },
-          headerShadowVisible: false,
-          headerTitleStyle: {
-            fontFamily: typography.bodyMedium,
-            fontSize: fontSize.md,
-            color: colors.ink,
-          },
-        }}
+        })}
       />
       <AppStack.Screen
         name="AccountSecurity"
         component={AccountSecurityScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...profileHeaderOptions(navigation),
           headerShown: true,
           title: 'Security',
-        }}
+        })}
       />
       <AppStack.Screen
         name="Support"
         component={SupportScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...profileHeaderOptions(navigation),
           headerShown: true,
           title: 'Contact support',
-        }}
+        })}
       />
       <AppStack.Screen
         name="SponsorPlan"
@@ -348,20 +412,20 @@ function AppNavigator() {
       <AppStack.Screen
         name="StudioPlan"
         component={StudioPlanScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Choose your plan',
-        }}
+        })}
       />
       <AppStack.Screen
         name="StudioFreeTier"
         component={StudioFreeTierScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Your plan',
-        }}
+        })}
       />
       <AppStack.Screen
         name="SponsorEditProfile"
@@ -397,266 +461,241 @@ function AppNavigator() {
           ...appModalHeaderOptions,
           headerShown: true,
           title: 'Your studio',
-          headerBackTitle: 'Studio',
         }}
       />
       <AppStack.Screen
         name="SetupPricing"
         component={SetupPricingScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Pricing',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="MemberDashboardSettingsOnboarding"
         component={MemberDashboardSettingsOnboardingScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Member view',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="InviteFirstMember"
         component={InviteFirstMemberScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Invite a member',
-          headerBackTitle: 'Back',
-        }}
+        })}
       />
       <AppStack.Screen
         name="PricingSettings"
         component={PricingSettingsScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Pricing',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="StudioSettings"
         component={StudioSettingsScreen}
-        options={{
-          headerShown: false,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: 'Studio settings',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="MemberDashboardSettings"
         component={MemberDashboardSettingsScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Member dashboard visibility',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="StudioJoinRequests"
         component={StudioJoinRequestsScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Join requests',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="Members"
         component={MembersScreen}
-        options={{
-          headerShown: false,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: 'Members',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="InviteMember"
         component={InviteMemberScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Invite member',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="MemberProfile"
         component={MemberProfileScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: route.params.memberName,
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
         })}
       />
       <AppStack.Screen
         name="KilnList"
         component={KilnListScreen}
-        options={{
-          headerShown: false,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: 'Kiln firings',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="KilnNewSession"
         component={KilnNewSessionScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'New firing',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="KilnLoadMembers"
         component={KilnLoadMembersScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Load kiln',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="KilnDetail"
         component={KilnDetailScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Firing detail',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="TaskList"
         component={TaskListScreen}
-        options={{
-          headerShown: false,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: 'Tasks',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="TaskDetail"
         component={TaskDetailScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: route.params.taskTitle?.trim() || 'Task',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
         })}
       />
       <AppStack.Screen
         name="Attendance"
         component={AttendanceScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Attendance',
-          headerBackTitle: 'Studio',
-        }}
+        })}
       />
       <AppStack.Screen
         name="AssistantsOverview"
         component={AssistantsOverviewScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Assistants',
-          headerBackTitle: 'Studio',
-        }}
+        })}
       />
       <AppStack.Screen
         name="CostList"
         component={CostListScreen}
-        options={{
-          headerShown: false,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: 'Cost summaries',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="CostDetail"
         component={CostDetailScreen}
-        options={({ route }) => ({
-          headerShown: false,
+        options={({ route, navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: route.params.memberName,
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
         })}
       />
       <AppStack.Screen
         name="EventList"
         component={EventListScreen}
-        options={{
-          headerShown: false,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
+          headerShown: true,
           title: 'Events',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="EventDetail"
         component={EventDetailScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: route.params.eventTitle,
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
         })}
       />
       <AppStack.Screen
         name="BookStudio"
         component={BookStudioScreen}
-        options={{
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Book studio',
-          headerBackTitle: 'Studio',
-          ...appModalHeaderOptions,
-        }}
+        })}
       />
       <AppStack.Screen
         name="CatalogManage"
         component={CatalogManageScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Catalog',
-          headerBackTitle: 'Studio',
-        }}
+        })}
       />
       <AppStack.Screen
         name="MaterialsShop"
         component={MaterialsShopScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Materials',
-          headerBackTitle: 'Studio',
-        }}
+        })}
       />
       <AppStack.Screen
         name="PrivateKiln"
         component={PrivateKilnScreen}
-        options={{
-          ...appModalHeaderOptions,
+        options={({ navigation }) => ({
+          ...studioHeaderOptions(navigation),
           headerShown: true,
           title: 'Private kiln',
-          headerBackTitle: 'Studio',
-        }}
+        })}
       />
       <AppStack.Screen
         name="AdminStudios"

@@ -269,7 +269,8 @@ export default function KilnListScreen({
 
       <StudioSubHeader
         title="Firings"
-        onBack={handleBack}
+        onBack={embedded ? handleBack : undefined}
+        actionsOnly={!embedded}
         right={
           <TouchableOpacity
             onPress={() => navigation.navigate('KilnNewSession', { tenantId })}

@@ -129,24 +129,27 @@ export default function MembersScreen({
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
-      <StudioSubHeader
-        title="Members"
-        onBack={
-          embedded && onBackToStudio
-            ? onBackToStudio
-            : () => navigation.goBack()
-        }
-        right={
-          <TouchableOpacity
-            onPress={() => navigation.navigate('InviteMember', { tenantId })}
-            style={invitePill.pill}
-            accessibilityRole="button"
-            accessibilityLabel="Invite member"
-          >
-            <Text style={invitePill.pillText}>Invite</Text>
-          </TouchableOpacity>
-        }
-      />
+      {(embedded || isOwner) ? (
+        <StudioSubHeader
+          title="Members"
+          onBack={
+            embedded && onBackToStudio
+              ? onBackToStudio
+              : undefined
+          }
+          actionsOnly={!embedded}
+          right={
+            <TouchableOpacity
+              onPress={() => navigation.navigate('InviteMember', { tenantId })}
+              style={invitePill.pill}
+              accessibilityRole="button"
+              accessibilityLabel="Invite member"
+            >
+              <Text style={invitePill.pillText}>Invite</Text>
+            </TouchableOpacity>
+          }
+        />
+      ) : null}
 
       {loading ? (
         <View style={styles.loadingWrap}>

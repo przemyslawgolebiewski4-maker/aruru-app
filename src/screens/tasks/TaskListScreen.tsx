@@ -466,29 +466,30 @@ export default function TaskListScreen({
         />
       }
     >
-      <StudioSubHeader
-        title="Tasks"
-        onBack={
-          embedded && onBackToStudio
-            ? onBackToStudio
-            : () => navigation.goBack()
-        }
-        right={
-          isStaff ? (
-            <TouchableOpacity
-              onPress={() => {
-                setShowForm((v) => !v);
-                setCreateError('');
-              }}
-              style={headerPill.pill}
-              accessibilityRole="button"
-              accessibilityLabel="New task"
-            >
-              <Text style={headerPill.pillText}>+ New</Text>
-            </TouchableOpacity>
-          ) : null
-        }
-      />
+      {(embedded || isStaff) ? (
+        <StudioSubHeader
+          title="Tasks"
+          onBack={
+            embedded && onBackToStudio ? onBackToStudio : undefined
+          }
+          actionsOnly={!embedded}
+          right={
+            isStaff ? (
+              <TouchableOpacity
+                onPress={() => {
+                  setShowForm((v) => !v);
+                  setCreateError('');
+                }}
+                style={headerPill.pill}
+                accessibilityRole="button"
+                accessibilityLabel="New task"
+              >
+                <Text style={headerPill.pillText}>+ New</Text>
+              </TouchableOpacity>
+            ) : null
+          }
+        />
+      ) : null}
 
       <View style={styles.pillRow}>
         <Text style={styles.pillRowText}>
