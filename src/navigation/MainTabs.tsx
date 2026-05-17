@@ -1,7 +1,13 @@
 import React from 'react';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { colors, typography } from '../theme/tokens';
-import type { MainTabParamList } from './types';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import {
+  createMaterialTopTabNavigator,
+  MaterialTopTabBar,
+} from '@react-navigation/material-top-tabs';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { colors, spacing, typography } from '../theme/tokens';
+import type { AppStackParamList, MainTabParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { userHasAdminTabAccess } from '../services/api';
 import DashboardScreen from '../screens/owner/DashboardScreen';
@@ -42,6 +48,45 @@ const tabScreenOptions = {
   swipeEnabled: false,
 };
 
+function TopBarActions() {
+  const nav = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  return (
+    <View style={tbStyles.row}>
+      <TouchableOpacity
+        onPress={() => nav.navigate('Settings')}
+        style={tbStyles.iconBtn}
+        accessibilityLabel="Settings"
+        accessibilityRole="button"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={tbStyles.iconText}>⚙</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => nav.navigate('Notifications')}
+        style={tbStyles.iconBtn}
+        accessibilityLabel="Notifications"
+        accessibilityRole="button"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={tbStyles.iconText}>🔔</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function renderMainTabBar(
+  props: React.ComponentProps<typeof MaterialTopTabBar>
+) {
+  return (
+    <View style={tbStyles.bar}>
+      <View style={tbStyles.tabs}>
+        <MaterialTopTabBar {...props} style={tbStyles.materialTabBar} />
+      </View>
+      <TopBarActions />
+    </View>
+  );
+}
+
 export function MainTabNavigator() {
   const { user } = useAuth();
   const isSponsor = user?.userRole === 'sponsor';
@@ -53,6 +98,7 @@ export function MainTabNavigator() {
       <Tab.Navigator
         initialRouteName="Community"
         screenOptions={tabScreenOptions}
+        tabBar={renderMainTabBar}
       >
         <Tab.Screen
           name="Community"
@@ -77,6 +123,7 @@ export function MainTabNavigator() {
     <Tab.Navigator
       initialRouteName="Community"
       screenOptions={tabScreenOptions}
+      tabBar={renderMainTabBar}
     >
       <Tab.Screen
         name="Community"
@@ -106,3 +153,31 @@ export function MainTabNavigator() {
     </Tab.Navigator>
   );
 }
+
+const tbStyles = StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
+  },
+  tabs: { flex: 1 },
+  materialTabBar: { elevation: 0, shadowOpacity: 0 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: spacing[2],
+    gap: 4,
+  },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconText: {
+    fontSize: 14,
+    color: colors.inkMid,
+  },
+});
