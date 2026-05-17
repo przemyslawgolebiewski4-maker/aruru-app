@@ -413,6 +413,56 @@
     .gdpr-card__val{font-size:14px;color:var(--ink);font-weight:500;line-height:1.5;}
     @media(max-width:900px){.gdpr-inner{grid-template-columns:1fr;gap:40px;}}
 
+    #live-preview{padding:72px 0;background:var(--surface,#f0ece6);}
+    .lp-block{margin-bottom:48px;}
+    .lp-block-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-light,#9a9490);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+    .lp-block-label::after{content:'';flex:1;height:.5px;background:var(--border,rgba(30,26,22,.12));}
+    .lp-slideshow-wrap{overflow:hidden;position:relative;}
+    .lp-slideshow-wrap::before,.lp-slideshow-wrap::after{content:'';position:absolute;top:0;bottom:0;width:48px;z-index:2;pointer-events:none;}
+    .lp-slideshow-wrap::before{left:0;background:linear-gradient(to right,var(--surface,#f0ece6),transparent);}
+    .lp-slideshow-wrap::after{right:0;background:linear-gradient(to left,var(--surface,#f0ece6),transparent);}
+    .lp-artists-track,.lp-forum-track,.lp-events-track,.lp-studios-track{display:flex;gap:16px;width:max-content;}
+    .lp-artists-track{animation:lpScrollL 28s linear infinite;}
+    .lp-forum-track{animation:lpScrollL 24s linear infinite;}
+    .lp-events-track{animation:lpScrollL 20s linear infinite;}
+    .lp-studios-track{animation:lpScrollR 22s linear infinite;}
+    .lp-artists-track:hover,.lp-forum-track:hover,.lp-events-track:hover,.lp-studios-track:hover{animation-play-state:paused;}
+    @keyframes lpScrollL{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+    @keyframes lpScrollR{0%{transform:translateX(-50%);}100%{transform:translateX(0);}}
+
+    .lp-artist-card{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:7px;width:90px;text-decoration:none;padding:6px;border-radius:8px;border:.5px solid transparent;transition:border-color .15s;}
+    .lp-artist-card:hover{border-color:var(--clay,#C4714A);}
+    .lp-artist-photo{width:76px;height:76px;border-radius:8px;object-fit:cover;background:var(--clay-light,#f5ebe4);display:block;}
+    .lp-artist-name{font-size:12px;font-weight:500;color:var(--ink,#1E1A16);text-align:center;}
+    .lp-artist-studio{font-size:11px;color:var(--clay,#C4714A);text-align:center;}
+    .lp-artist-city{font-size:10px;color:var(--ink-light,#9a9490);text-align:center;}
+
+    .lp-forum-card{flex-shrink:0;width:240px;background:var(--bg,#fff);border:.5px solid var(--border,rgba(30,26,22,.12));border-radius:8px;padding:14px;text-decoration:none;display:flex;flex-direction:column;gap:8px;}
+    .lp-forum-card:hover{border-color:var(--clay,#C4714A);}
+    .lp-f-badge{font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:20px;align-self:flex-start;font-weight:500;}
+    .lp-f-technique{background:#e8f0e4;color:#27500A;}
+    .lp-f-kiln{background:#f5ebe4;color:#712B13;}
+    .lp-f-business{background:#e8eaf0;color:#3d4a6b;}
+    .lp-f-general{background:var(--surface,#f0ece6);color:var(--ink-mid,#5a5248);}
+    .lp-forum-title{font-size:13px;color:var(--ink,#1E1A16);line-height:1.4;}
+    .lp-forum-meta{font-size:11px;color:var(--ink-light,#9a9490);}
+
+    .lp-event-card{flex-shrink:0;width:180px;background:var(--bg,#fff);border:.5px solid var(--border,rgba(30,26,22,.12));border-radius:8px;padding:14px;text-decoration:none;display:block;}
+    .lp-event-card:hover{border-color:var(--clay,#C4714A);}
+    .lp-event-day{font-family:var(--serif);font-size:28px;color:var(--clay,#C4714A);line-height:1;display:block;}
+    .lp-event-month{font-family:var(--mono);font-size:10px;color:var(--clay,#C4714A);text-transform:uppercase;margin-bottom:8px;display:block;}
+    .lp-event-title{font-size:13px;font-weight:500;color:var(--ink,#1E1A16);margin-bottom:3px;line-height:1.3;}
+    .lp-event-studio{font-size:11px;color:var(--ink-mid,#5a5248);}
+
+    .lp-studio-pill{flex-shrink:0;display:flex;align-items:center;gap:10px;background:var(--bg,#fff);border:.5px solid var(--border,rgba(30,26,22,.12));border-radius:8px;padding:10px 14px;text-decoration:none;min-width:180px;}
+    .lp-studio-pill:hover{border-color:var(--clay,#C4714A);}
+    .lp-studio-name{font-size:13px;font-weight:500;color:var(--ink,#1E1A16);}
+    .lp-studio-loc{font-size:11px;color:var(--ink-light,#9a9490);}
+
+    .lp-cta-row{text-align:center;margin-top:16px;}
+    .lp-cta-note{font-family:var(--mono);font-size:11px;color:var(--ink-light,#9a9490);margin-top:10px;}
+    @media(max-width:600px){#live-preview{padding:48px 0;}}
+
     /* ── ACCORDION JS INIT ─────────────────────────────────── */
   </style>
 </head>
@@ -467,6 +517,47 @@
     </div>
   </div>
 </div>
+
+<section id="live-preview" aria-labelledby="lp-heading">
+  <div class="container">
+    <p class="sec-label">Happening now</p>
+    <h2 id="lp-heading" class="sec-title">See what's going on inside</h2>
+    <p class="sec-sub">A glimpse of the people and conversations already here. Updated daily.</p>
+
+    <div class="lp-block" id="lp-artists">
+      <div class="lp-block-label">Ceramicists</div>
+      <div class="lp-slideshow-wrap">
+        <div class="lp-artists-track" id="lpArtistsTrack"></div>
+      </div>
+    </div>
+
+    <div class="lp-block" id="lp-forum">
+      <div class="lp-block-label">From the forum</div>
+      <div class="lp-slideshow-wrap">
+        <div class="lp-forum-track" id="lpForumTrack"></div>
+      </div>
+    </div>
+
+    <div class="lp-block" id="lp-events">
+      <div class="lp-block-label">Upcoming events</div>
+      <div class="lp-slideshow-wrap">
+        <div class="lp-events-track" id="lpEventsTrack"></div>
+      </div>
+    </div>
+
+    <div class="lp-block" id="lp-studios">
+      <div class="lp-block-label">Studios</div>
+      <div class="lp-slideshow-wrap lp-slideshow-wrap--rev">
+        <div class="lp-studios-track" id="lpStudiosTrack"></div>
+      </div>
+    </div>
+
+    <div class="lp-cta-row">
+      <a href="/register?type=community" class="btn btn-primary btn-lg">Join to see everything</a>
+      <p class="lp-cta-note">Free to join — no credit card required.</p>
+    </div>
+  </div>
+</section>
 
 <!-- HERO -->
 <section class="hero" aria-labelledby="hero-title">
@@ -1006,6 +1097,86 @@
   }
 
   loadStats();
+
+  (function(){
+    var BASE='https://aruru-backend-production.up.railway.app';
+    function _hide(id){var el=document.getElementById(id);if(el)el.style.display='none';}
+    function _dup(track){var kids=Array.from(track.children);kids.forEach(function(k){track.appendChild(k.cloneNode(true));});}
+    function _esc(v){return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function _attr(v){return _esc(v).replace(/`/g,'&#96;');}
+
+    function _artists(list){
+      var t=document.getElementById('lpArtistsTrack');if(!t)return;
+      if(!list||!list.length){_hide('lp-artists');return;}
+      t.innerHTML=list.map(function(a){
+        var img=a.featuredPhotoUrl||a.avatarUrl||'';
+        var name=(a.name||'').slice(0,18);
+        return '<a href="/register?type=community" class="lp-artist-card">'
+          +(img?'<img class="lp-artist-photo" src="'+_attr(img)+'" alt="'+_attr(name)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+              :'<div class="lp-artist-photo" style="display:flex;align-items:center;justify-content:center;"></div>')
+          +'<span class="lp-artist-name">'+_esc(name)+'</span>'
+          +'<span class="lp-artist-studio">'+_esc(a.studioName||'Independent')+'</span>'
+          +(a.city?'<span class="lp-artist-city">'+_esc(a.city)+'</span>':'')
+          +'</a>';
+      }).join('');
+      _dup(t);
+    }
+
+    function _forum(list){
+      var t=document.getElementById('lpForumTrack');if(!t)return;
+      if(!list||!list.length){_hide('lp-forum');return;}
+      var cm={'technique':'lp-f-technique','kiln':'lp-f-kiln','business':'lp-f-business','general':'lp-f-general'};
+      t.innerHTML=list.map(function(p){
+        var cat=p.category||'general';
+        var cls=cm[cat]||'lp-f-general';
+        return '<a href="/register?type=community" class="lp-forum-card">'
+          +'<span class="lp-f-badge '+cls+'">'+_esc(cat)+'</span>'
+          +'<span class="lp-forum-title">'+_esc((p.title||'').slice(0,55))+(p.title&&p.title.length>55?'…':'')+'</span>'
+          +'<span class="lp-forum-meta">'+_esc(p.replyCount||0)+' replies · Join to read</span>'
+          +'</a>';
+      }).join('');
+      _dup(t);
+    }
+
+    function _events(list){
+      var t=document.getElementById('lpEventsTrack');if(!t)return;
+      if(!list||!list.length){_hide('lp-events');return;}
+      t.innerHTML=list.map(function(e){
+        var d=new Date(e.startsAt);
+        var ds=d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}).split(' ');
+        return '<a href="/register?type=community" class="lp-event-card">'
+          +'<span class="lp-event-day">'+_esc(ds[0]||'')+'</span>'
+          +'<span class="lp-event-month">'+_esc(ds[1]||'')+'</span>'
+          +'<div class="lp-event-title">'+_esc((e.title||'').slice(0,45))+'</div>'
+          +'<div class="lp-event-studio">'+_esc(e.studioName||'Independent')+(e.city?' · '+_esc(e.city):'')+'</div>'
+          +'</a>';
+      }).join('');
+      _dup(t);
+    }
+
+    function _studios(list){
+      var t=document.getElementById('lpStudiosTrack');if(!t)return;
+      if(!list||!list.length){_hide('lp-studios');return;}
+      t.innerHTML=list.map(function(s){
+        return '<a href="/register?type=community" class="lp-studio-pill">'
+          +'<div style="width:32px;height:32px;border-radius:6px;background:var(--clay-light,#f5ebe4);flex-shrink:0;"></div>'
+          +'<div><div class="lp-studio-name">'+_esc(s.name||'')+'</div>'
+          +'<div class="lp-studio-loc">'+_esc([s.city,s.country].filter(Boolean).join(', '))+'</div></div>'
+          +'</a>';
+      }).join('');
+      _dup(t);
+    }
+
+    fetch(BASE+'/public/landing-preview')
+      .then(function(r){return r.ok?r.json():Promise.reject(r.status);})
+      .then(function(d){
+        _artists(d.artists);
+        _forum(d.forums);
+        _events(d.events);
+        _studios(d.studios);
+      })
+      .catch(function(){_hide('live-preview');});
+  })();
 </script>
 <script>
 (function(){

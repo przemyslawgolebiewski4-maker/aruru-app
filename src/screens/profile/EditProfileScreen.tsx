@@ -15,6 +15,7 @@ import {
   Platform,
   ActivityIndicator,
   Image,
+  Switch,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import ImageUpload from '../../components/ImageUpload';
@@ -78,6 +79,8 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [portfolioUrls, setPortfolioUrls] = useState<(string | null)[]>(() =>
     padPortfolioSlots(user?.portfolioUrls)
   );
+  const [showOnLanding, setShowOnLanding] = useState(false);
+  const [featuredPhotoUrl, setFeaturedPhotoUrl] = useState<string | null>(null);
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [portfolioUploadError, setPortfolioUploadError] = useState<
     string | null
@@ -204,6 +207,36 @@ export default function EditProfileScreen({ navigation }: Props) {
   }, [user?.portfolioUrls]);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function loadProfileVisibility() {
+      try {
+        const res = await apiFetch<{
+          user?: Record<string, unknown>;
+          show_on_landing?: unknown;
+          showOnLanding?: unknown;
+          featured_photo_url?: unknown;
+          featuredPhotoUrl?: unknown;
+        }>('/auth/me');
+        if (!mounted) return;
+        const profile = res.user ?? res;
+        setShowOnLanding(Boolean(profile.show_on_landing ?? profile.showOnLanding));
+        const featured =
+          profile.featured_photo_url ?? profile.featuredPhotoUrl ?? null;
+        setFeaturedPhotoUrl(featured != null ? String(featured) : null);
+      } catch {
+        /* Keep local defaults if profile refresh fails. */
+      }
+    }
+
+    void loadProfileVisibility();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     setAvatarUrl(user?.avatarUrl ?? '');
   }, [user?.avatarUrl]);
 
@@ -315,7 +348,10 @@ export default function EditProfileScreen({ navigation }: Props) {
     }
     setSaving(true);
     try {
-      const body: PatchMeBody = {
+      const body: PatchMeBody & {
+        show_on_landing: boolean;
+        featured_photo_url: string | null;
+      } = {
         name: name.trim(),
         bio: bio.trim() || null,
         city: city.trim() || null,
@@ -323,6 +359,8 @@ export default function EditProfileScreen({ navigation }: Props) {
         instagram_url: instagramUrl.trim() || null,
         website_url: websiteUrl.trim() || null,
         shop_url: shopUrl.trim() || null,
+        show_on_landing: showOnLanding,
+        featured_photo_url: featuredPhotoUrl,
         community_visibility: {
           ...visibility,
           hidden_studios: hiddenStudios,
@@ -341,6 +379,10 @@ export default function EditProfileScreen({ navigation }: Props) {
       setSaving(false);
     }
   }
+
+  const selectablePortfolioUrls = portfolioUrls.filter(
+    (url): url is string => Boolean(url)
+  );
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
@@ -649,6 +691,68 @@ export default function EditProfileScreen({ navigation }: Props) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {success ? <Text style={styles.success}>{success}</Text> : null}
 
+      <View style={styles.landingVisibilitySection}>
+        <Text style={styles.privacyTitle}>Community visibility</Text>
+        <View style={styles.landingToggleRow}>
+          <Text style={styles.landingToggleLabel}>
+            Show my profile on the Aruru public homepage
+          </Text>
+          <Switch
+            value={showOnLanding}
+            onValueChange={setShowOnLanding}
+            trackColor={{ false: colors.border, true: colors.clay }}
+            thumbColor={colors.surface}
+          />
+        </View>
+        <View style={styles.landingConsentBox}>
+          <Text style={styles.landingConsentText}>
+            By enabling this, you agree that your name, profile photo or
+            selected portfolio image, and studio name may be shown publicly on
+            aruru.xyz to visitors who are not logged in. You can disable this at
+            any time in your profile settings.
+          </Text>
+        </View>
+        {showOnLanding ? (
+          <View>
+            <Text style={styles.featuredPhotoTitle}>Featured photo</Text>
+            <Text style={styles.featuredPhotoHint}>
+              Choose which photo visitors see on the homepage. If none
+              selected, your avatar is used.
+            </Text>
+            {selectablePortfolioUrls.length > 0 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {selectablePortfolioUrls.map((url) => (
+                  <TouchableOpacity
+                    key={url}
+                    onPress={() => setFeaturedPhotoUrl(url)}
+                    style={styles.featuredPhotoOption}
+                    activeOpacity={0.75}
+                  >
+                    <Image source={{ uri: url }} style={styles.featuredPhotoImage} />
+                    {url === featuredPhotoUrl ? (
+                      <>
+                        <View style={styles.featuredPhotoSelectedOverlay} />
+                        <View style={styles.featuredPhotoCheck}>
+                          <Text style={styles.featuredPhotoCheckText}>✓</Text>
+                        </View>
+                      </>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <Text style={styles.landingHiddenText}>
+                Add portfolio photos first to select a featured image.
+              </Text>
+            )}
+          </View>
+        ) : (
+          <Text style={styles.landingHiddenText}>
+            Your profile is not shown on the homepage.
+          </Text>
+        )}
+      </View>
+
       <Button
         label="Save changes"
         onPress={() => void onSave()}
@@ -916,6 +1020,93 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#fff',
     fontWeight: '500',
+  },
+  landingVisibilitySection: {
+    gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+  },
+  landingToggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  landingToggleLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.ink,
+    flex: 1,
+    marginRight: 12,
+  },
+  landingConsentBox: {
+    backgroundColor: colors.cream,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.clay,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  landingConsentText: {
+    fontSize: 12,
+    color: colors.inkLight,
+    lineHeight: 18,
+  },
+  featuredPhotoTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  featuredPhotoHint: {
+    fontSize: 12,
+    color: colors.inkLight,
+    marginBottom: 12,
+  },
+  featuredPhotoOption: {
+    width: 76,
+    height: 76,
+    borderRadius: 8,
+    marginRight: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  featuredPhotoImage: {
+    width: 76,
+    height: 76,
+    borderRadius: 8,
+  },
+  featuredPhotoSelectedOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(196,113,74,0.35)',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.clay,
+  },
+  featuredPhotoCheck: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.clay,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featuredPhotoCheckText: {
+    fontSize: 12,
+    color: colors.surface,
+    fontWeight: '500',
+  },
+  landingHiddenText: {
+    fontSize: 12,
+    color: colors.inkLight,
+    marginTop: 4,
   },
   error: {
     fontFamily: typography.body,
