@@ -15,6 +15,7 @@ const Tab = createMaterialTopTabNavigator<MainTabParamList>();
 const tabScreenOptions = {
   tabBarStyle: {
     backgroundColor: colors.surface,
+    height: 44,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
     elevation: 0,
@@ -28,16 +29,17 @@ const tabScreenOptions = {
   },
   tabBarLabelStyle: {
     fontFamily: typography.mono,
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 0.4,
     textTransform: 'uppercase' as const,
   },
   tabBarActiveTintColor: colors.clay,
   tabBarInactiveTintColor: colors.inkLight,
   tabBarScrollEnabled: true,
-  tabBarItemStyle: { paddingVertical: 8 },
+  tabBarItemStyle: { paddingVertical: 8, minWidth: 80 },
   tabBarShowLabel: true,
   tabBarPressColor: colors.clayLight,
+  swipeEnabled: false,
 };
 
 export function MainTabNavigator() {
