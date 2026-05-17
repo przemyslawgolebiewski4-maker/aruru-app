@@ -718,6 +718,16 @@ export default function DashboardScreen() {
       ?.navigate('EventList', { tenantId });
   }
 
+  function goBookStudio() {
+    if (!tenantId) {
+      alertMessage('Book studio time', 'Create or join a studio first.');
+      return;
+    }
+    navigation
+      .getParent<NativeStackNavigationProp<AppStackParamList>>()
+      ?.navigate('BookStudio', { tenantId });
+  }
+
   function goCatalog() {
     if (!tenantId) {
       alertMessage('Catalog', 'Create or join a studio first.');
@@ -1379,6 +1389,22 @@ export default function DashboardScreen() {
             style={styles.quickActionBtn}
           />
         </View>
+        {tenantId &&
+        (currentStudio?.role === 'owner' ||
+          (currentStudio?.role === 'assistant' &&
+            memberSectionVisible(
+              currentStudio?.memberDashboardVisibility,
+              'bookings'
+            ))) ? (
+          <View style={actionQuarterStyle}>
+            <Button
+              label="Book studio time"
+              variant="secondary"
+              onPress={goBookStudio}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
         {hasSubscription && currentStudio?.role === 'owner' ? (
           <View style={actionQuarterStyle}>
             <Button
