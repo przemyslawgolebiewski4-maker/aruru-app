@@ -44,6 +44,8 @@ export type AppStackParamList = {
   Notifications: undefined;
   Settings: undefined;
   AccountSecurity: undefined;
+  /** What I want to receive — routes into channel prefs (stub + inbox link until API toggles ship). */
+  NotificationPreferences: undefined;
   Support: undefined;
   CreateStudio: undefined;
   StudioOnboarding: { tenantId: string; studioName: string };
