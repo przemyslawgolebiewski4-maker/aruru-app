@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  Platform,
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { colors, typography, fontSize, spacing } from '../../theme/tokens';
@@ -81,6 +87,18 @@ export default function CommunityScreen() {
     }
   }, [TABS, activeTab]);
 
+  const isWeb = Platform.OS === 'web';
+  const activeContent = (
+    <>
+      {activeTab === 'home' && <HomeTab onSelectTab={setActiveTab} />}
+      {activeTab === 'feed' && <EventFeedTab />}
+      {activeTab === 'studios' && <StudioFinderTab />}
+      {activeTab === 'artists' && <ArtistsTab />}
+      {activeTab === 'forum' && <ForumTab />}
+      {activeTab === 'sponsors' && <SponsorsTab />}
+    </>
+  );
+
   return (
     <View style={styles.root}>
       <View style={styles.topBar}>
@@ -119,28 +137,56 @@ export default function CommunityScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      <View style={styles.tabBar}>
-        {TABS.map((t) => (
-          <TouchableOpacity
-            key={t.key}
-            style={[styles.tab, activeTab === t.key && styles.tabActive]}
-            onPress={() => setActiveTab(t.key)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.tabLabel, activeTab === t.key && styles.tabLabelActive]}>
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      <View style={styles.content}>
-        {activeTab === 'home' && <HomeTab onSelectTab={setActiveTab} />}
-        {activeTab === 'feed' && <EventFeedTab />}
-        {activeTab === 'studios' && <StudioFinderTab />}
-        {activeTab === 'artists' && <ArtistsTab />}
-        {activeTab === 'forum' && <ForumTab />}
-        {activeTab === 'sponsors' && <SponsorsTab />}
-      </View>
+      {isWeb ? (
+        <View style={styles.webLayout}>
+          <View style={styles.webSidebar}>
+            {TABS.map((t) => (
+              <TouchableOpacity
+                key={t.key}
+                style={[
+                  styles.webSidebarItem,
+                  activeTab === t.key && styles.webSidebarItemActive,
+                ]}
+                onPress={() => setActiveTab(t.key)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.webSidebarLabel,
+                    activeTab === t.key && styles.webSidebarLabelActive,
+                  ]}
+                >
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.webContent}>{activeContent}</View>
+        </View>
+      ) : (
+        <>
+          <View style={styles.tabBar}>
+            {TABS.map((t) => (
+              <TouchableOpacity
+                key={t.key}
+                style={[styles.tab, activeTab === t.key && styles.tabActive]}
+                onPress={() => setActiveTab(t.key)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    activeTab === t.key && styles.tabLabelActive,
+                  ]}
+                >
+                  {t.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={styles.content}>{activeContent}</View>
+        </>
+      )}
     </View>
   );
 }
@@ -162,15 +208,15 @@ const styles = StyleSheet.create({
     color: colors.clay,
   },
   topBarIcons: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  topBarIcon: { padding: spacing[2], position: 'relative' },
+  topBarIcon: { padding: spacing[1], position: 'relative' },
   iconCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconSymbol: { fontSize: 18, color: colors.inkMid },
+  iconSymbol: { fontSize: 14, color: colors.inkMid },
   notifBadge: {
     position: 'absolute',
     top: 4,
@@ -212,4 +258,31 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: { color: colors.clay },
   content: { flex: 1 },
+  webLayout: { flex: 1, flexDirection: 'row' },
+  webSidebar: {
+    width: 160,
+    backgroundColor: colors.surface,
+    borderRightWidth: 0.5,
+    borderRightColor: colors.border,
+    paddingTop: spacing[2],
+  },
+  webSidebarItem: {
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[4],
+    borderLeftWidth: 2,
+    borderLeftColor: 'transparent',
+  },
+  webSidebarItemActive: {
+    borderLeftColor: colors.clay,
+    backgroundColor: colors.cream,
+  },
+  webSidebarLabel: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: colors.inkLight,
+  },
+  webSidebarLabelActive: { color: colors.clay },
+  webContent: { flex: 1 },
 });
