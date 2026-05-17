@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Platform,
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
+  StyleSheet,
+  Platform,
+  ScrollView,
 } from 'react-native';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { colors, typography, spacing } from '../../theme/tokens';
 import { useAuth } from '../../hooks/useAuth';
 import HomeTab from './tabs/HomeTab';
@@ -15,27 +17,158 @@ import ArtistsTab from './tabs/ArtistsTab';
 import ForumTab from './tabs/ForumTab';
 import SponsorsTab from './tabs/SponsorsTab';
 
-type Tab = 'home' | 'feed' | 'studios' | 'artists' | 'forum' | 'sponsors';
+type Tab = 'home' | 'forum' | 'feed' | 'studios' | 'artists' | 'sponsors';
+
+function IconHome({ active }: { active: boolean }) {
+  const c = active ? colors.clay : colors.inkMid;
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5Z"
+      />
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        d="M9 21V12h6v9"
+      />
+    </Svg>
+  );
+}
+
+function IconForum({ active }: { active: boolean }) {
+  const c = active ? colors.clay : colors.inkMid;
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+      />
+    </Svg>
+  );
+}
+
+function IconFeed({ active }: { active: boolean }) {
+  const c = active ? colors.clay : colors.inkMid;
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Rect
+        x="3"
+        y="4"
+        width="18"
+        height="18"
+        rx="2"
+        stroke={c}
+        strokeWidth={1.5}
+      />
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        d="M16 2v4M8 2v4M3 10h18"
+      />
+    </Svg>
+  );
+}
+
+function IconStudios({ active }: { active: boolean }) {
+  const c = active ? colors.clay : colors.inkMid;
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 21h18M3 7l9-4 9 4M4 7v14M20 7v14M9 21V12h6v9"
+      />
+    </Svg>
+  );
+}
+
+function IconArtists({ active }: { active: boolean }) {
+  const c = active ? colors.clay : colors.inkMid;
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 3h8M7 3c0 0-2 3-2 7s2 5 2 8h10c0-3 2-4 2-8s-2-7-2-7M6 18h12"
+      />
+    </Svg>
+  );
+}
+
+function IconSponsors({ active }: { active: boolean }) {
+  const c = active ? colors.clay : colors.inkMid;
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+      />
+      <Path
+        stroke={c}
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"
+      />
+    </Svg>
+  );
+}
+
+type TabConfig = {
+  key: Tab;
+  label: string;
+  shortLabel: string;
+  Icon: React.ComponentType<{ active: boolean }>;
+};
+
+const TABS_CONFIG: TabConfig[] = [
+  { key: 'home', label: 'Home', shortLabel: 'Home', Icon: IconHome },
+  { key: 'forum', label: 'Forum', shortLabel: 'Forum', Icon: IconForum },
+  { key: 'feed', label: 'Feed', shortLabel: 'Feed', Icon: IconFeed },
+  {
+    key: 'studios',
+    label: 'Studios',
+    shortLabel: 'Studios',
+    Icon: IconStudios,
+  },
+  {
+    key: 'artists',
+    label: 'Artists',
+    shortLabel: 'Artists',
+    Icon: IconArtists,
+  },
+  {
+    key: 'sponsors',
+    label: 'Sponsors',
+    shortLabel: 'Spons.',
+    Icon: IconSponsors,
+  },
+];
 
 export default function CommunityScreen() {
   const { user } = useAuth();
   const isSponsor = user?.userRole === 'sponsor';
 
-  const TABS: { key: Tab; label: string }[] = useMemo(
+  const TABS = useMemo(
     () =>
       isSponsor
-        ? [
-            { key: 'feed', label: 'Feed' },
-            { key: 'sponsors', label: 'Sponsors' },
-          ]
-        : [
-            { key: 'home', label: 'Home' },
-            { key: 'forum', label: 'Forum' },
-            { key: 'feed', label: 'Feed' },
-            { key: 'studios', label: 'Studios' },
-            { key: 'artists', label: 'Artists' },
-            { key: 'sponsors', label: 'Sponsors' },
-          ],
+        ? TABS_CONFIG.filter((t) => t.key === 'feed' || t.key === 'sponsors')
+        : TABS_CONFIG,
     [isSponsor]
   );
 
@@ -54,115 +187,78 @@ export default function CommunityScreen() {
   }, [TABS, activeTab]);
 
   const isWeb = Platform.OS === 'web';
-  const activeContent = (
-    <>
-      {activeTab === 'home' && <HomeTab onSelectTab={setActiveTab} />}
-      {activeTab === 'feed' && <EventFeedTab />}
-      {activeTab === 'studios' && <StudioFinderTab />}
-      {activeTab === 'artists' && <ArtistsTab />}
-      {activeTab === 'forum' && <ForumTab />}
-      {activeTab === 'sponsors' && <SponsorsTab />}
-    </>
-  );
 
   return (
     <View style={styles.root}>
-      {isWeb ? (
-        <View style={styles.webLayout}>
-          <View style={styles.webSidebar}>
-            {TABS.map((t) => (
+      <View style={isWeb ? styles.webLayout : styles.mobileLayout}>
+        <View style={isWeb ? styles.webSidebar : styles.mobileSidebar}>
+          {TABS.map((t) => {
+            const active = activeTab === t.key;
+            const TabIcon = t.Icon;
+            return (
               <TouchableOpacity
                 key={t.key}
                 style={[
-                  styles.webSidebarItem,
-                  activeTab === t.key && styles.webSidebarItemActive,
+                  isWeb ? styles.webSidebarItem : styles.mobileSidebarItem,
+                  active && styles.sidebarItemActive,
                 ]}
                 onPress={() => setActiveTab(t.key)}
-                activeOpacity={0.7}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
               >
+                <TabIcon active={active} />
                 <Text
                   style={[
-                    styles.webSidebarLabel,
-                    activeTab === t.key && styles.webSidebarLabelActive,
+                    isWeb ? styles.webSidebarLabel : styles.mobileSidebarLabel,
+                    active && styles.sidebarLabelActive,
                   ]}
+                  numberOfLines={1}
                 >
-                  {t.label}
+                  {isWeb ? t.label : t.shortLabel}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.webContent}>{activeContent}</View>
+            );
+          })}
         </View>
-      ) : (
-        <>
-          <View style={styles.tabBar}>
-            {TABS.map((t) => (
-              <TouchableOpacity
-                key={t.key}
-                style={[styles.tab, activeTab === t.key && styles.tabActive]}
-                onPress={() => setActiveTab(t.key)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    activeTab === t.key && styles.tabLabelActive,
-                  ]}
-                >
-                  {t.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.content}>{activeContent}</View>
-        </>
-      )}
+
+        <View style={styles.content}>
+          {activeTab === 'home' && (
+            <HomeTab
+              onSelectTab={(k) => setActiveTab(k as Tab)}
+            />
+          )}
+          {activeTab === 'forum' && <ForumTab />}
+          {activeTab === 'feed' && <EventFeedTab />}
+          {activeTab === 'studios' && <StudioFinderTab />}
+          {activeTab === 'artists' && <ArtistsTab />}
+          {activeTab === 'sponsors' && <SponsorsTab />}
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: spacing[2],
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: { borderBottomColor: colors.clay },
-  tabLabel: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.inkLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  tabLabelActive: { color: colors.clay },
-  content: { flex: 1 },
+
   webLayout: { flex: 1, flexDirection: 'row' },
+  mobileLayout: { flex: 1, flexDirection: 'row' },
+
   webSidebar: {
-    width: 160,
+    width: 140,
     backgroundColor: colors.surface,
     borderRightWidth: 0.5,
     borderRightColor: colors.border,
-    paddingTop: spacing[2],
+    paddingTop: spacing[1],
   },
   webSidebarItem: {
-    paddingVertical: spacing[3],
-    paddingHorizontal: spacing[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: spacing[3],
     borderLeftWidth: 2,
     borderLeftColor: 'transparent',
-  },
-  webSidebarItemActive: {
-    borderLeftColor: colors.clay,
-    backgroundColor: colors.cream,
   },
   webSidebarLabel: {
     fontFamily: typography.mono,
@@ -171,6 +267,37 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     color: colors.inkLight,
   },
-  webSidebarLabelActive: { color: colors.clay },
-  webContent: { flex: 1 },
+
+  mobileSidebar: {
+    width: 72,
+    backgroundColor: colors.surface,
+    borderRightWidth: 0.5,
+    borderRightColor: colors.border,
+    paddingTop: spacing[1],
+  },
+  mobileSidebarItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderLeftWidth: 2,
+    borderLeftColor: 'transparent',
+  },
+  mobileSidebarLabel: {
+    fontFamily: typography.mono,
+    fontSize: 7,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    color: colors.inkLight,
+    textAlign: 'center',
+  },
+
+  sidebarItemActive: {
+    borderLeftColor: colors.clay,
+    backgroundColor: colors.cream,
+  },
+  sidebarLabelActive: { color: colors.clay },
+
+  content: { flex: 1, overflow: 'hidden' },
 });
