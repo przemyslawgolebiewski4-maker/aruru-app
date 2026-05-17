@@ -152,7 +152,7 @@ function PillTabBar({ state, descriptors, navigation }: MaterialTabBarProps) {
       style={pillStyles.scroll}
       contentContainerStyle={pillStyles.scrollContent}
     >
-      {state.routes.map((route) => {
+      {state.routes.map((route, index) => {
         const focused = state.index === index;
         const { options } = descriptors[route.key];
         const label = getTabLabel(options, route.name);
@@ -167,8 +167,8 @@ function PillTabBar({ state, descriptors, navigation }: MaterialTabBarProps) {
           });
           if (!focused && !event.defaultPrevented) {
             (
-              navigation as MaterialTopTabNavigationProp<MainTabParamList>
-            ).jumpTo(route.name);
+              navigation as unknown as MaterialTopTabNavigationProp<MainTabParamList>
+            ).jumpTo(route.name as keyof MainTabParamList);
           }
         };
 

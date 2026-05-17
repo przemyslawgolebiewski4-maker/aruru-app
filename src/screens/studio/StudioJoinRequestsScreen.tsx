@@ -188,7 +188,8 @@ export default function StudioJoinRequestsScreen({
           </Text>
         ) : (
           list.map((req) => {
-            const highlighted = focusRequestId && req.id === focusRequestId;
+            const highlighted =
+              Boolean(focusRequestId) && req.id === focusRequestId;
             return (
               <View
                 key={req.id}
