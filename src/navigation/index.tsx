@@ -442,7 +442,7 @@ function AppNavigator() {
         name="StudioSettings"
         component={StudioSettingsScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Studio settings',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
@@ -472,7 +472,7 @@ function AppNavigator() {
         name="Members"
         component={MembersScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Members',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
@@ -502,7 +502,7 @@ function AppNavigator() {
         name="KilnList"
         component={KilnListScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Kiln firings',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
@@ -542,7 +542,7 @@ function AppNavigator() {
         name="TaskList"
         component={TaskListScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Tasks',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
@@ -582,7 +582,7 @@ function AppNavigator() {
         name="CostList"
         component={CostListScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Cost summaries',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
@@ -592,7 +592,7 @@ function AppNavigator() {
         name="CostDetail"
         component={CostDetailScreen}
         options={({ route }) => ({
-          headerShown: true,
+          headerShown: false,
           title: route.params.memberName,
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,
@@ -602,7 +602,7 @@ function AppNavigator() {
         name="EventList"
         component={EventListScreen}
         options={{
-          headerShown: true,
+          headerShown: false,
           title: 'Events',
           headerBackTitle: 'Studio',
           ...appModalHeaderOptions,

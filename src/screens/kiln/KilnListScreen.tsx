@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Badge } from '../../components/ui';
+import { StudioSubHeader, studioHeaderPillStyles } from '../../components/studio/StudioSubHeader';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -82,9 +83,22 @@ function formatFiringDate(iso: string) {
   }
 }
 
-export default function KilnListScreen({ route }: { route: Route }) {
+export default function KilnListScreen({
+  route,
+  embedded,
+  onBackToStudio,
+}: {
+  route: Route;
+  embedded?: boolean;
+  onBackToStudio?: () => void;
+}) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
+  const pillStyles = studioHeaderPillStyles();
+  const handleBack =
+    embedded && onBackToStudio
+      ? onBackToStudio
+      : () => navigation.goBack();
   const [firings, setFirings] = useState<KilnFiringListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -113,6 +127,10 @@ export default function KilnListScreen({ route }: { route: Route }) {
       load();
     }, [load])
   );
+
+  useEffect(() => {
+    if (embedded) void load();
+  }, [embedded, load]);
 
   const stats = useMemo(() => {
     const open = firings.filter((f) =>
@@ -249,12 +267,20 @@ export default function KilnListScreen({ route }: { route: Route }) {
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-      <View style={styles.topRow}>
-        <Text style={styles.pageTitle}>Kiln firings</Text>
-        <ButtonSmallNew
-          onPress={() => navigation.navigate('KilnNewSession', { tenantId })}
-        />
-      </View>
+      <StudioSubHeader
+        title="Firings"
+        onBack={handleBack}
+        right={
+          <TouchableOpacity
+            onPress={() => navigation.navigate('KilnNewSession', { tenantId })}
+            style={pillStyles.pill}
+            accessibilityRole="button"
+            accessibilityLabel="New firing session"
+          >
+            <Text style={pillStyles.pillText}>+ New</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.statsRow}>
         <View style={styles.statPill}>
@@ -337,19 +363,6 @@ export default function KilnListScreen({ route }: { route: Route }) {
   );
 }
 
-function ButtonSmallNew({ onPress }: { onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={styles.newBtn}
-      accessibilityRole="button"
-      accessibilityLabel="New firing session"
-    >
-      <Text style={styles.newBtnText}>+ New</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing[5], paddingBottom: spacing[10] },
@@ -359,31 +372,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.error,
     marginBottom: spacing[2],
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing[5],
-  },
-  pageTitle: {
-    fontFamily: typography.display,
-    fontSize: 22,
-    color: colors.ink,
-    letterSpacing: -0.3,
-  },
-  newBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: spacing[3],
-    borderRadius: radius.sm,
-    borderWidth: 0.5,
-    borderColor: colors.clay,
-    backgroundColor: 'transparent',
-  },
-  newBtnText: {
-    fontFamily: typography.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.clay,
   },
   statsRow: {
     flexDirection: 'row',

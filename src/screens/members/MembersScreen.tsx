@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,10 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Badge, Button, Divider, SectionLabel } from '../../components/ui';
+import {
+  StudioSubHeader,
+  studioHeaderPillStyles,
+} from '../../components/studio/StudioSubHeader';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -41,9 +45,18 @@ function formatErr(e: unknown): string {
   return e instanceof Error ? e.message : 'Could not load members.';
 }
 
-export default function MembersScreen({ route }: { route: Route }) {
+export default function MembersScreen({
+  route,
+  embedded,
+  onBackToStudio,
+}: {
+  route: Route;
+  embedded?: boolean;
+  onBackToStudio?: () => void;
+}) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
+  const invitePill = studioHeaderPillStyles();
   const { studios } = useAuth();
   const [search, setSearch] = useState('');
   const [list, setList] = useState<StudioMemberRow[]>([]);
@@ -81,20 +94,9 @@ export default function MembersScreen({ route }: { route: Route }) {
     }, [load])
   );
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () => (
-        <TouchableOpacity
-          onPress={() => navigation.navigate('InviteMember', { tenantId })}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Invite member"
-        >
-          <Text style={styles.headerInvite}>Invite</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, tenantId]);
+  useEffect(() => {
+    if (embedded) void load();
+  }, [embedded, load]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -127,6 +129,25 @@ export default function MembersScreen({ route }: { route: Route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      <StudioSubHeader
+        title="Members"
+        onBack={
+          embedded && onBackToStudio
+            ? onBackToStudio
+            : () => navigation.goBack()
+        }
+        right={
+          <TouchableOpacity
+            onPress={() => navigation.navigate('InviteMember', { tenantId })}
+            style={invitePill.pill}
+            accessibilityRole="button"
+            accessibilityLabel="Invite member"
+          >
+            <Text style={invitePill.pillText}>Invite</Text>
+          </TouchableOpacity>
+        }
+      />
+
       {loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.clay} />
@@ -138,23 +159,20 @@ export default function MembersScreen({ route }: { route: Route }) {
       ) : null}
 
       {isOwner ? (
-        <>
-          <SectionLabel>Join requests</SectionLabel>
-          <Text style={styles.joinRequestsHint}>
-            Review requests from people who want to join via your public studio
-            page in the community directory.
+        <TouchableOpacity
+          style={styles.joinBanner}
+          onPress={() =>
+            navigation.navigate('StudioJoinRequests', { tenantId })
+          }
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel="Review join requests"
+        >
+          <Text style={styles.joinBannerText}>
+            Join requests — review people who want to join your studio
           </Text>
-          <Button
-            label="Manage join requests"
-            variant="secondary"
-            onPress={() =>
-              navigation.navigate('StudioJoinRequests', { tenantId })
-            }
-            fullWidth
-            style={styles.joinRequestsBtn}
-          />
-          <Divider style={styles.joinRequestsDivider} />
-        </>
+          <Text style={styles.joinBannerArrow}>Review →</Text>
+        </TouchableOpacity>
       ) : null}
 
       <View style={styles.statsRow}>
@@ -265,24 +283,30 @@ const styles = StyleSheet.create({
     color: colors.error,
     marginBottom: spacing[3],
   },
-  joinRequestsHint: {
-    fontFamily: typography.body,
-    fontSize: fontSize.sm,
-    color: colors.inkLight,
-    lineHeight: 20,
-    marginBottom: spacing[3],
-  },
-  joinRequestsBtn: {
+  joinBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing[3],
+    backgroundColor: colors.mossLight,
+    borderWidth: 0.5,
+    borderColor: colors.mossBorder,
+    borderRadius: radius.sm,
+    paddingVertical: spacing[3],
+    paddingHorizontal: spacing[3],
     marginBottom: spacing[4],
   },
-  joinRequestsDivider: {
-    marginBottom: spacing[4],
-  },
-  headerInvite: {
+  joinBannerText: {
+    flex: 1,
     fontFamily: typography.mono,
-    fontSize: 13,
+    fontSize: fontSize.xs,
+    color: colors.moss,
+    lineHeight: 18,
+  },
+  joinBannerArrow: {
+    fontFamily: typography.bodyMedium,
+    fontSize: fontSize.sm,
     color: colors.clay,
-    marginRight: spacing[2],
   },
   statsRow: {
     flexDirection: 'row',

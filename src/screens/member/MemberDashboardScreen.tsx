@@ -384,7 +384,7 @@ export default function MemberDashboardScreen() {
             ) : null}
             {studioSubscriptionActive && showCosts ? (
               <Button
-                label="My costs"
+                label="My bill"
                 variant="secondary"
                 onPress={goCosts}
                 style={styles.actionBtn}
@@ -421,9 +421,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   greeting: {
-    fontFamily: typography.bodySemiBold,
+    fontFamily: typography.display,
     fontSize: fontSize['2xl'],
     color: colors.ink,
+    letterSpacing: -0.3,
   },
   bookingsTodayRow: {
     backgroundColor: colors.mossLight,

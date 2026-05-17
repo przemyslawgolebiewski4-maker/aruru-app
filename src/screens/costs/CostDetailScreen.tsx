@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Button, Input, SectionLabel } from '../../components/ui';
+import { StudioSubHeader } from '../../components/studio/StudioSubHeader';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch, postStudioMiscCharge } from '../../services/api';
@@ -319,7 +320,15 @@ async function fetchPdfFromEndpoint(
   }
 }
 
-export default function CostDetailScreen({ route }: { route: Route }) {
+export default function CostDetailScreen({
+  route,
+  embedded,
+  onBackToStudio,
+}: {
+  route: Route;
+  embedded?: boolean;
+  onBackToStudio?: () => void;
+}) {
   const {
     tenantId,
     userId,
@@ -363,13 +372,14 @@ export default function CostDetailScreen({ route }: { route: Route }) {
   }, [selectedYear, selectedMonth]);
 
   useLayoutEffect(() => {
+    if (embedded) return;
     if (!isOwner && user?.id !== userId) {
       if (typeof window !== 'undefined') {
         window.alert('You can only view your own cost summary.');
       }
       navigation.goBack();
     }
-  }, [isOwner, user?.id, userId, navigation]);
+  }, [isOwner, user?.id, userId, navigation, embedded]);
 
   const loadCostData = useCallback(async () => {
     if (!isOwner && user?.id !== userId) return;
@@ -678,6 +688,15 @@ export default function CostDetailScreen({ route }: { route: Route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      <StudioSubHeader
+        title="My bill"
+        onBack={
+          embedded && onBackToStudio
+            ? onBackToStudio
+            : () => navigation.goBack()
+        }
+      />
+
       <View style={styles.periodBox}>
         <View style={styles.periodTop}>
           <Text style={styles.periodLabel}>PERIOD</Text>
@@ -712,7 +731,6 @@ export default function CostDetailScreen({ route }: { route: Route }) {
           </View>
         </View>
       </View>
-
       {loading ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.clay} />

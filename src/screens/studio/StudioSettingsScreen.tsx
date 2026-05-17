@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,10 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import ImageUpload from '../../components/ImageUpload';
 import { Button, Input, SectionLabel } from '../../components/ui';
+import {
+  StudioSubHeader,
+  studioHeaderPillStyles,
+} from '../../components/studio/StudioSubHeader';
 import {
   colors,
   typography,
@@ -126,9 +130,18 @@ function parseStudioPayload(
   return o as Record<string, unknown> & Partial<StudioSettingsStudio>;
 }
 
-export default function StudioSettingsScreen({ route }: { route: Route }) {
+export default function StudioSettingsScreen({
+  route,
+  embedded,
+  onBackToStudio,
+}: {
+  route: Route;
+  embedded?: boolean;
+  onBackToStudio?: () => void;
+}) {
   const { tenantId, studioName } = route.params;
   const navigation = useNavigation<Nav>();
+  const savePill = studioHeaderPillStyles();
   const { studios, refresh } = useAuth();
 
   const membership = studios.find((s) => s.tenantId === tenantId);
@@ -164,13 +177,14 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
   const [exportOverdue, setExportOverdue] = useState(false);
 
   useLayoutEffect(() => {
+    if (embedded) return;
     if (!isOwner) {
       if (typeof window !== 'undefined') {
         window.alert('Only studio owners can edit studio settings.');
       }
       navigation.goBack();
     }
-  }, [isOwner, navigation]);
+  }, [isOwner, navigation, embedded]);
 
   const load = useCallback(async () => {
     if (!isOwner) {
@@ -223,6 +237,10 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       void load();
     }, [load, tenantId])
   );
+
+  useEffect(() => {
+    if (embedded) void load();
+  }, [embedded, load]);
 
   async function onSave() {
     if (!isOwner) return;
@@ -320,7 +338,7 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
     const tier = formatTierLabel(currentStudio?.subscriptionTier);
 
     if (status === 'trial') {
-      const days = trialDaysLeft(currentStudio?.trialEndsAt);
+      const days = trialDaysLeft(currentStudio?.trialEndsAt ?? undefined);
       if (days > 7) {
         return (
           <>
@@ -521,6 +539,27 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <StudioSubHeader
+        title="Studio settings"
+        onBack={
+          embedded && onBackToStudio
+            ? onBackToStudio
+            : () => navigation.goBack()
+        }
+        right={
+          <TouchableOpacity
+            style={savePill.pill}
+            onPress={() => void onSave()}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel="Save studio settings"
+          >
+            <Text style={savePill.pillText}>
+              {saving ? 'Save…' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        }
+      />
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
@@ -722,15 +761,6 @@ export default function StudioSettingsScreen({ route }: { route: Route }) {
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Button
-          label="Save changes"
-          variant="primary"
-          onPress={() => void onSave()}
-          loading={saving}
-          fullWidth
-          style={styles.saveBtn}
-        />
 
         {/* ─── Subscription ────────────── */}
         <View style={styles.sectionGap} />

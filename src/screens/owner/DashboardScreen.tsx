@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,8 +10,17 @@ import {
   Pressable,
   useWindowDimensions,
 } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import KilnListScreen from '../kiln/KilnListScreen';
+import TaskListScreen from '../tasks/TaskListScreen';
+import MembersScreen from '../members/MembersScreen';
+import CostListScreen from '../costs/CostListScreen';
+import CostDetailScreen from '../costs/CostDetailScreen';
+import StudioSettingsScreen from '../studio/StudioSettingsScreen';
+import { StudioDashboardRail } from '../../components/studio/StudioDashboardRail';
+import type { StudioRailSection as StudioSection } from '../../components/studio/StudioDashboardRail';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { MaterialTopTabNavigationProp } from '@react-navigation/material-top-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../hooks/useAuth';
@@ -54,19 +63,6 @@ type KilnRequest = {
   privateKilnPrice: number;
   startsAt?: string;
   notes?: string;
-};
-
-type IncomeData = {
-  current: {
-    membership: number;
-    kiln: number;
-    materials: number;
-    events: number;
-    openStudio: number;
-    total: number;
-  };
-  history: { period: string; total: number }[];
-  memberCount: number;
 };
 
 function parseMembersArray(data: unknown): unknown[] {
@@ -261,7 +257,6 @@ export default function DashboardScreen() {
   const [recentFirings, setRecentFirings] = useState<RecentFiring[]>([]);
   const [recentTasks, setRecentTasks] = useState<RecentTask[]>([]);
   const [loading, setLoading] = useState(true);
-  const [income, setIncome] = useState<IncomeData | null>(null);
   const [summariesDue, setSummariesDue] = useState(0);
   const [showCommunityBanner, setShowCommunityBanner] = useState(false);
   const [trialPromptDismissed, setTrialPromptDismissed] = useState(
@@ -271,9 +266,14 @@ export default function DashboardScreen() {
   const [kilnRequests, setKilnRequests] = useState<KilnRequest[]>([]);
   const [exportingStudio, setExportingStudio] = useState(false);
   const [showExportReminder, setShowExportReminder] = useState(false);
+  const [studioSection, setStudioSection] = useState<StudioSection>('home');
   const [pendingStudios, setPendingStudios] = useState<
     { studioName: string; tenantId: string }[]
   >([]);
+
+  useEffect(() => {
+    setStudioSection('home');
+  }, [tenantId]);
 
   const { width: windowWidth } = useWindowDimensions();
   const isTablet = windowWidth >= 768;
@@ -318,7 +318,6 @@ export default function DashboardScreen() {
       });
       setRecentFirings([]);
       setRecentTasks([]);
-      setIncome(null);
       setKilnRequests([]);
 
       try {
@@ -368,7 +367,6 @@ export default function DashboardScreen() {
       });
       setRecentFirings([]);
       setRecentTasks([]);
-      setIncome(null);
       setKilnRequests([]);
       setLoading(false);
       return;
@@ -384,12 +382,11 @@ export default function DashboardScreen() {
 
     setLoading(true);
     try {
-      const [memRes, firRes, taskRes, incomeRes, summariesRes, kilnReqRes] =
+      const [memRes, firRes, taskRes, summariesRes, kilnReqRes] =
         await Promise.allSettled([
           apiFetch<unknown>(`/studios/${tenantId}/members`, {}, tenantId),
           apiFetch<unknown>(`/studios/${tenantId}/kiln/firings`, {}, tenantId),
           apiFetch<unknown>(`/studios/${tenantId}/tasks`, {}, tenantId),
-          apiFetch<unknown>(`/studios/${tenantId}/costs/income`, {}, tenantId),
           apiFetch<{ summariesDue: number }>(
             `/studios/${tenantId}/costs/summaries-due`,
             {},
@@ -419,12 +416,6 @@ export default function DashboardScreen() {
         firRes.status === 'fulfilled'
           ? parseFiringsArray(firRes.value)
           : [];
-
-      if (incomeRes.status === 'fulfilled' && incomeRes.value) {
-        setIncome(incomeRes.value as IncomeData);
-      } else {
-        setIncome(null);
-      }
 
       let nextSummariesDue = 0;
       if (summariesRes.status === 'fulfilled' && summariesRes.value) {
@@ -610,7 +601,6 @@ export default function DashboardScreen() {
       });
       setRecentFirings([]);
       setRecentTasks([]);
-      setIncome(null);
       setKilnRequests([]);
     } finally {
       setLoading(false);
@@ -659,9 +649,7 @@ export default function DashboardScreen() {
       alertMessage('Kiln firings', 'Create or join a studio first.');
       return;
     }
-    navigation
-      .getParent<NativeStackNavigationProp<AppStackParamList>>()
-      ?.navigate('KilnList', { tenantId });
+    setStudioSection('firings');
   }
 
   function goMembers() {
@@ -673,9 +661,7 @@ export default function DashboardScreen() {
       return;
     }
     if (!tenantId) return;
-    const stack =
-      navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
-    stack?.navigate('Members', { tenantId });
+    setStudioSection('members');
   }
 
   function goTasks() {
@@ -683,9 +669,7 @@ export default function DashboardScreen() {
       alertMessage('Tasks', 'Create or join a studio first.');
       return;
     }
-    navigation
-      .getParent<NativeStackNavigationProp<AppStackParamList>>()
-      ?.navigate('TaskList', { tenantId });
+    setStudioSection('tasks');
   }
 
   function goCosts() {
@@ -696,28 +680,13 @@ export default function DashboardScreen() {
     const stack =
       navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
     if (currentStudio?.role === 'owner') {
-      stack?.navigate('CostList', { tenantId });
+      setStudioSection('revenue');
       return;
     }
     const uid = user?.id;
     if (!uid) return;
-    // Assistant: same as members - previous month only, no live current month.
     if (currentStudio?.role === 'assistant') {
-      const now = new Date();
-      let prevMonth = now.getMonth();
-      let prevYear = now.getFullYear();
-      if (prevMonth === 0) {
-        prevMonth = 12;
-        prevYear -= 1;
-      }
-      stack?.navigate('CostDetail', {
-        tenantId,
-        userId: uid,
-        memberName: user?.name?.trim() || user?.email || 'You',
-        memberEmail: user?.email,
-        year: prevYear,
-        month: prevMonth,
-      });
+      setStudioSection('myBill');
       return;
     }
     const y = new Date().getFullYear();
@@ -786,16 +755,7 @@ export default function DashboardScreen() {
       return;
     }
     if (!tenantId) return;
-    const name =
-      currentStudio?.studioName?.trim() ||
-      currentStudio?.studioSlug ||
-      'Studio';
-    const stack =
-      navigation.getParent<NativeStackNavigationProp<AppStackParamList>>();
-    stack?.navigate('StudioSettings', {
-      tenantId,
-      studioName: name,
-    });
+    setStudioSection('settings');
   }
 
   async function handleStudioExport() {
@@ -862,7 +822,7 @@ export default function DashboardScreen() {
     currentStudio?.role === 'owner' &&
     currentStudio?.status === 'active' &&
     currentStudio?.subscriptionStatus === 'trial'
-      ? trialDaysLeft(currentStudio.trialEndsAt)
+      ? trialDaysLeft(currentStudio.trialEndsAt ?? undefined)
       : null;
 
   const hasSubscription =
@@ -873,6 +833,38 @@ export default function DashboardScreen() {
     currentStudio?.role === 'owner' &&
     currentStudio?.status === 'active' &&
     !hasSubscription;
+
+  const assistantCostsTabVisible =
+    currentStudio?.role === 'assistant' &&
+    memberSectionVisible(
+      currentStudio?.memberDashboardVisibility,
+      'costs'
+    );
+
+  const allowedStudioSections: StudioSection[] = useMemo(() => {
+    const role = currentStudio?.role;
+    if (role === 'owner' && hasSubscription) {
+      return ['home', 'firings', 'tasks', 'members', 'revenue', 'settings'];
+    }
+    if (role === 'owner' && !hasSubscription) {
+      return ['home', 'members', 'settings'];
+    }
+    if (role === 'assistant' && hasSubscription) {
+      const t: StudioSection[] = ['home', 'firings', 'tasks'];
+      if (assistantCostsTabVisible) t.push('myBill');
+      return t;
+    }
+    if (role === 'assistant' && !hasSubscription) {
+      return ['home'];
+    }
+    return ['home'];
+  }, [currentStudio?.role, hasSubscription, assistantCostsTabVisible]);
+
+  useEffect(() => {
+    if (!allowedStudioSections.includes(studioSection)) {
+      setStudioSection('home');
+    }
+  }, [allowedStudioSections, studioSection]);
 
   if (studios.length === 0) {
     const onlySuspended = suspendedStudios.length > 0;
@@ -991,7 +983,7 @@ export default function DashboardScreen() {
 
   return (
     <>
-      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
+      <View style={styles.studioShell}>
       <View style={styles.topRow}>
         <TouchableOpacity
           onPress={() => {
@@ -1051,41 +1043,22 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.studioLayoutRow}>
+        <StudioDashboardRail
+          sections={allowedStudioSections}
+          active={studioSection}
+          onSelect={setStudioSection}
+        />
+        <View style={styles.studioMainCol}>
+      {studioSection === 'home' ? (
+      <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <View style={styles.greetingBlock}>
         <Text style={styles.greeting}>
           {greeting}, {firstName}.
         </Text>
         <Text style={styles.studioSub}>{studioLabel.toUpperCase()}</Text>
       </View>
-
-      {false && showFreeBanner && !trialPromptDismissed ? (
-        <View style={styles.trialPromptCard}>
-          <Text style={styles.trialPromptTitle}>
-            Try studio manager - free for 14 days
-          </Text>
-          <Text style={styles.trialPromptSub}>
-            Kiln costs - billing - tasks - materials.{'\n'}
-            No credit card needed - cancel anytime.
-          </Text>
-          <View style={styles.trialPromptActions}>
-            <Button
-              label="Start free trial"
-              variant="primary"
-              onPress={() => void openCheckout()}
-              style={styles.trialPromptBtn}
-            />
-            <Button
-              label="Continue with free plan"
-              variant="ghost"
-              onPress={() => {
-                setTrialPromptDismissed(true);
-                if (tenantId) setTrialPromptDismissedStorage(tenantId);
-              }}
-              style={styles.trialPromptBtn}
-            />
-          </View>
-        </View>
-      ) : showFreeBanner ? (
+      {showFreeBanner ? (
         <View style={styles.communityBanner}>
           <View style={styles.communityBannerRow}>
             <View style={styles.communityBannerText}>
@@ -1153,23 +1126,6 @@ export default function DashboardScreen() {
         </View>
       ) : null}
 
-      {false && ownerTrialDaysLeft !== null && ownerTrialDaysLeft > 0 ? (
-        <TouchableOpacity
-          style={styles.trialBanner}
-          onPress={() => void openCheckout()}
-          activeOpacity={0.75}
-          accessibilityRole="button"
-          accessibilityLabel="Open subscription checkout"
-        >
-          <Text style={styles.trialBannerText}>
-            {`${ownerTrialDaysLeft} day${
-              ownerTrialDaysLeft === 1 ? '' : 's'
-            } left in trial - subscribe to keep access`}
-          </Text>
-          <Text style={styles.trialBannerArrow}>→</Text>
-        </TouchableOpacity>
-      ) : null}
-
       {currentStudio?.role === 'owner' &&
       currentStudio?.status === 'active' &&
       currentStudio?.subscriptionStatus === 'past_due' ? (
@@ -1190,14 +1146,7 @@ export default function DashboardScreen() {
       {showExportReminder && hasSubscription ? (
         <TouchableOpacity
           style={styles.exportReminderRow}
-          onPress={() =>
-            navigation
-              .getParent<NativeStackNavigationProp<AppStackParamList>>()
-              ?.navigate('StudioSettings', {
-                tenantId: tenantId ?? '',
-                studioName: currentStudio?.studioName ?? '',
-              })
-          }
+          onPress={goStudioSettings}
           activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel="Open studio settings for data backup"
@@ -1326,75 +1275,6 @@ export default function DashboardScreen() {
         </View>
       ) : null}
 
-      <Divider />
-
-      {income?.current ? (
-        <>
-          <SectionLabel>REVENUE THIS MONTH</SectionLabel>
-          <View style={styles.incomeCards}>
-            <View
-              style={[styles.incomeCard, { backgroundColor: colors.clayLight }]}
-            >
-              <Text style={styles.incomeCardLabel}>Total</Text>
-              <Text style={styles.incomeCardValue}>
-                {formatCurrency(income.current.total, activeCurrency)}
-              </Text>
-            </View>
-            <View style={styles.incomeCard}>
-              <Text style={styles.incomeCardLabel}>Kiln</Text>
-              <Text style={styles.incomeCardValue}>
-                {formatCurrency(income.current.kiln, activeCurrency)}
-              </Text>
-            </View>
-            <View style={styles.incomeCard}>
-              <Text style={styles.incomeCardLabel}>Materials</Text>
-              <Text style={styles.incomeCardValue}>
-                {formatCurrency(income.current.materials, activeCurrency)}
-              </Text>
-            </View>
-            <View style={styles.incomeCard}>
-              <Text style={styles.incomeCardLabel}>Membership</Text>
-              <Text style={styles.incomeCardValue}>
-                {formatCurrency(income.current.membership, activeCurrency)}
-              </Text>
-            </View>
-            <View style={styles.incomeCard}>
-              <Text style={styles.incomeCardLabel}>Open studio</Text>
-              <Text style={styles.incomeCardValue}>
-                {formatCurrency(income.current.openStudio, activeCurrency)}
-              </Text>
-            </View>
-          </View>
-          <SectionLabel>LAST 6 MONTHS</SectionLabel>
-          <View style={styles.sparkline}>
-            {(income.history ?? []).map((h, i) => {
-              const max = Math.max(
-                ...(income.history ?? []).map((x) => x.total),
-                1
-              );
-              const heightPct = h.total / max;
-              return (
-                <View key={h.period || String(i)} style={styles.sparkCol}>
-                  <View
-                    style={[
-                      styles.sparkBar,
-                      {
-                        flex: heightPct || 0.02,
-                        backgroundColor:
-                          i === (income.history ?? []).length - 1
-                            ? colors.clay
-                            : colors.border,
-                      },
-                    ]}
-                  />
-                  <Text style={styles.sparkLabel}>{h.period.slice(5)}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
-
       <SectionLabel>Recent firings</SectionLabel>
       {!tenantId ? (
         <Text style={styles.emptyList}>-</Text>
@@ -1491,26 +1371,6 @@ export default function DashboardScreen() {
 
       <SectionLabel>QUICK ACTIONS</SectionLabel>
       <View style={actionsRowStyle}>
-        {hasSubscription ? (
-          <View style={actionQuarterStyle}>
-            <Button
-              label="Firings"
-              variant="secondary"
-              onPress={goKilnList}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
-        {hasSubscription ? (
-          <View style={actionQuarterStyle}>
-            <Button
-              label="Tasks"
-              variant="secondary"
-              onPress={goTasks}
-              style={styles.quickActionBtn}
-            />
-          </View>
-        ) : null}
         <View style={actionQuarterStyle}>
           <Button
             label="Events"
@@ -1519,17 +1379,44 @@ export default function DashboardScreen() {
             style={styles.quickActionBtn}
           />
         </View>
-        {hasSubscription &&
-        (currentStudio?.role !== 'assistant' ||
-          memberSectionVisible(
-            currentStudio?.memberDashboardVisibility,
-            'costs'
-          )) ? (
+        {hasSubscription && currentStudio?.role === 'owner' ? (
           <View style={actionQuarterStyle}>
             <Button
-              label={currentStudio?.role === 'assistant' ? 'My costs' : 'Costs'}
+              label="Revenue"
               variant="secondary"
               onPress={goCosts}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
+        {hasSubscription && canManageMembers ? (
+          <View style={actionQuarterStyle}>
+            <Button
+              label="Pricing"
+              variant="secondary"
+              onPress={goPricing}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
+        {hasSubscription && canManageMembers ? (
+          <View style={actionQuarterStyle}>
+            <Button
+              label={exportingStudio ? 'Preparing...' : 'Export'}
+              variant="secondary"
+              onPress={() => void handleStudioExport()}
+              loading={exportingStudio}
+              disabled={typeof window === 'undefined'}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
+        {!hasSubscription && canManageMembers ? (
+          <View style={actionQuarterStyle}>
+            <Button
+              label="Members"
+              variant="secondary"
+              onPress={goMembers}
               style={styles.quickActionBtn}
             />
           </View>
@@ -1544,25 +1431,22 @@ export default function DashboardScreen() {
             />
           </View>
         ) : null}
+        {hasSubscription &&
+        currentStudio?.role === 'assistant' &&
+        memberSectionVisible(
+          currentStudio?.memberDashboardVisibility,
+          'costs'
+        ) ? (
+          <View style={actionQuarterStyle}>
+            <Button
+              label="My bill"
+              variant="secondary"
+              onPress={goCosts}
+              style={styles.quickActionBtn}
+            />
+          </View>
+        ) : null}
       </View>
-      {false ? (
-        <View style={styles.trialCtaWrap}>
-          <TouchableOpacity
-            style={styles.trialCtaBtn}
-            onPress={() => void openCheckout()}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Try studio manager, free for 14 days"
-          >
-            <Text style={styles.trialCtaLabel}>
-              Try studio manager - free 14 days
-            </Text>
-            <Text style={styles.trialCtaSub}>
-              Kiln costs - billing - tasks - materials - no credit card needed
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
       {currentStudio?.role === 'assistant' &&
       hasSubscription &&
       memberSectionVisible(
@@ -1570,80 +1454,36 @@ export default function DashboardScreen() {
         'costs'
       ) ? (
         <Text style={styles.assistantCostsHint}>
-          Your costs show the previous month only - they update at month end,
-          the same as for studio members.
+          Your bill shows the previous month only — it updates at month end, the
+          same as for studio members.
         </Text>
       ) : null}
 
-      {canManageMembers ? (
+      {canManageMembers && hasSubscription ? (
         <>
           <SectionLabel>STUDIO</SectionLabel>
           <View style={actionsRowStyle}>
-            {hasSubscription ? (
-              <View style={actionQuarterStyle}>
-                <Button
-                  label="Catalog"
-                  variant="secondary"
-                  onPress={goCatalog}
-                  style={styles.quickActionBtn}
-                />
-              </View>
-            ) : null}
-            {hasSubscription ? (
-              <View style={actionQuarterStyle}>
-                <Button
-                  label="Attendance"
-                  variant="secondary"
-                  onPress={goAttendance}
-                  style={styles.quickActionBtn}
-                />
-              </View>
-            ) : null}
-            {hasSubscription ? (
-              <View style={actionQuarterStyle}>
-                <Button
-                  label="Assistants"
-                  variant="secondary"
-                  onPress={goAssistants}
-                  style={styles.quickActionBtn}
-                />
-              </View>
-            ) : null}
-            {hasSubscription ? (
-              <View style={actionQuarterStyle}>
-                <Button
-                  label="Pricing"
-                  variant="secondary"
-                  onPress={goPricing}
-                  style={styles.quickActionBtn}
-                />
-              </View>
-            ) : null}
             <View style={actionQuarterStyle}>
               <Button
-                label="Members"
+                label="Catalog"
                 variant="secondary"
-                onPress={goMembers}
+                onPress={goCatalog}
                 style={styles.quickActionBtn}
               />
             </View>
             <View style={actionQuarterStyle}>
               <Button
-                label="Studio settings"
+                label="Attendance"
                 variant="secondary"
-                onPress={goStudioSettings}
+                onPress={goAttendance}
                 style={styles.quickActionBtn}
               />
             </View>
             <View style={actionQuarterStyle}>
               <Button
-                label={
-                  exportingStudio ? 'Preparing...' : 'Export studio data'
-                }
+                label="Assistants"
                 variant="secondary"
-                onPress={() => void handleStudioExport()}
-                loading={exportingStudio}
-                disabled={typeof window === 'undefined'}
+                onPress={goAssistants}
                 style={styles.quickActionBtn}
               />
             </View>
@@ -1653,6 +1493,117 @@ export default function DashboardScreen() {
 
       <View style={{ height: spacing[10] }} />
       </ScrollView>
+      ) : studioSection === 'firings' && tenantId ? (
+        <View style={styles.studioPanel}>
+          <KilnListScreen
+            route={
+              {
+                key: 'emb-kiln',
+                name: 'KilnList',
+                params: { tenantId },
+              } as RouteProp<AppStackParamList, 'KilnList'>
+            }
+            embedded
+            onBackToStudio={() => setStudioSection('home')}
+          />
+        </View>
+      ) : studioSection === 'tasks' && tenantId ? (
+        <View style={styles.studioPanel}>
+          <TaskListScreen
+            route={
+              {
+                key: 'emb-task',
+                name: 'TaskList',
+                params: { tenantId },
+              } as RouteProp<AppStackParamList, 'TaskList'>
+            }
+            embedded
+            onBackToStudio={() => setStudioSection('home')}
+          />
+        </View>
+      ) : studioSection === 'members' && tenantId ? (
+        <View style={styles.studioPanel}>
+          <MembersScreen
+            route={
+              {
+                key: 'emb-mem',
+                name: 'Members',
+                params: { tenantId },
+              } as RouteProp<AppStackParamList, 'Members'>
+            }
+            embedded
+            onBackToStudio={() => setStudioSection('home')}
+          />
+        </View>
+      ) : studioSection === 'revenue' && tenantId ? (
+        <View style={styles.studioPanel}>
+          <CostListScreen
+            route={
+              {
+                key: 'emb-rev',
+                name: 'CostList',
+                params: { tenantId },
+              } as RouteProp<AppStackParamList, 'CostList'>
+            }
+            embedded
+            onBackToStudio={() => setStudioSection('home')}
+          />
+        </View>
+      ) : studioSection === 'myBill' && tenantId && user?.id ? (
+        <View style={styles.studioPanel}>
+          <CostDetailScreen
+            route={
+              {
+                key: 'emb-bill',
+                name: 'CostDetail',
+                params: {
+                  tenantId,
+                  userId: user.id,
+                  memberName: user?.name?.trim() || user?.email || 'You',
+                  memberEmail: user?.email,
+                  year: (() => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - 1);
+                    return d.getFullYear();
+                  })(),
+                  month: (() => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - 1);
+                    return d.getMonth() + 1;
+                  })(),
+                },
+              } as RouteProp<AppStackParamList, 'CostDetail'>
+            }
+            embedded
+            onBackToStudio={() => setStudioSection('home')}
+          />
+        </View>
+      ) : studioSection === 'settings' && tenantId ? (
+        <View style={styles.studioPanel}>
+          <StudioSettingsScreen
+            route={
+              {
+                key: 'emb-set',
+                name: 'StudioSettings',
+                params: {
+                  tenantId,
+                  studioName:
+                    currentStudio?.studioName?.trim() ||
+                    currentStudio?.studioSlug ||
+                    'Studio',
+                },
+              } as RouteProp<AppStackParamList, 'StudioSettings'>
+            }
+            embedded
+            onBackToStudio={() => setStudioSection('home')}
+          />
+        </View>
+      ) : (
+        <View style={styles.studioPanel} />
+      )}
+      </View>
+      </View>
+      </View>
 
       <Modal
         visible={showSwitcher}
@@ -1747,6 +1698,10 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
+  studioShell: { flex: 1, backgroundColor: colors.cream },
+  studioLayoutRow: { flex: 1, flexDirection: 'row', minHeight: 0 },
+  studioMainCol: { flex: 1, minWidth: 0, minHeight: 0 },
+  studioPanel: { flex: 1, minHeight: 0 },
   root: { flex: 1, backgroundColor: colors.surface },
   content: { padding: spacing[5] },
   emptyStudiosScroll: {
@@ -2223,55 +2178,6 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 0,
     width: 'auto',
-  },
-  incomeCards: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-    marginBottom: spacing[2],
-  },
-  incomeCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing[3],
-    gap: 4,
-  },
-  incomeCardLabel: {
-    fontFamily: typography.mono,
-    fontSize: fontSize.xs,
-    color: colors.inkLight,
-    textTransform: 'uppercase',
-  },
-  incomeCardValue: {
-    fontFamily: typography.bodySemiBold,
-    fontSize: fontSize.lg,
-    color: colors.ink,
-  },
-  sparkline: {
-    flexDirection: 'row',
-    height: 80,
-    gap: spacing[1],
-    alignItems: 'flex-end',
-    marginBottom: spacing[3],
-  },
-  sparkCol: {
-    flex: 1,
-    alignItems: 'center',
-    height: '100%',
-    justifyContent: 'flex-end',
-    gap: 4,
-  },
-  sparkBar: {
-    width: '100%',
-    borderRadius: 3,
-    minHeight: 3,
-  },
-  sparkLabel: {
-    fontFamily: typography.mono,
-    fontSize: 9,
-    color: colors.inkLight,
   },
   statCardTap: {
     width: '100%',

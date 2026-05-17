@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,10 @@ import type { RouteProp } from '@react-navigation/native';
 import DateTimeField from '../../components/DateTimeField';
 import TaskCalendar from '../../components/TaskCalendar';
 import { Avatar, Badge, Button, Input } from '../../components/ui';
+import {
+  StudioSubHeader,
+  studioHeaderPillStyles,
+} from '../../components/studio/StudioSubHeader';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import {
@@ -172,9 +176,18 @@ function canEditAssignee(
   return !!(userId && cb && cb === userId);
 }
 
-export default function TaskListScreen({ route }: { route: Route }) {
+export default function TaskListScreen({
+  route,
+  embedded,
+  onBackToStudio,
+}: {
+  route: Route;
+  embedded?: boolean;
+  onBackToStudio?: () => void;
+}) {
   const paramTenantId = route.params?.tenantId;
   const navigation = useNavigation<Nav>();
+  const headerPill = studioHeaderPillStyles();
   const { user, studios, activeTenantId, suspendedStudios } = useAuth();
 
   const rawParam = paramTenantId ? String(paramTenantId).trim() : '';
@@ -266,26 +279,6 @@ export default function TaskListScreen({ route }: { route: Route }) {
     setCreateError('');
     setShowForm(false);
   }
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () =>
-        isStaff ? (
-          <TouchableOpacity
-            onPress={() => {
-              setShowForm((v) => !v);
-              setCreateError('');
-            }}
-            hitSlop={12}
-            style={styles.headerNewBtn}
-            accessibilityRole="button"
-            accessibilityLabel="New task"
-          >
-            <Text style={styles.headerNewText}>+ New</Text>
-          </TouchableOpacity>
-        ) : null,
-    });
-  }, [navigation, isStaff]);
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -473,7 +466,29 @@ export default function TaskListScreen({ route }: { route: Route }) {
         />
       }
     >
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      <StudioSubHeader
+        title="Tasks"
+        onBack={
+          embedded && onBackToStudio
+            ? onBackToStudio
+            : () => navigation.goBack()
+        }
+        right={
+          isStaff ? (
+            <TouchableOpacity
+              onPress={() => {
+                setShowForm((v) => !v);
+                setCreateError('');
+              }}
+              style={headerPill.pill}
+              accessibilityRole="button"
+              accessibilityLabel="New task"
+            >
+              <Text style={headerPill.pillText}>+ New</Text>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       <View style={styles.pillRow}>
         <Text style={styles.pillRowText}>
@@ -482,7 +497,6 @@ export default function TaskListScreen({ route }: { route: Route }) {
         </Text>
       </View>
 
-      <Text style={styles.sectionLabel}>Filters</Text>
       <View style={styles.tabsRow}>
         {tabOrder.map((k) => (
           <TouchableOpacity

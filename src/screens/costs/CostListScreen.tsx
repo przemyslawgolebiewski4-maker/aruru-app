@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
 import { Avatar, Badge, Button, Input } from '../../components/ui';
+import { StudioSubHeader } from '../../components/studio/StudioSubHeader';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch, formatCurrency, postStudioMiscCharge } from '../../services/api';
@@ -176,7 +177,15 @@ function bumpMonthForward(year: number, month: number): { y: number; m: number }
   return { y: year, m: month + 1 };
 }
 
-export default function CostListScreen({ route }: { route: Route }) {
+export default function CostListScreen({
+  route,
+  embedded,
+  onBackToStudio,
+}: {
+  route: Route;
+  embedded?: boolean;
+  onBackToStudio?: () => void;
+}) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
   const { studios } = useAuth();
@@ -208,13 +217,14 @@ export default function CostListScreen({ route }: { route: Route }) {
   const isOwner = currentStudio?.role === 'owner';
 
   useLayoutEffect(() => {
+    if (embedded) return;
     if (currentStudio?.role !== 'owner') {
       if (typeof window !== 'undefined') {
         window.alert('Only studio owners can view cost summaries.');
       }
       navigation.goBack();
     }
-  }, [currentStudio?.role, navigation]);
+  }, [currentStudio?.role, navigation, embedded]);
 
   const load = useCallback(async () => {
     if (currentStudio?.role !== 'owner') return;
@@ -258,6 +268,10 @@ export default function CostListScreen({ route }: { route: Route }) {
       void load();
     }, [load])
   );
+
+  useEffect(() => {
+    if (embedded) void load();
+  }, [embedded, load]);
 
   function goPrevMonth() {
     if (selectedMonth <= 1) {
@@ -328,6 +342,15 @@ export default function CostListScreen({ route }: { route: Route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      <StudioSubHeader
+        title="Revenue"
+        onBack={
+          embedded && onBackToStudio
+            ? onBackToStudio
+            : () => navigation.goBack()
+        }
+      />
+
       <View style={styles.periodBox}>
         <View style={styles.periodTop}>
           <Text style={styles.periodLabel}>PERIOD</Text>

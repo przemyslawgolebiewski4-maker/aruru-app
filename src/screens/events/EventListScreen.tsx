@@ -1,7 +1,6 @@
 import React, {
   createElement,
   useCallback,
-  useLayoutEffect,
   useMemo,
   useState,
 } from 'react';
@@ -21,6 +20,10 @@ import type { RouteProp } from '@react-navigation/native';
 import DateTimeField, { toLocalISOString } from '../../components/DateTimeField';
 import EventCalendar from '../../components/EventCalendar';
 import { Button, Input } from '../../components/ui';
+import {
+  StudioSubHeader,
+  studioHeaderPillStyles,
+} from '../../components/studio/StudioSubHeader';
 import { colors, typography, fontSize, spacing, radius } from '../../theme/tokens';
 import type { AppStackParamList } from '../../navigation/types';
 import { apiFetch } from '../../services/api';
@@ -169,6 +172,7 @@ function defaultEndsAt(): Date {
 export default function EventListScreen({ route }: { route: Route }) {
   const { tenantId } = route.params;
   const navigation = useNavigation<Nav>();
+  const newPill = studioHeaderPillStyles();
   const { studios } = useAuth();
 
   const role = studios.find((s) => s.tenantId === tenantId)?.role;
@@ -216,26 +220,6 @@ export default function EventListScreen({ route }: { route: Route }) {
       void load();
     }, [load])
   );
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerRight: () =>
-        isStaff ? (
-          <TouchableOpacity
-            onPress={() => {
-              setShowForm((v) => !v);
-              setCreateError('');
-            }}
-            hitSlop={12}
-            style={styles.headerNewBtn}
-            accessibilityRole="button"
-            accessibilityLabel="New event"
-          >
-            <Text style={styles.headerNewText}>+ New</Text>
-          </TouchableOpacity>
-        ) : null,
-    });
-  }, [navigation, isStaff]);
 
   const stats = useMemo(() => {
     const nowMs = Date.now();
@@ -422,6 +406,26 @@ export default function EventListScreen({ route }: { route: Route }) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      <StudioSubHeader
+        title="Events"
+        onBack={() => navigation.goBack()}
+        right={
+          isStaff ? (
+            <TouchableOpacity
+              onPress={() => {
+                setShowForm((v) => !v);
+                setCreateError('');
+              }}
+              style={newPill.pill}
+              accessibilityRole="button"
+              accessibilityLabel="New event"
+            >
+              <Text style={newPill.pillText}>+ New</Text>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
+
       <View style={styles.pillRow}>
         <Text style={styles.pillText}>
           {stats.upcoming} upcoming · {stats.thisMonth} this month
