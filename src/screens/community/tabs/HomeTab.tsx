@@ -149,7 +149,8 @@ export default function HomeTab({ onSelectTab }: Props) {
   const PAGE_SIZE = COLS * ROWS;
   const [galleryPage, setGalleryPage] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const SIDEBAR = Platform.OS === 'web' ? 140 : 72;
+  /** Match CommunityScreen narrow icon rail (web + native). */
+  const SIDEBAR = 58;
   const CONTENT_PAD = spacing[4] * 2;
   const ARROW_W = 28 * 2 + spacing[2] * 2;
   const GAP = 2;

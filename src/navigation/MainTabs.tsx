@@ -33,7 +33,7 @@ const tabScreenOptions = {
     shadowOpacity: 0,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 0,
-    height: 40,
+    height: Platform.OS === 'web' ? 38 : 34,
   },
   tabBarIndicatorStyle: {
     backgroundColor: colors.clay,
@@ -41,8 +41,8 @@ const tabScreenOptions = {
   },
   tabBarLabelStyle: {
     fontFamily: typography.mono,
-    fontSize: 10,
-    letterSpacing: 0.4,
+    fontSize: Platform.OS === 'web' ? 9 : 8,
+    letterSpacing: Platform.OS === 'web' ? 0.07 : 0.05,
     textTransform: 'uppercase' as const,
     marginHorizontal: 0,
   },
@@ -50,10 +50,10 @@ const tabScreenOptions = {
   tabBarInactiveTintColor: colors.inkLight,
   tabBarScrollEnabled: true,
   tabBarItemStyle: {
-    paddingHorizontal: 12,
+    paddingHorizontal: Platform.OS === 'web' ? 10 : 6,
     paddingVertical: 0,
     minWidth: 0,
-    height: 40,
+    height: Platform.OS === 'web' ? 38 : 34,
   },
   tabBarShowLabel: true,
   tabBarPressColor: colors.clayLight,
@@ -71,7 +71,12 @@ function TopBarActions() {
         accessibilityRole="button"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Svg
+          width={Platform.OS === 'web' ? 18 : 16}
+          height={Platform.OS === 'web' ? 18 : 16}
+          viewBox="0 0 24 24"
+          fill="none"
+        >
           <Circle cx={12} cy={12} r={0.01} fill="none" />
           <Path
             stroke={colors.inkMid}
@@ -94,7 +99,12 @@ function TopBarActions() {
         accessibilityRole="button"
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Svg
+          width={Platform.OS === 'web' ? 18 : 16}
+          height={Platform.OS === 'web' ? 18 : 16}
+          viewBox="0 0 24 24"
+          fill="none"
+        >
           <Path
             stroke={colors.inkMid}
             strokeWidth={1.5}
@@ -136,7 +146,11 @@ export function MainTabNavigator() {
         <Tab.Screen
           name="Sponsors"
           component={SponsorsTab}
-          options={{ title: 'Sponsors' }}
+          options={{
+            title: 'Sponsors',
+            tabBarLabel:
+              Platform.OS === 'web' ? 'Sponsors' : 'Spons',
+          }}
         />
         <Tab.Screen
           name="Profile"
@@ -173,7 +187,11 @@ export function MainTabNavigator() {
       <Tab.Screen
         name="Studio"
         component={DashboardScreen}
-        options={{ title: 'Studio' }}
+        options={{
+          title: 'Studio',
+          tabBarLabel:
+            Platform.OS === 'web' ? 'Studio' : 'STU',
+        }}
       />
       {showAdminTab ? (
         <Tab.Screen
@@ -181,13 +199,16 @@ export function MainTabNavigator() {
           component={AdminScreen}
           options={{
             title: 'Admin',
-            tabBarLabel: 'Admin',
+            tabBarLabel:
+              Platform.OS === 'web' ? 'Admin' : 'ADM',
           }}
         />
       ) : null}
     </Tab.Navigator>
   );
 }
+
+const mainNavHeight = Platform.OS === 'web' ? 38 : 34;
 
 const tbStyles = RNStyleSheet.create({
   navRow: {
@@ -196,23 +217,23 @@ const tbStyles = RNStyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
-    height: 40,
+    height: mainNavHeight,
   },
   tabBarWrap: {
     flex: 1,
-    height: 40,
+    height: mainNavHeight,
     overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingRight: spacing[2],
-    gap: 2,
-    height: Platform.OS === 'web' ? 40 : 40,
+    gap: Platform.OS === 'web' ? 2 : 1,
+    height: mainNavHeight,
   },
   btn: {
-    width: 32,
-    height: 32,
+    width: Platform.OS === 'web' ? 28 : 26,
+    height: Platform.OS === 'web' ? 28 : 26,
     alignItems: 'center',
     justifyContent: 'center',
   },

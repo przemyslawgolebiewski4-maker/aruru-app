@@ -1,13 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  ScrollView,
-} from 'react-native';
-import Svg, { Path, Circle, Rect } from 'react-native-svg';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import Svg, { Path, Rect } from 'react-native-svg';
 import { colors, typography, spacing } from '../../theme/tokens';
 import { useAuth } from '../../hooks/useAuth';
 import HomeTab from './tabs/HomeTab';
@@ -155,7 +148,7 @@ const TABS_CONFIG: TabConfig[] = [
   {
     key: 'sponsors',
     label: 'Sponsors',
-    shortLabel: 'Spons.',
+    shortLabel: 'Spons',
     Icon: IconSponsors,
   },
 ];
@@ -186,35 +179,28 @@ export default function CommunityScreen() {
     }
   }, [TABS, activeTab]);
 
-  const isWeb = Platform.OS === 'web';
-
   return (
     <View style={styles.root}>
-      <View style={isWeb ? styles.webLayout : styles.mobileLayout}>
-        <View style={isWeb ? styles.webSidebar : styles.mobileSidebar}>
+      <View style={styles.layout}>
+        <View style={styles.sidebar}>
           {TABS.map((t) => {
             const active = activeTab === t.key;
             const TabIcon = t.Icon;
             return (
               <TouchableOpacity
                 key={t.key}
-                style={[
-                  isWeb ? styles.webSidebarItem : styles.mobileSidebarItem,
-                  active && styles.sidebarItemActive,
-                ]}
+                style={[styles.sidebarItem, active && styles.sidebarItemActive]}
                 onPress={() => setActiveTab(t.key)}
                 accessibilityRole="tab"
+                accessibilityLabel={`${t.label} tab`}
                 accessibilityState={{ selected: active }}
               >
                 <TabIcon active={active} />
                 <Text
-                  style={[
-                    isWeb ? styles.webSidebarLabel : styles.mobileSidebarLabel,
-                    active && styles.sidebarLabelActive,
-                  ]}
-                  numberOfLines={1}
+                  style={[styles.sidebarLabel, active && styles.sidebarLabelActive]}
+                  numberOfLines={2}
                 >
-                  {isWeb ? t.label : t.shortLabel}
+                  {t.shortLabel}
                 </Text>
               </TouchableOpacity>
             );
@@ -238,59 +224,40 @@ export default function CommunityScreen() {
   );
 }
 
+/** Keep in sync with `styles.sidebar.width` (HomeTab gallery layout). */
+const COMMUNITY_SIDEBAR_WIDTH = 58;
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.cream },
 
-  webLayout: { flex: 1, flexDirection: 'row' },
-  mobileLayout: { flex: 1, flexDirection: 'row' },
+  layout: { flex: 1, flexDirection: 'row' },
 
-  webSidebar: {
-    width: 140,
+  sidebar: {
+    width: COMMUNITY_SIDEBAR_WIDTH,
+    flexShrink: 0,
     backgroundColor: colors.surface,
     borderRightWidth: 0.5,
     borderRightColor: colors.border,
     paddingTop: spacing[1],
   },
-  webSidebarItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: spacing[3],
-    borderLeftWidth: 2,
-    borderLeftColor: 'transparent',
-  },
-  webSidebarLabel: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    color: colors.inkLight,
-  },
-
-  mobileSidebar: {
-    width: 72,
-    backgroundColor: colors.surface,
-    borderRightWidth: 0.5,
-    borderRightColor: colors.border,
-    paddingTop: spacing[1],
-  },
-  mobileSidebarItem: {
+  sidebarItem: {
     flexDirection: 'column',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 3,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 3,
     borderLeftWidth: 2,
     borderLeftColor: 'transparent',
   },
-  mobileSidebarLabel: {
+  sidebarLabel: {
     fontFamily: typography.mono,
-    fontSize: 7,
+    fontSize: Platform.OS === 'web' ? 9 : 7,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    letterSpacing: Platform.OS === 'web' ? 0.06 : 0.04,
     color: colors.inkLight,
     textAlign: 'center',
+    maxWidth: COMMUNITY_SIDEBAR_WIDTH - 4,
   },
 
   sidebarItemActive: {
