@@ -1,6 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Image,
   Platform,
@@ -132,15 +133,83 @@ export default function HomeTab({ onSelectTab }: Props) {
   const [studios, setStudios] = useState<HomeStudio[]>([]);
   const [sponsors, setSponsors] = useState<HomeSponsor[]>([]);
   const [loading, setLoading] = useState(true);
-  const SIDEBAR_WIDTH = Platform.OS === 'web' ? 160 : 0;
-  const GALLERY_PADDING = spacing[1] * 2;
-  const GAP = 2;
   const COLS = 3;
-  const photoSize = Math.floor(
-    (width - SIDEBAR_WIDTH - GALLERY_PADDING - GAP * (COLS - 1)) / COLS
+  const ROWS = 2;
+  const PAGE_SIZE = COLS * ROWS;
+  const [galleryPage, setGalleryPage] = useState(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const SIDEBAR = Platform.OS === 'web' ? 160 : 0;
+  const ARROW_SPACE = 64;
+  const GALLERY_PAD = spacing[4] * 2;
+  const GAP = 2;
+  const cellSize = Math.floor(
+    (width - SIDEBAR - ARROW_SPACE - GALLERY_PAD - GAP * (COLS - 1)) / COLS
   );
-  const clampedSize =
-    Platform.OS === 'web' ? Math.min(photoSize, 140) : photoSize;
+  const clampedCell =
+    Platform.OS === 'web'
+      ? Math.min(Math.max(cellSize, 72), 120)
+      : Math.max(cellSize, 72);
+  const totalPages = Math.ceil(photos.length / PAGE_SIZE);
+  const pagePhotos = photos.slice(
+    galleryPage * PAGE_SIZE,
+    (galleryPage + 1) * PAGE_SIZE
+  );
+  const gridPhotos: Array<GalleryPhoto | null> = [
+    ...pagePhotos,
+    ...Array(Math.max(0, PAGE_SIZE - pagePhotos.length)).fill(null),
+  ];
+  const slideStyle = {
+    transform: [
+      {
+        translateX: slideAnim.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [-40, 0, 40],
+        }),
+      },
+    ],
+    opacity: slideAnim.interpolate({
+      inputRange: [-1, 0, 1],
+      outputRange: [0, 1, 0],
+    }),
+  };
+
+  useEffect(() => {
+    setGalleryPage(0);
+  }, [photos.length]);
+
+  function goGalleryNext() {
+    if (galleryPage >= totalPages - 1) return;
+    Animated.timing(slideAnim, {
+      toValue: -1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      slideAnim.setValue(1);
+      setGalleryPage((p) => p + 1);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  }
+
+  function goGalleryPrev() {
+    if (galleryPage <= 0) return;
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      slideAnim.setValue(-1);
+      setGalleryPage((p) => p - 1);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -298,35 +367,77 @@ export default function HomeTab({ onSelectTab }: Props) {
             <Text style={styles.sectionTitle}>Gallery</Text>
             <SeeAllButton onPress={() => onSelectTab('artists')} />
           </View>
-          <FlatList
-            data={photos}
-            keyExtractor={(item, index) =>
-              `${item.userId}_${item.photoUrl}_${index}`
-            }
-            numColumns={3}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.galleryCell,
-                  { width: clampedSize, height: clampedSize },
-                ]}
-                onPress={() =>
-                  stackNav.navigate('ArtistProfile', { userId: item.userId })
-                }
-                activeOpacity={0.82}
-              >
-                {item.photoUrl ? (
-                  <Image
-                    source={{ uri: item.photoUrl }}
-                    style={styles.galleryImage}
-                  />
+          <View style={styles.galleryOuter}>
+            <TouchableOpacity
+              onPress={goGalleryPrev}
+              style={[
+                styles.galleryArrow,
+                styles.galleryArrowLeft,
+                galleryPage === 0 && styles.galleryArrowDisabled,
+              ]}
+              disabled={galleryPage === 0}
+              accessibilityLabel="Previous photos"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <View style={styles.galleryArrowCircle}>
+                <Text style={styles.galleryArrowText}>‹</Text>
+              </View>
+            </TouchableOpacity>
+
+            <Animated.View style={[styles.galleryGrid, slideStyle]}>
+              {gridPhotos.map((item, index) =>
+                item ? (
+                  <TouchableOpacity
+                    key={`${item.userId}_${item.photoUrl}_${index}`}
+                    style={[
+                      styles.galleryCell,
+                      { width: clampedCell, height: clampedCell },
+                    ]}
+                    onPress={() =>
+                      stackNav.navigate('ArtistProfile', { userId: item.userId })
+                    }
+                    activeOpacity={0.85}
+                  >
+                    <Image
+                      source={{ uri: item.photoUrl }}
+                      style={styles.galleryCellImage}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
                 ) : (
-                  <View style={styles.galleryFallback} />
-                )}
-              </TouchableOpacity>
-            )}
-          />
+                  <View
+                    key={`empty_${index}`}
+                    style={[
+                      styles.galleryCell,
+                      styles.galleryCellEmpty,
+                      { width: clampedCell, height: clampedCell },
+                    ]}
+                  />
+                )
+              )}
+            </Animated.View>
+
+            <TouchableOpacity
+              onPress={goGalleryNext}
+              style={[
+                styles.galleryArrow,
+                styles.galleryArrowRight,
+                galleryPage >= totalPages - 1 && styles.galleryArrowDisabled,
+              ]}
+              disabled={galleryPage >= totalPages - 1}
+              accessibilityLabel="Next photos"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <View style={styles.galleryArrowCircle}>
+                <Text style={styles.galleryArrowText}>›</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+          {totalPages > 1 && (
+            <Text style={styles.galleryCounter}>
+              {galleryPage + 1} / {totalPages}
+            </Text>
+          )}
         </>
       ) : null}
 
@@ -487,12 +598,62 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
   },
-  galleryCell: {
-    margin: 1,
-    backgroundColor: colors.clayLight,
+  galleryOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing[4],
+    marginBottom: spacing[3],
   },
-  galleryImage: { flex: 1 },
-  galleryFallback: { flex: 1, backgroundColor: colors.clayLight },
+  galleryGrid: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 2,
+  },
+  galleryCell: {
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  galleryCellImage: {
+    width: '100%',
+    height: '100%',
+  },
+  galleryCellEmpty: {
+    backgroundColor: colors.clayLight,
+    opacity: 0.3,
+  },
+  galleryArrow: {
+    width: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  galleryArrowLeft: { marginRight: 4 },
+  galleryArrowRight: { marginLeft: 4 },
+  galleryArrowDisabled: { opacity: 0.2 },
+  galleryArrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  galleryArrowText: {
+    fontSize: 20,
+    color: colors.clay,
+    lineHeight: 24,
+    fontFamily: typography.display,
+  },
+  galleryCounter: {
+    fontFamily: typography.mono,
+    fontSize: 10,
+    color: colors.inkLight,
+    textAlign: 'center',
+    marginBottom: spacing[3],
+  },
   emptySection: {
     padding: spacing[4],
     alignItems: 'center',
