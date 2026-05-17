@@ -16,6 +16,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../../hooks/useAuth';
 import { apiFetch } from '../../../services/api';
 import { AvatarImage } from '../../../components/AvatarImage';
+import { Button } from '../../../components/ui';
 import {
   colors,
   fontSize,
@@ -98,15 +99,12 @@ function SeeAllButton({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity
+    <Button
+      label={label}
+      variant="secondary"
       onPress={onPress}
-      style={styles.seeAllBtn}
-      accessibilityRole="button"
-      activeOpacity={0.75}
-    >
-      <Text style={styles.seeAllText}>{label}</Text>
-      <Text style={styles.seeAllArrow}>→</Text>
-    </TouchableOpacity>
+      style={styles.compactSectionBtn}
+    />
   );
 }
 
@@ -484,24 +482,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  seeAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    borderWidth: 0.5,
-    borderColor: colors.clay,
+  compactSectionBtn: {
+    minHeight: 32,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
-  seeAllText: {
-    fontFamily: typography.mono,
-    fontSize: 10,
-    color: colors.clay,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  seeAllArrow: { fontSize: 11, color: colors.clay },
   galleryCell: {
     margin: 1,
     backgroundColor: colors.clayLight,
