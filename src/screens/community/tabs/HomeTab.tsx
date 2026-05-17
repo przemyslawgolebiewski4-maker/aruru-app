@@ -26,12 +26,23 @@ import {
   typography,
 } from '../../../theme/tokens';
 import type { AppStackParamList } from '../../../navigation/types';
+import Svg, { Path } from 'react-native-svg';
 
 type GalleryPhoto = {
   userId: string;
   userName: string;
   photoUrl: string;
   studioName?: string;
+};
+
+type ApiArtist = {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  avatar_url?: string;
+  portfolioUrls?: string[];
+  portfolio_urls?: string[];
+  studios?: { studioName?: string }[];
 };
 
 type HomeEvent = {
@@ -120,17 +131,17 @@ function EmptySection({ onPress }: { onPress: () => void }) {
 
 export default function HomeTab({ onSelectTab }: Props) {
   const { width } = useWindowDimensions();
-  const { studios: authStudios } = useAuth();
+  const { studios } = useAuth();
   const navigation = useNavigation<StackNav>();
   const stackNav = navigation.getParent<StackNav>() ?? navigation;
   const tenantId =
-    authStudios.find((s) => s.status === 'active')?.tenantId ??
-    authStudios[0]?.tenantId ??
+    studios.find((s) => s.status === 'active')?.tenantId ??
+    studios[0]?.tenantId ??
     '';
 
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [events, setEvents] = useState<HomeEvent[]>([]);
-  const [studios, setStudios] = useState<HomeStudio[]>([]);
+  const [homeStudios, setHomeStudios] = useState<HomeStudio[]>([]);
   const [sponsors, setSponsors] = useState<HomeSponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const COLS = 3;
@@ -138,32 +149,31 @@ export default function HomeTab({ onSelectTab }: Props) {
   const PAGE_SIZE = COLS * ROWS;
   const [galleryPage, setGalleryPage] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const SIDEBAR = Platform.OS === 'web' ? 160 : 0;
-  const ARROW_SPACE = 64;
-  const GALLERY_PAD = spacing[4] * 2;
+  const SIDEBAR = Platform.OS === 'web' ? 140 : 72;
+  const CONTENT_PAD = spacing[4] * 2;
+  const ARROW_W = 28 * 2 + spacing[2] * 2;
   const GAP = 2;
-  const cellSize = Math.floor(
-    (width - SIDEBAR - ARROW_SPACE - GALLERY_PAD - GAP * (COLS - 1)) / COLS
+  const rawCell = Math.floor(
+    (width - SIDEBAR - CONTENT_PAD - ARROW_W - GAP * (COLS - 1)) / COLS
   );
-  const clampedCell =
-    Platform.OS === 'web'
-      ? Math.min(Math.max(cellSize, 72), 120)
-      : Math.max(cellSize, 72);
-  const totalPages = Math.ceil(photos.length / PAGE_SIZE);
+  const cellSize = Platform.OS === 'web'
+    ? Math.min(rawCell, 120)
+    : Math.min(rawCell, 160);
+  const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
   const pagePhotos = photos.slice(
     galleryPage * PAGE_SIZE,
     (galleryPage + 1) * PAGE_SIZE
   );
-  const gridPhotos: Array<GalleryPhoto | null> = [
+  const gridPhotos = [
     ...pagePhotos,
     ...Array(Math.max(0, PAGE_SIZE - pagePhotos.length)).fill(null),
-  ];
+  ] as (GalleryPhoto | null)[];
   const slideStyle = {
     transform: [
       {
         translateX: slideAnim.interpolate({
           inputRange: [-1, 0, 1],
-          outputRange: [-40, 0, 40],
+          outputRange: [-30, 0, 30],
         }),
       },
     ],
@@ -177,38 +187,29 @@ export default function HomeTab({ onSelectTab }: Props) {
     setGalleryPage(0);
   }, [photos.length]);
 
-  function goGalleryNext() {
-    if (galleryPage >= totalPages - 1) return;
+  function animateGallery(direction: 1 | -1, nextPage: number) {
     Animated.timing(slideAnim, {
-      toValue: -1,
-      duration: 200,
+      toValue: direction,
+      duration: 180,
       useNativeDriver: true,
     }).start(() => {
-      slideAnim.setValue(1);
-      setGalleryPage((p) => p + 1);
+      slideAnim.setValue(-direction);
+      setGalleryPage(nextPage);
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 200,
+        duration: 180,
         useNativeDriver: true,
       }).start();
     });
   }
 
-  function goGalleryPrev() {
-    if (galleryPage <= 0) return;
-    Animated.timing(slideAnim, {
-      toValue: 1,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      slideAnim.setValue(-1);
-      setGalleryPage((p) => p - 1);
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
+  function goNext() {
+    if (galleryPage < totalPages - 1)
+      animateGallery(1, galleryPage + 1);
+  }
+
+  function goPrev() {
+    if (galleryPage > 0) animateGallery(-1, galleryPage - 1);
   }
 
   useFocusEffect(
@@ -219,8 +220,8 @@ export default function HomeTab({ onSelectTab }: Props) {
         setLoading(true);
         const [artistsRes, eventsRes, studiosRes, sponsorsRes] =
           await Promise.allSettled([
-            apiFetch<{ artists?: unknown[] }>(
-              '/community/artists?limit=18',
+            apiFetch<{ artists?: ApiArtist[] }>(
+              '/community/artists?limit=50',
               {},
               tenantId
             ),
@@ -240,31 +241,22 @@ export default function HomeTab({ onSelectTab }: Props) {
         if (!active) return;
 
         if (artistsRes.status === 'fulfilled') {
-          const nextPhotos: GalleryPhoto[] = [];
-          for (const artist of artistsRes.value.artists ?? []) {
-            const a = asRecord(artist);
-            const rawUrls =
+          const res = artistsRes.value;
+          const rawArtists: ApiArtist[] = res.artists ?? [];
+          const allPhotos: GalleryPhoto[] = rawArtists.flatMap((a) => {
+            const urls: string[] = (
               a.portfolioUrls ??
               a.portfolio_urls ??
-              a.portfolioPhotos ??
-              a.portfolio_photos;
-            const portfolioUrls = Array.isArray(rawUrls) ? rawUrls : [];
-            const rawStudios = Array.isArray(a.studios) ? a.studios : [];
-            const firstStudio = asRecord(rawStudios[0]);
-            for (const url of portfolioUrls) {
-              const photoUrl = stringValue(url);
-              if (!photoUrl) continue;
-              nextPhotos.push({
-                userId: String(a.id ?? a.userId ?? a.user_id ?? ''),
-                userName: String(a.name ?? ''),
-                photoUrl,
-                studioName: stringValue(
-                  firstStudio.studioName ?? firstStudio.studio_name
-                ),
-              });
-            }
-          }
-          setPhotos(nextPhotos);
+              []
+            ).filter((u): u is string => typeof u === 'string' && u.length > 0);
+            return urls.map((photoUrl) => ({
+              userId: a.id,
+              userName: a.name ?? '',
+              photoUrl,
+              studioName: a.studios?.[0]?.studioName,
+            }));
+          });
+          setPhotos(allPhotos);
         } else {
           setPhotos([]);
         }
@@ -294,7 +286,7 @@ export default function HomeTab({ onSelectTab }: Props) {
           const rawStudios = Array.isArray(studiosRes.value.studios)
             ? studiosRes.value.studios
             : [];
-          setStudios(
+          setHomeStudios(
             rawStudios.slice(0, 6).map((studio) => {
               const s = asRecord(studio);
               return {
@@ -308,7 +300,7 @@ export default function HomeTab({ onSelectTab }: Props) {
             })
           );
         } else {
-          setStudios([]);
+          setHomeStudios([]);
         }
 
         if (sponsorsRes.status === 'fulfilled') {
@@ -361,38 +353,43 @@ export default function HomeTab({ onSelectTab }: Props) {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
     >
-      {photos.length > 0 ? (
-        <>
+      {photos.length > 0 && (
+        <View style={styles.gallerySection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Gallery</Text>
             <SeeAllButton onPress={() => onSelectTab('artists')} />
           </View>
+
           <View style={styles.galleryOuter}>
             <TouchableOpacity
-              onPress={goGalleryPrev}
+              onPress={goPrev}
+              disabled={galleryPage === 0}
               style={[
                 styles.galleryArrow,
-                styles.galleryArrowLeft,
-                galleryPage === 0 && styles.galleryArrowDisabled,
+                galleryPage === 0 && styles.galleryArrowOff,
               ]}
-              disabled={galleryPage === 0}
-              accessibilityLabel="Previous photos"
+              accessibilityLabel="Previous"
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <View style={styles.galleryArrowCircle}>
-                <Text style={styles.galleryArrowText}>‹</Text>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    stroke={colors.clay}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 18l-6-6 6-6"
+                  />
+                </Svg>
               </View>
             </TouchableOpacity>
 
             <Animated.View style={[styles.galleryGrid, slideStyle]}>
-              {gridPhotos.map((item, index) =>
+              {gridPhotos.map((item, idx) =>
                 item ? (
                   <TouchableOpacity
-                    key={`${item.userId}_${item.photoUrl}_${index}`}
-                    style={[
-                      styles.galleryCell,
-                      { width: clampedCell, height: clampedCell },
-                    ]}
+                    key={item.userId + item.photoUrl + idx}
+                    style={[styles.galleryCell, { width: cellSize, height: cellSize }]}
                     onPress={() =>
                       stackNav.navigate('ArtistProfile', { userId: item.userId })
                     }
@@ -400,17 +397,17 @@ export default function HomeTab({ onSelectTab }: Props) {
                   >
                     <Image
                       source={{ uri: item.photoUrl }}
-                      style={styles.galleryCellImage}
+                      style={styles.galleryCellImg}
                       resizeMode="cover"
                     />
                   </TouchableOpacity>
                 ) : (
                   <View
-                    key={`empty_${index}`}
+                    key={'empty' + idx}
                     style={[
                       styles.galleryCell,
                       styles.galleryCellEmpty,
-                      { width: clampedCell, height: clampedCell },
+                      { width: cellSize, height: cellSize },
                     ]}
                   />
                 )
@@ -418,28 +415,36 @@ export default function HomeTab({ onSelectTab }: Props) {
             </Animated.View>
 
             <TouchableOpacity
-              onPress={goGalleryNext}
+              onPress={goNext}
+              disabled={galleryPage >= totalPages - 1}
               style={[
                 styles.galleryArrow,
-                styles.galleryArrowRight,
-                galleryPage >= totalPages - 1 && styles.galleryArrowDisabled,
+                galleryPage >= totalPages - 1 && styles.galleryArrowOff,
               ]}
-              disabled={galleryPage >= totalPages - 1}
-              accessibilityLabel="Next photos"
+              accessibilityLabel="Next"
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <View style={styles.galleryArrowCircle}>
-                <Text style={styles.galleryArrowText}>›</Text>
+                <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                  <Path
+                    stroke={colors.clay}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 18l6-6-6-6"
+                  />
+                </Svg>
               </View>
             </TouchableOpacity>
           </View>
+
           {totalPages > 1 && (
             <Text style={styles.galleryCounter}>
               {galleryPage + 1} / {totalPages}
             </Text>
           )}
-        </>
-      ) : null}
+        </View>
+      )}
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Upcoming events</Text>
@@ -484,9 +489,9 @@ export default function HomeTab({ onSelectTab }: Props) {
         <Text style={styles.sectionTitle}>Studios</Text>
         <SeeAllButton onPress={() => onSelectTab('studios')} />
       </View>
-      {studios.length > 0 ? (
+      {homeStudios.length > 0 ? (
         <FlatList
-          data={studios}
+          data={homeStudios}
           keyExtractor={(item) => item.id}
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -598,11 +603,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 14,
   },
+  gallerySection: { marginBottom: spacing[4] },
   galleryOuter: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
     paddingHorizontal: spacing[4],
-    marginBottom: spacing[3],
   },
   galleryGrid: {
     flex: 1,
@@ -614,44 +620,33 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: 'hidden',
   },
-  galleryCellImage: {
-    width: '100%',
-    height: '100%',
-  },
+  galleryCellImg: { width: '100%', height: '100%' },
   galleryCellEmpty: {
     backgroundColor: colors.clayLight,
-    opacity: 0.3,
+    opacity: 0.25,
   },
   galleryArrow: {
     width: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 2,
   },
-  galleryArrowLeft: { marginRight: 4 },
-  galleryArrowRight: { marginLeft: 4 },
-  galleryArrowDisabled: { opacity: 0.2 },
+  galleryArrowOff: { opacity: 0.2 },
   galleryArrowCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.surface,
     borderWidth: 0.5,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  galleryArrowText: {
-    fontSize: 20,
-    color: colors.clay,
-    lineHeight: 24,
-    fontFamily: typography.display,
-  },
   galleryCounter: {
     fontFamily: typography.mono,
     fontSize: 10,
     color: colors.inkLight,
     textAlign: 'center',
+    marginTop: spacing[1],
     marginBottom: spacing[3],
   },
   emptySection: {
