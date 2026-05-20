@@ -34,6 +34,18 @@ function validateEmail(v: string): string | undefined {
   return undefined;
 }
 
+function validatePasswordStrength(pw: string): string {
+  if (pw.length < 8)
+    return 'At least 8 characters.';
+  if (!/[A-Z]/.test(pw))
+    return 'Include at least one uppercase letter.';
+  if (!/[0-9]/.test(pw))
+    return 'Include at least one number.';
+  if (!/[!@#$%^&*()_+\-=\[\]{}|';\'",./<>?]/.test(pw))
+    return 'Include at least one special character (!@#$% etc.)';
+  return '';
+}
+
 export default function RegisterScreen({ navigation }: Props) {
   const { signUp } = useAuth();
   const [name, setName] = useState('');
@@ -92,8 +104,9 @@ export default function RegisterScreen({ navigation }: Props) {
       return;
     }
     setTermsError('');
-    if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
+    const pwErr = validatePasswordStrength(password);
+    if (pwErr) {
+      setPasswordError(pwErr);
       return;
     }
     if (password !== confirmPassword) {
@@ -221,6 +234,13 @@ export default function RegisterScreen({ navigation }: Props) {
                 </Text>
               </TouchableOpacity>
             </View>
+            {passwordError ? (
+              <Text style={styles.passwordErrorBelow}>{passwordError}</Text>
+            ) : (
+              <Text style={styles.passwordHint}>
+                Min. 8 characters · uppercase · number · special character
+              </Text>
+            )}
           </View>
 
           <View style={styles.passwordBlock}>
@@ -262,10 +282,6 @@ export default function RegisterScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
           </View>
-
-          {passwordError ? (
-            <Text style={styles.passwordErrorText}>{passwordError}</Text>
-          ) : null}
 
           {!roleFixed && (
             <TouchableOpacity
@@ -449,11 +465,17 @@ const styles = StyleSheet.create({
   },
   eyeBtn: { padding: spacing[3] },
   eyeIcon: { fontSize: 16, color: colors.inkLight },
-  passwordErrorText: {
+  passwordHint: {
+    fontFamily: typography.body,
+    fontSize: 11,
+    color: colors.inkLight,
+    marginTop: 4,
+  },
+  passwordErrorBelow: {
     fontFamily: typography.body,
     fontSize: fontSize.sm,
     color: colors.error,
-    marginBottom: spacing[2],
+    marginTop: 4,
   },
   sponsorToggle: {
     flexDirection: 'row',

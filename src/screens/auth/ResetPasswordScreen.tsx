@@ -27,7 +27,11 @@ function normalizeToken(raw?: string): string | undefined {
 
 function validatePassword(v: string): string | undefined {
   if (!v) return 'Password is required.';
-  if (v.length < 8) return 'Password must be at least 8 characters.';
+  if (v.length < 8) return 'At least 8 characters.';
+  if (!/[A-Z]/.test(v)) return 'Include at least one uppercase letter.';
+  if (!/[0-9]/.test(v)) return 'Include at least one number.';
+  if (!/[!@#$%^&*()_+\-=\[\]{}|';\'",./<>?]/.test(v))
+    return 'Include at least one special character (!@#$% etc.)';
   return undefined;
 }
 
@@ -158,6 +162,11 @@ export default function ResetPasswordScreen({ navigation, route }: Props) {
                 : undefined
             }
           />
+          {pwError ? null : (
+            <Text style={styles.passwordHint}>
+              Min. 8 characters · uppercase · number · special character
+            </Text>
+          )}
           <Input
             label="Confirm password"
             value={confirm}
@@ -247,6 +256,12 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: spacing[8],
+  },
+  passwordHint: {
+    fontFamily: typography.body,
+    fontSize: 11,
+    color: colors.inkLight,
+    marginTop: 4,
   },
   errorBox: {
     backgroundColor: colors.errorLight,
