@@ -34,6 +34,7 @@ on:
 jobs:
   dist-in-sync:
     runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
     timeout-minutes: 15
     steps:
       # v5+ actions run on Node 24 natively (avoids Node 20 deprecation + FORCE_* warnings).
