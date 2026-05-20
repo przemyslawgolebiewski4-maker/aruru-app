@@ -181,7 +181,7 @@ export default function MembersScreen({
       <View style={styles.statsRow}>
         <View style={styles.statPill}>
           <Text style={styles.statPillText}>
-            {stats.total} members
+            {stats.total} {stats.total === 1 ? 'member' : 'members'}
           </Text>
         </View>
         <View style={styles.statPill}>

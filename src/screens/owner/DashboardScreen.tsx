@@ -1109,22 +1109,6 @@ export default function DashboardScreen() {
               ))}
               <TouchableOpacity
                 style={styles.communityBannerLink}
-                onPress={() =>
-                  navigation
-                    .getParent<NativeStackNavigationProp<AppStackParamList>>()
-                    ?.navigate('StudioFreeTier', {
-                      tenantId: tenantId ?? '',
-                    })
-                }
-                accessibilityRole="button"
-                accessibilityLabel="See full plan details"
-              >
-                <Text style={styles.communityBannerLinkText}>
-                  See full plan details →
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.communityBannerLink}
                 onPress={() => setShowCommunityBanner(false)}
                 accessibilityRole="button"
                 accessibilityLabel="Hide community features"

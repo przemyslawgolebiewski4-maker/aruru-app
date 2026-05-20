@@ -295,7 +295,7 @@ export default function KilnDetailScreen({ route }: { route: Route }) {
 
         <View style={styles.pillRow}>
           <View style={styles.pill}>
-            <Text style={styles.pillText}>{memberCount} members</Text>
+            <Text style={styles.pillText}>{memberCount} {memberCount === 1 ? 'member' : 'members'}</Text>
           </View>
           <View style={styles.pill}>
             <Text style={styles.pillText}>{totalKg.toFixed(1)} kg total</Text>

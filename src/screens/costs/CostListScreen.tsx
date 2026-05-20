@@ -383,7 +383,7 @@ export default function CostListScreen({
 
       <View style={styles.pillRow}>
         <Text style={styles.pillText}>
-          {members.length} members · {formatCurrency(totalAll, studioCurrency)} total all members
+          {members.length} {members.length === 1 ? 'member' : 'members'} · {formatCurrency(totalAll, studioCurrency)} total all members
         </Text>
       </View>
 

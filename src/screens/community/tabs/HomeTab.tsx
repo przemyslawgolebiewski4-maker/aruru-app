@@ -517,7 +517,7 @@ export default function HomeTab({ onSelectTab }: Props) {
               <Text style={styles.studioLocation} numberOfLines={1}>
                 {[item.city, item.country].filter(Boolean).join(', ')}
               </Text>
-              <Text style={styles.memberCount}>{item.memberCount} members</Text>
+              <Text style={styles.memberCount}>{item.memberCount} {item.memberCount === 1 ? 'member' : 'members'}</Text>
             </TouchableOpacity>
           )}
         />

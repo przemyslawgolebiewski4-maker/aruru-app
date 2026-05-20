@@ -12,6 +12,7 @@ type Nav = NativeStackNavigationProp<AppStackParamList>;
  * Channel toggles can be wired when the API ships; inbox is fully functional.
  */
 export default function NotificationPreferencesScreen() {
+  // NOTE: channel toggles pending API — placeholder is intentional
   const stackNav = useNavigation<Nav>();
 
   return (

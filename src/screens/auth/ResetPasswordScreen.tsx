@@ -137,7 +137,7 @@ export default function ResetPasswordScreen({ navigation, route }: Props) {
           </Text>
           <Text style={styles.title}>Choose a new password</Text>
           <Text style={styles.tagline}>
-            At least 8 characters, same as when you registered.
+            Min. 8 characters · uppercase · number · special character
           </Text>
         </View>
 

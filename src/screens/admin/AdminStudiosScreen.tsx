@@ -261,7 +261,7 @@ export default function AdminStudiosScreen() {
                   <Text style={styles.studioName}>{s.name}</Text>
                   <Text style={styles.studioEmail}>{s.ownerEmail}</Text>
                   <Text style={styles.studioMeta}>
-                    {s.memberCount} members · {s.subscriptionTier}
+                    {s.memberCount} {s.memberCount === 1 ? 'member' : 'members'} · {s.subscriptionTier}
                     {s.trialEndsAt ? ` · ${timeLeft(s.trialEndsAt)}` : ''}
                   </Text>
                   {s.subscriptionStatus === 'suspended' &&

@@ -246,7 +246,7 @@ export default function KilnListScreen({
           ) : null}
         </View>
         <View style={styles.firingRight}>
-          <Text style={styles.memberCount}>{n} members</Text>
+          <Text style={styles.memberCount}>{n} {n === 1 ? 'member' : 'members'}</Text>
           <Text style={styles.chevron}>›</Text>
         </View>
       </TouchableOpacity>

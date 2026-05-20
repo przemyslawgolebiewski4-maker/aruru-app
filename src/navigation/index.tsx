@@ -334,7 +334,7 @@ function AppNavigator() {
         options={({ navigation }) => ({
           ...profileHeaderOptions(navigation),
           headerShown: true,
-          title: 'Notifications',
+          title: 'Notification preferences',
         })}
       />
       <AppStack.Screen

@@ -225,7 +225,7 @@ export default function StudioFinderTab() {
                     </View>
                   )}
                 </View>
-                <Text style={styles.memberCount}>{s.memberCount} members</Text>
+                <Text style={styles.memberCount}>{s.memberCount} {s.memberCount === 1 ? 'member' : 'members'}</Text>
               </View>
             </TouchableOpacity>
           )}

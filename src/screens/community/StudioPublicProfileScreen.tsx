@@ -392,7 +392,7 @@ export default function StudioPublicProfileScreen({ route }: Props) {
         {studio.publicDescription ? (
           <Text style={styles.description}>{studio.publicDescription}</Text>
         ) : null}
-        <Text style={styles.memberCount}>{studio.memberCount} members</Text>
+        <Text style={styles.memberCount}>{studio.memberCount} {studio.memberCount === 1 ? 'member' : 'members'}</Text>
         {tags.length > 0 ? (
           <View style={styles.tags}>
             {tags.map((tag, i) => (
