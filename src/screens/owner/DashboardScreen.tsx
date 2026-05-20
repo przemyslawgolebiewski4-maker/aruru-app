@@ -181,6 +181,15 @@ function setTrialPromptDismissedStorage(tenantId: string) {
   localStorage.setItem(`aruru_trial_prompt_dismissed_${tenantId}`, 'true');
 }
 
+function studioInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join('');
+}
+
 function IconTwoCircles60() {
   return (
     <Svg width={60} height={60} viewBox="0 0 60 60">
@@ -285,11 +294,6 @@ export default function DashboardScreen() {
     }
     setTrialPromptDismissed(getTrialPromptDismissed(tenantId));
   }, [tenantId]);
-
-  const firstName = user?.name?.split(' ')[0] ?? 'there';
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   const studioLabel = currentStudio?.studioName?.trim() || 'Your studio';
   const canManageMembers =
@@ -1015,15 +1019,27 @@ export default function DashboardScreen() {
             accessibilityLabel="Switch studio"
             hitSlop={4}
           >
+            <View style={styles.studioPillAvatar}>
+              <Text style={styles.studioPillAvatarText}>
+                {studioInitials(studioLabel)}
+              </Text>
+            </View>
             <Text style={styles.studioMono} numberOfLines={1}>
-              {studioLabel.toUpperCase()}
+              {studioLabel}
             </Text>
             <Text style={styles.studioPillChevron}>⌄</Text>
           </TouchableOpacity>
         ) : (
-          <Text style={styles.studioMono} numberOfLines={1}>
-            {studioLabel.toUpperCase()}
-          </Text>
+          <View style={styles.studioPill}>
+            <View style={styles.studioPillAvatar}>
+              <Text style={styles.studioPillAvatarText}>
+                {studioInitials(studioLabel)}
+              </Text>
+            </View>
+            <Text style={styles.studioMono} numberOfLines={1}>
+              {studioLabel}
+            </Text>
+          </View>
         )}
         <TouchableOpacity
           onPress={() => navigation.jumpTo('Profile')}
@@ -1062,12 +1078,6 @@ export default function DashboardScreen() {
         <View style={styles.studioMainCol}>
       {studioSection === 'home' ? (
       <ScrollView style={styles.root} contentContainerStyle={styles.content}>
-      <View style={styles.greetingBlock}>
-        <Text style={styles.greeting}>
-          {greeting}, {firstName}.
-        </Text>
-        <Text style={styles.studioSub}>{studioLabel.toUpperCase()}</Text>
-      </View>
       {showFreeBanner ? (
         <View style={styles.communityBanner}>
           <View style={styles.communityBannerRow}>
@@ -1823,8 +1833,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing[4],
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
     gap: spacing[3],
+    backgroundColor: colors.surface,
+    borderBottomWidth: 0.5,
+    borderBottomColor: colors.border,
   },
   logoWordmark: {
     fontFamily: typography.display,
@@ -1836,9 +1850,8 @@ const styles = StyleSheet.create({
   studioMono: {
     fontFamily: typography.mono,
     fontSize: 11,
-    color: colors.inkLight,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    color: colors.inkMid,
+    letterSpacing: 0.3,
     flex: 1,
   },
   studioPill: {
@@ -1851,6 +1864,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing[2],
     paddingVertical: 3,
     minWidth: 0,
+  },
+  studioPillAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.clayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  studioPillAvatarText: {
+    fontFamily: typography.mono,
+    fontSize: 8,
+    color: colors.clay,
+    fontWeight: '600',
   },
   studioPillChevron: {
     fontFamily: typography.mono,
@@ -1948,23 +1976,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingTop: spacing[3],
     paddingHorizontal: spacing[4],
-  },
-  greetingBlock: {
-    marginBottom: spacing[6],
-  },
-  greeting: {
-    fontFamily: typography.display,
-    fontSize: 26,
-    color: colors.ink,
-    letterSpacing: -0.4,
-  },
-  studioSub: {
-    fontFamily: typography.mono,
-    fontSize: 11,
-    color: colors.inkLight,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginTop: spacing[2],
   },
   exportReminderRow: {
     backgroundColor: colors.clayLight,
